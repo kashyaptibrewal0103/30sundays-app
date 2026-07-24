@@ -21,6 +21,7 @@ import InvitePartnerSection from "../components/InvitePartnerSection";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { buildActivityDetail } from "../data/activityData";
 import { getMauritiusHotel } from "../data/mauritiusData";
+import { generateHotelsForCity, getStayInfo } from "../data/hotelData";
 import InclusionsDrawer from "../components/InclusionsDrawer";
 import HotelStayCard from "../components/HotelStayCard";
 
@@ -367,18 +368,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // fall back to the app-level (Explore) selection.
   const hotels = baseHotels.map((h, i) => {
     const savedHotel = inDeal ? selectedHotelOptions?.[i] : selectedHotels?.[it.id]?.stays?.[i];
-    if (savedHotel) {
-      return {
-        ...h,
-        name: savedHotel.hotelName,
-        type: savedHotel.roomName,
-        img: savedHotel.image || h.img,
-        rating: savedHotel.bookingScore || h.rating,
-        stars: savedHotel.stars || h.stars,
-        hotelId: savedHotel.hotelId,
-      };
-    }
-    return { ...h, hotelId: `${h.city}-hotel-0` }; // default to first hotel
+    const resolved = savedHotel
+      ? {
+          ...h,
+          name: savedHotel.hotelName,
+          type: savedHotel.roomName,
+          img: savedHotel.image || h.img,
+          rating: savedHotel.bookingScore || h.rating,
+          stars: savedHotel.stars || h.stars,
+          hotelId: savedHotel.hotelId,
+        }
+      : { ...h, hotelId: `${h.city}-hotel-0` }; // default to first hotel
+    // Pull refundability from the real generated hotel behind this stay.
+    const si = getStayInfo(it, i);
+    const match = si && generateHotelsForCity(si.city, it.dest, si.checkIn, si.checkOut, si.nights).find(x => x.id === resolved.hotelId);
+    return { ...resolved, freeCancellation: match ? match.freeCancellation : undefined };
   });
 
   // Stays the customer chose to book themselves — set from the hotel chooser,
@@ -1094,6 +1098,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 name={h.name}
                 roomType={h.type}
                 city={h.city}
+                freeCancellation={h.freeCancellation}
                 to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}`}
                 footer={
                   <>

@@ -52,6 +52,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const [showSheet, setShowSheet] = useState(false);
   const [sheetTab, setSheetTab] = useState("Filters");
   const [sortIdx, setSortIdx] = useState(0);
+  const [sicTipId, setSicTipId] = useState(null); // which card's SIC tooltip is open
   const [filters, setFilters] = useState({
     budget: null, // [lo, hi] per night; null = untouched
     stars: new Set(),
@@ -317,9 +318,10 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                     </p>
 
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <Star size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
-                        <span style={{ fontSize: 12.5, fontWeight: 500, color: "#4EAC7E" }}>{hotel.stars} star hotel</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        {Array.from({ length: hotel.stars }).map((_, s) => (
+                          <Star key={s} size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
+                        ))}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <span style={{
@@ -344,14 +346,51 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                           <span style={{ fontWeight: 700, color: C.head }}>
                             {priceDelta > 0 ? "+" : "−"} ₹ {formatHotelPrice(Math.abs(priceDelta) * stayInfo.nights)}
                           </span>
-                          <span style={{ fontSize: 11, color: C.sub }}> on your trip</span>
                         </>
                       )}
                     </p>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                      <MapPin size={10} color={C.inact} />
-                      <span style={{ fontSize: 11, color: C.inact }}>{hotel.neighbourhood}</span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
+                        <MapPin size={10} color={C.inact} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, color: C.inact, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hotel.neighbourhood}</span>
+                      </div>
+                      {hotel.sharedTransfers && (
+                        <span style={{ position: "relative", display: "inline-flex", flexShrink: 0 }}>
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSicTipId(t => t === hotel.id ? null : hotel.id); }}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}
+                          >
+                            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".3px", color: C.sText || "#027A48" }}>SIC</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: C.sText || "#027A48" }}>ⓘ</span>
+                          </button>
+                          {sicTipId === hotel.id && (
+                            <>
+                              <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSicTipId(null); }} style={{ position: "fixed", inset: 0, zIndex: 59 }} />
+                              <span style={{ position: "absolute", bottom: "calc(100% + 6px)", right: 0, zIndex: 60, width: 210, background: "#181D27", color: "#fff", fontSize: 10.5, lineHeight: "14px", borderRadius: 8, padding: "8px 10px", boxShadow: "0 4px 16px rgba(0,0,0,0.25)", fontWeight: 400, letterSpacing: 0 }}>
+                                This hotel's area is served by shared coaches (SIC), so you can pick a shared or private transfer.
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Policy tags: refundability always, checkin/checkout perks when included */}
+                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: hotel.freeCancellation ? (C.sText || "#027A48") : C.inact }}>
+                        {hotel.freeCancellation ? "Free cancellation" : "Non-refundable"}
+                      </span>
+                      {(hotel.earlyCheckIn || hotel.lateCheckOut) && (
+                        <>
+                          <span style={{ fontSize: 11, color: C.inact }}>·</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: C.sText || "#027A48" }}>
+                            {hotel.earlyCheckIn && hotel.lateCheckOut
+                              ? "Early check-in + late checkout"
+                              : hotel.earlyCheckIn ? "Early check-in included" : "Late checkout included"}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

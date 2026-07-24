@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Star, MapPin, Navigation, X as XIcon, ChevronLeft, ChevronRight, Bed, Maximize2, Bath, Eye, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Navigation, X as XIcon, ChevronLeft, ChevronRight, Bed, Maximize2, Bath, Eye, UtensilsCrossed, Bus, Clock } from "lucide-react";
 import { C } from "../data";
 import InclusionsSection from "./InclusionsSection";
 import AddOnDetailList from "./AddOnDetailList";
@@ -132,6 +132,47 @@ export default function HotelDetailScreen({
           </a>
         </div>
 
+        {/* ═══ Good to know: transfers, check-in/out ═══ */}
+        {hotel.sharedTransfers !== undefined && (
+          <div style={{ marginTop: 24, padding: "0 16px" }}>
+            <p style={{ fontSize: 17, fontWeight: 700, color: "#181E4C", margin: "0 0 12px" }}>Good to know</p>
+            <div style={{ borderRadius: 14, border: `1px solid ${C.div}` }}>
+
+              {/* Transfers */}
+              <div style={{ display: "flex", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${C.div}` }}>
+                <Bus size={17} color={C.sub} style={{ flexShrink: 0, marginTop: 1 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.head }}>
+                    {hotel.sharedTransfers ? "Shared or private transfers" : "Private transfers only"}
+                  </span>
+                  <p style={{ fontSize: 11.5, color: C.sub, margin: "2px 0 0" }}>
+                    {hotel.sharedTransfers
+                      ? "This hotel's area is served by shared coaches, so you can pick either"
+                      : "This hotel's area has no shared coaches, so pickups are by private car"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Check-in / checkout */}
+              <div style={{ display: "flex", gap: 10, padding: "12px 14px" }}>
+                <Clock size={17} color={C.sub} style={{ flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.head }}>
+                    Check-in {hotel.checkInTime} · Checkout {hotel.checkOutTime}
+                  </span>
+                  {(hotel.earlyCheckIn || hotel.lateCheckOut) && (
+                    <p style={{ fontSize: 11.5, fontWeight: 600, color: C.sText || "#027A48", margin: "2px 0 0" }}>
+                      {hotel.earlyCheckIn && hotel.lateCheckOut
+                        ? "Early check-in and late checkout included"
+                        : hotel.earlyCheckIn ? "Early check-in included" : "Late checkout included"}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ═══ Rooms ═══ */}
         <div style={{ marginTop: 24, padding: "0 16px" }}>
           <p style={{ fontSize: 17, fontWeight: 700, color: "#181E4C", margin: "0 0 14px" }}>{roomFooter ? "Select your room" : "Rooms"}</p>
@@ -141,10 +182,19 @@ export default function HotelDetailScreen({
               return (
                 <div key={room.id} style={{ borderRadius: 14, overflow: "hidden", border: isSelected ? "2px solid #FD014F" : `1px solid ${C.div}`, background: isSelected ? "#FFF5F8" : C.white, padding: isSelected ? 15 : 16 }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: "#181E4C", margin: "0 0 6px" }}>{room.name}</p>
-                  {room.mealPlan && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
-                      <UtensilsCrossed size={12} color={room.mealPlan === "Only Room" ? C.inact : "#4EAC7E"} />
-                      <span style={{ fontSize: 11, fontWeight: 600, color: room.mealPlan === "Only Room" ? C.inact : "#4EAC7E" }}>{room.mealPlan}</span>
+                  {(room.mealPlan || hotel.freeCancellation !== undefined) && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+                      {room.mealPlan ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <UtensilsCrossed size={12} color={room.mealPlan === "Only Room" ? C.inact : "#4EAC7E"} />
+                          <span style={{ fontSize: 11, fontWeight: 600, color: room.mealPlan === "Only Room" ? C.inact : "#4EAC7E" }}>{room.mealPlan}</span>
+                        </div>
+                      ) : <span />}
+                      {hotel.freeCancellation !== undefined && (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: hotel.freeCancellation ? (C.sText || "#027A48") : "#FD014F", flexShrink: 0 }}>
+                          {hotel.freeCancellation ? "Free cancellation" : "Non-refundable"}
+                        </span>
+                      )}
                     </div>
                   )}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>

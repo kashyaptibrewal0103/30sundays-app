@@ -286,6 +286,16 @@ export function generateHotelsForCity(city, destination, checkIn, checkOut, nigh
     const checkInTime = hotelSeed() > 0.5 ? "2 PM" : "3 PM";
     const checkOutTime = hotelSeed() > 0.5 ? "11 AM" : "12 PM";
 
+    // Transfers: hotels far from the centre sit off shared (SIC) routes
+    const sharedTransfers = distanceFromCenter <= 5;
+
+    // Early check-in / late checkout included at some hotels
+    const earlyCheckIn = hotelSeed() > 0.7;
+    const lateCheckOut = hotelSeed() > 0.7;
+
+    // Refundability: a real mix so both cases show up in every list
+    const freeCancellation = hotelSeed() > 0.4;
+
     // Base price per night (correlated with stars)
     const basePriceMap = { 3: 2000, 4: 3500, 5: 6000 };
     const basePrice = basePriceMap[stars] + Math.floor(hotelSeed() * basePriceMap[stars]);
@@ -350,7 +360,10 @@ export function generateHotelsForCity(city, destination, checkIn, checkOut, nigh
       id: `${city}-hotel-${i}`,
       name,
       stars,
-      freeCancellation: stars >= 4 || hotelSeed() > 0.5,
+      freeCancellation,
+      sharedTransfers,
+      earlyCheckIn,
+      lateCheckOut,
       bookingScore: Math.min(bookingScore, 9.8),
       reviewCount,
       neighbourhood,

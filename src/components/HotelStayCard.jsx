@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Star, MapPin, ChevronRight } from "lucide-react";
+import { Star, MapPin } from "lucide-react";
 import { C } from "../data";
 
 // Shared hotel card that represents ONE stay. Used across planning/exploration,
@@ -27,7 +27,7 @@ import { C } from "../data";
 export default function HotelStayCard({
   image, imageAlt, fallbackImage, imageHeight = 150,
   dayLabel, topRightBadge, recommendedBadge, soldOut,
-  stars, ratingScore, name, roomType, city,
+  stars, ratingScore, name, roomType, city, freeCancellation,
   showChevron = true, width, to, onClick, footer, confirmationBar,
 }) {
   const cardStyle = {
@@ -92,19 +92,23 @@ export default function HotelStayCard({
         {/* Name */}
         <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0, lineHeight: "21px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
 
-        {/* Room type */}
+        {/* Room type (never truncated) */}
         {roomType && (
           <p style={{ fontSize: 12.5, color: C.sub, margin: 0, lineHeight: "17px" }}>{roomType}</p>
         )}
 
-        {/* Location + chevron */}
-        {(city || showChevron) && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginTop: 2 }}>
+        {/* Region (clickable), with refundability on the right */}
+        {(city || freeCancellation != null) && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 2 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
               {city && <MapPin size={13} color={C.inact} style={{ flexShrink: 0 }} />}
-              {city && <span style={{ fontSize: 12, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{city}</span>}
+              {city && <span style={{ fontSize: 12, color: C.sub, textDecoration: "underline", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{city}</span>}
             </div>
-            {showChevron && <ChevronRight size={18} color={C.p600} style={{ flexShrink: 0 }} />}
+            {freeCancellation != null && (
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: freeCancellation ? (C.sText || "#027A48") : C.p600, flexShrink: 0 }}>
+                {freeCancellation ? "Free cancellation" : "Non-refundable"}
+              </span>
+            )}
           </div>
         )}
 
