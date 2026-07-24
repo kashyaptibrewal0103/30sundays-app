@@ -209,9 +209,9 @@ export default function CompareVersions() {
 
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", background: C.bg }}>
-      {/* Header + version strip */}
+      {/* Header (version identity + price now live together in the hero below) */}
       <div style={{ flexShrink: 0, background: C.white, borderBottom: `1px solid ${C.div}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: `12px ${PAD}px 8px` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: `12px ${PAD}px 12px` }}>
           <button onClick={() => navigate(-1)} aria-label="Back" style={{ width: 34, height: 34, borderRadius: "50%", background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
             <ArrowLeft size={18} color={C.head} />
           </button>
@@ -221,23 +221,15 @@ export default function CompareVersions() {
           </div>
           <button onClick={() => setPhase("select")} style={{ flexShrink: 0, border: "none", background: "none", color: C.p600, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Change</button>
         </div>
-        <div style={{ display: "flex", gap: 10, padding: `4px ${PAD}px 12px` }}>
-          {[{ v: vA }, { v: vB, latest: vB.id === list[0].id }].map(({ v, latest }) => (
-            <div key={v.id} style={{ flex: 1, border: `1px solid ${C.div}`, borderRadius: 12, padding: "9px 11px", background: C.white }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: C.head }}>{v.label || `V${v.num}`}</span>
-                <StatusChip status={v.status} small />
-                {latest && <span style={{ fontSize: 9, fontWeight: 800, color: C.p600, background: C.p100, padding: "1px 6px", borderRadius: 999 }}>LATEST</span>}
-              </div>
-              <p style={{ fontSize: 11, color: C.sub, margin: "4px 0 0" }}>{genDate(v)}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Scroll body */}
-      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: `14px ${PAD}px 16px` }}>
-        <PriceHero diff={diff} labelA={vA.label || `V${vA.num}`} labelB={vB.label || `V${vB.num}`} />
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: `12px ${PAD}px 16px` }}>
+        <PriceHero
+          diff={diff}
+          a={{ label: vA.label || `V${vA.num}`, date: genDate(vA), status: vA.status, latest: vA.id === list[0].id }}
+          b={{ label: vB.label || `V${vB.num}`, date: genDate(vB), status: vB.status, latest: vB.id === list[0].id }}
+        />
 
         <div style={{ display: "flex", background: SLATE_BG, borderRadius: 11, padding: 3, margin: "14px 0 6px" }}>
           {[{ k: "diff", l: "What changed" }, { k: "full", l: "Everything" }].map((o) => (
@@ -270,43 +262,52 @@ export default function CompareVersions() {
 }
 
 // ── Price hero ──
-function PriceHero({ diff, labelA, labelB }) {
-  const { a, b, delta, breakdown } = diff.price;
+// Merges the version identity (label + date + LATEST) with each version's price
+// and the price-movers, so the top of Compare is one compact block.
+function PriceHero({ diff, a, b }) {
+  const { a: priceA, b: priceB, delta, breakdown } = diff.price;
   const up = delta > 0;
   const Dir = up ? ArrowUpRight : ArrowDownRight;
   // Only a price drop is highlighted (green); an increase or no change reads black.
   const dirColor = delta < 0 ? C.sText : C.head;
-  // Always list only the components that actually moved the price, in both
-  // modes, so this summary card keeps a fixed height. That stops the mode
-  // switch below it from jumping, and drops any misleading "No change" rows.
+  // Always list only the components that actually moved the price, so this
+  // summary keeps a fixed height and the mode switch below it never jumps.
   const rows = breakdown.filter((d) => d.delta !== 0);
 
+  const Col = ({ meta, price }) => (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: C.head }}>{meta.label}</span>
+        <StatusChip status={meta.status} small />
+        {meta.latest && <span style={{ fontSize: 9, fontWeight: 800, color: C.p600, background: C.p100, padding: "1px 6px", borderRadius: 999 }}>LATEST</span>}
+      </div>
+      <p style={{ fontSize: 19, fontWeight: 800, color: C.head, margin: "3px 0 0" }}>{price}</p>
+      <p style={{ fontSize: 10.5, color: C.inact, margin: "1px 0 0" }}>{meta.date} · incl. taxes</p>
+    </div>
+  );
+
   return (
-    <div style={{ borderRadius: 16, border: `1px solid ${C.div}`, background: C.white, padding: 14 }}>
-      <TwoCol
-        a={<div><p style={{ fontSize: 11, color: C.sub, margin: 0 }}>{labelA}</p><p style={{ fontSize: 19, fontWeight: 800, color: C.head, margin: "2px 0 0" }}>{inr(a)}</p></div>}
-        b={<div><p style={{ fontSize: 11, color: C.sub, margin: 0 }}>{labelB}</p><p style={{ fontSize: 19, fontWeight: 800, color: C.head, margin: "2px 0 0" }}>{inr(b)}</p></div>}
-      />
-      <p style={{ fontSize: 10.5, color: C.inact, margin: "4px 0 0" }}>Total incl. taxes</p>
+    <div style={{ borderRadius: 16, border: `1px solid ${C.div}`, background: C.white, padding: 12 }}>
+      <TwoCol a={<Col meta={a} price={inr(priceA)} />} b={<Col meta={b} price={inr(priceB)} />} />
 
       {delta !== 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px 12px", borderRadius: 12, background: SLATE_BG }}>
-          <div style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: C.white, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Dir size={16} color={dirColor} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, padding: "8px 10px", borderRadius: 10, background: SLATE_BG }}>
+          <div style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: C.white, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Dir size={15} color={dirColor} />
           </div>
-          <p style={{ fontSize: 13, color: C.head, margin: 0 }}>
-            <b style={{ color: dirColor }}>{labelB} is {inr(Math.abs(delta))} {up ? "more" : "less"}</b> than {labelA}.
+          <p style={{ fontSize: 12.5, color: C.head, margin: 0 }}>
+            <b style={{ color: dirColor }}>{b.label} is {inr(Math.abs(delta))} {up ? "more" : "less"}</b> than {a.label}.
           </p>
         </div>
       )}
 
       {rows.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: C.sub, margin: "0 0 6px" }}>What moved the price</p>
+        <div style={{ marginTop: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: C.sub, margin: "0 0 4px" }}>What moved the price</p>
           {rows.map((d) => {
             const c = d.delta < 0 ? C.sText : C.head;
             return (
-              <div key={d.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderTop: `1px solid ${C.div}` }}>
+              <div key={d.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 0", borderTop: `1px solid ${C.div}` }}>
                 <span style={{ fontSize: 12.5, color: C.head }}>{d.label}</span>
                 <span style={{ fontSize: 12.5, fontWeight: 800, color: c }}>{d.delta === 0 ? "No change" : signed(d.delta)}</span>
               </div>
