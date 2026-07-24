@@ -1529,9 +1529,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             { label: "Flights", value: costSplit.flights, hide: costSplit.flights <= 0 },
             { label: "Hotels", value: costSplit.hotels },
             { label: "Activities", value: costSplit.activities },
-            { label: "GST", value: costSplit.gst },
+            { label: "Taxes (incl. TCS)", value: costSplit.gst + costSplit.tcs },
             { label: "Discount", value: -costSplit.discount, hide: costSplit.discount <= 0, accent: true },
-            { label: "TCS", value: costSplit.tcs },
           ].filter(r => !r.hide).map((r, i) => (
             <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.div}` }}>
               <span style={{ fontSize: 13.5, color: C.sub }}>{r.label}</span>
@@ -1546,7 +1545,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </div>
         </div>
         <p style={{ fontSize: 11, color: C.inact, margin: "8px 2px 0", lineHeight: "15px" }}>
-          For {travellers} travellers · incl. GST & TCS. TCS is creditable against your income tax.
+          You can claim the TCS amount when filing your income tax return.
         </p>
       </div>
 
