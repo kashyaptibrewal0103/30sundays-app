@@ -19,6 +19,7 @@ import {
 } from "../data/resortData";
 import { useDeals } from "../data/deals";
 import { useSaves } from "../data/saves";
+import LoginV2 from "./LoginV2";
 
 // Steps: 0 Destination · 1 Party · 2 When · 3 Route · 4 Activities.
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
@@ -129,19 +130,21 @@ function seedFromCurated(deal, version) {
   };
 }
 
-export default function Build() {
+export default function Build({ userState = "new", otpVerified = false, setOtpVerified }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dealsCtx = useDeals();
 
-  // Edit mode: re-enter the builder on ONE screen (travellers / dates / cities)
-  // for an existing deal, change it, and save it as a new version. `editRoute=1`
+  // Sequential edit: re-enter the wizard at a chosen field. Fields BEFORE it are
+  // locked; the chosen field and everything AFTER it are edited in order via
+  // Continue; the final step saves a new version (no confirmation). `editRoute=1`
   // is kept as a legacy alias for `edit=route`.
   const editDealId = params.get("dealId");
   const editVersionId = params.get("versionId");
-  const editTarget = params.get("editRoute") === "1" ? "route" : params.get("edit"); // travellers | dates | route
+  const EDIT_STEP_MAP = { destination: 0, travellers: 1, dates: 2, route: 3, activities: 4 };
+  const editTarget = params.get("editRoute") === "1" ? "route" : params.get("edit"); // destination | travellers | dates | route | activities
   const editRoute = editTarget === "route";
-  const editMode = !!editTarget && !!editDealId && !!editVersionId;
+  const editMode = editTarget in EDIT_STEP_MAP && !!editDealId && !!editVersionId;
   const editingVersion = editMode ? dealsCtx.getVersion(editDealId, editVersionId) : null;
   const editDeal = editMode ? dealsCtx.getDeal(editDealId) : null;
   const editBuilt = editMode
@@ -149,7 +152,9 @@ export default function Build() {
         || editDeal?.customItinerary
         || seedFromCurated(editDeal, editingVersion))
     : null;
-  const editStep = { travellers: 1, dates: 2, route: 3 }[editTarget] ?? 0;
+  // Entry field the user chose; earlier steps lock, this + later steps edit.
+  const editFromStep = editMode ? (EDIT_STEP_MAP[editTarget] ?? 0) : 0;
+  const editStep = editFromStep;
 
   // Pre-selected destination (e.g. entering from a destination page): skip the
   // destination pick + intro and start on the next step with it already chosen.
@@ -166,18 +171,37 @@ export default function Build() {
   // Maldives asks for a fixed 3 or 4 nights, so it starts unset (no default fill).
   const [nights, setNights] = useState(editBuilt?.nights || (seedDest && seedDest !== "Maldives" ? (destMeta[seedDest]?.defaultNights || 7) : null));
   const [route, setRoute] = useState(editBuilt?.route || null);
-  const [picks, setPicks] = useState(() => new Set());
+  const [picks, setPicks] = useState(() => {
+    // In edit mode, pre-select the activities already in the built itinerary so
+    // they carry over unless the user changes them on the Activities step.
+    if (!editBuilt) return new Set();
+    const chosen = picksFromBuilt(editBuilt);
+    const ids = new Set();
+    try {
+      activityPool(editBuilt.dest, editBuilt.route || [], editBuilt._vibes || []).forEach(g => {
+        (chosen[g.city] || []).forEach(name => {
+          const a = g.activities.find(x => x.name === name);
+          if (a) ids.add(a.id);
+        });
+      });
+    } catch (_) { /* fall back to empty */ }
+    return ids;
+  });
   // Maldives-only: budget tier, a specific pinned resort, and meal preferences.
   const [tier, setTier] = useState(null);
   const [pinnedResortId, setPinnedResortId] = useState(null);
   const [mealPrefs, setMealPrefs] = useState(() => new Set());
   const [detailDest, setDetailDest] = useState(null); // full-screen destination view
-  const [confirmEdit, setConfirmEdit] = useState(false); // edit-fork confirm (travellers/dates/route)
   const [building, setBuilding] = useState(false);
+  // End-of-flow OTP gate: shown on the final CTA for unverified users, the
+  // pending build action runs right after a successful verification.
+  const [showAuth, setShowAuth] = useState(false);
+  const pendingBuildRef = useRef(null);
 
   const isMaldives = dest === "Maldives";
   const STEP_LABELS = isMaldives ? STEP_LABELS_MALDIVES : STEP_LABELS_DEFAULT;
   const travellers = party.couples * 2 + party.adults + party.kids;
+
   const targetNights = nights || (dest ? destMeta[dest]?.defaultNights : 7);
 
   // When the route step is first reached, seed the recommended route.
@@ -194,21 +218,29 @@ export default function Build() {
 
   // ─── navigation ───
   const goBack = () => {
+    // Sequential edit: step back through the editable range; leave at the entry.
+    if (editMode) {
+      if (step > editFromStep) { setStep(s => s - 1); return; }
+      navigate(-1); return;
+    }
     // With a pre-seeded destination, step 1 is the first screen; leaving it exits.
-    if (step === 0 || editMode || (seedDest && step === 1)) { navigate(-1); return; }
+    if (step === 0 || (seedDest && step === 1)) { navigate(-1); return; }
     setStep(s => Math.max(0, s - 1));
   };
   const goNext = () => setStep(s => s + 1);
 
-  const chooseDest = (d) => {
+  // Reset the trip to a freshly-picked destination (nights, route, activities).
+  const resetForDest = (d) => {
     setDest(d);
     // Maldives asks for nights (3/4) on the dates step, so leave it unset.
     setNights(d === "Maldives" ? null : (destMeta[d]?.defaultNights || 7));
     setRoute(null); setPicks(new Set()); setVibes([]);
     setTier(null); setPinnedResortId(null); setMealPrefs(new Set());
-    setDetailDest(null);
-    setStep(1);
   };
+  // Grid tap: select the destination but stay on step 0 (a sticky Continue
+  // advances). Watching from the detail view still advances directly.
+  const pickDest = (d) => resetForDest(d);
+  const chooseDest = (d) => { resetForDest(d); setDetailDest(null); setStep(1); };
 
   // ─── activities → build ───
   const picksByCity = useMemo(() => {
@@ -243,6 +275,17 @@ export default function Build() {
     }, 1400);
   };
 
+  // Mobile OTP verification before the itinerary is created (non-skippable).
+  // Verified users (or known leads/customers) go straight to the build.
+  const gatedBuild = (fn) => {
+    if (userState === "new" && !otpVerified) {
+      pendingBuildRef.current = fn;
+      setShowAuth(true);
+    } else {
+      fn();
+    }
+  };
+
   // Maldives: no multi-city itinerary. Collect the choices and land on a quote
   // screen listing the shortlisted resort(s), passing dates/nights/meal along.
   const doBuildMaldives = () => {
@@ -259,29 +302,26 @@ export default function Build() {
     }, 1400);
   };
 
-  // ─── edit confirm (travellers / dates / route) → fork a new version ───
-  // Changing the route (or the trip length on the dates screen) is structural:
-  // it re-synthesises the itinerary and resets day/hotel swaps. A travellers- or
-  // dates-only change keeps the existing day plans and hotels.
+  // ─── Save the sequential edit → fork a new version (no confirmation) ───
+  // The walk ends on the Activities step, so the itinerary is rebuilt from the
+  // current dest / dates / route / activities. Day-option and hotel swaps reset
+  // because the plan is regenerated.
   const applyEdit = () => {
-    const nightsChanged = editTarget === "dates" && nights && routeNights(route) !== nights;
+    const nightsChanged = nights && routeNights(route) !== nights;
     const effRoute = nightsChanged ? recommendedRoute(dest, nights) : route;
-    const structural = editTarget === "route" || nightsChanged;
     const it = synthesizeItinerary({
       dest, nights: routeNights(effRoute), route: effRoute,
-      picksByCity: structural ? {} : picksFromBuilt(editBuilt),
-      vibes, startDate, party,
+      picksByCity, vibes, startDate, party,
       // Reuse a built trip's id; a curated edit mints a fresh (high) id so it
       // doesn't collide with the seed itinerary it forked from.
-      id: editBuilt.custom ? editBuilt.id : undefined,
+      id: editBuilt?.custom ? editBuilt.id : undefined,
     });
     it._vibes = vibes;
     const { versionId: newVer } = dealsCtx.forkVersion(editDealId, editVersionId);
-    const prev = editingVersion?.customizations || {};
     dealsCtx.updateDraft(editDealId, newVer, {
       customizations: {
-        selectedDayOptions: structural ? {} : (prev.selectedDayOptions || {}),
-        selectedHotels: structural ? {} : (prev.selectedHotels || {}),
+        selectedDayOptions: {},
+        selectedHotels: {},
         travelDates: { fromDate: startDate, nights: it.nights, travelers: travellers },
         builtItinerary: it,
       },
@@ -292,28 +332,37 @@ export default function Build() {
     navigate(`/itinerary/${it.id}?dealId=${editDealId}&versionId=${newVer}`, { replace: true });
   };
 
-  // Route step is select-only and gated: too few / too many nights block continue
-  // (the screen guides the user to fix nights or talk to the team instead).
+  // Route step is select-only. Short trips are allowed (a route is still shown
+  // and Continue stays enabled); only a too-long trip is routed to the team.
   const routeMinN = destMeta[dest]?.minNights || 4;
   const ROUTE_LONG = 14;
-  const routeStepOk = !!route?.length && targetNights >= routeMinN && targetNights <= ROUTE_LONG;
+  const routeStepOk = !!route?.length && targetNights <= ROUTE_LONG;
 
   // ─── primary CTA per step ───
-  const partyOk = party.kids === 0 && !party.solo;
+  // Couples only: groups must be an even number of adults (pairs of couples).
+  const partyOk = party.kids === 0 && !party.solo && (party.couples > 0 || party.adults % 2 === 0);
   const ctaFor = () => {
-    // Single-screen edit: the CTA on the active step saves a new version.
+    // Sequential edit: Continue through each editable step in order; the final
+    // step (Activities / Meal plan) saves a new version with no confirmation.
     if (editMode) {
-      const enabled = step === 1 ? partyOk : step === 2 ? (!!startDate && !!nights) : step === 3 ? routeStepOk : true;
-      return { label: "Save changes", onClick: () => setConfirmEdit(true), enabled };
+      const stepValid = step === 0 ? !!dest
+        : step === 1 ? partyOk
+        : step === 2 ? (!!startDate && !!nights)
+        : step === 3 ? (isMaldives ? (!!tier || !!pinnedResortId) : routeStepOk)
+        : true;
+      if (step >= 4) return { label: "Save changes", onClick: applyEdit, enabled: stepValid };
+      return { label: "Continue", onClick: goNext, enabled: stepValid };
     }
+    // Destination step: a sticky Select CTA once a place is chosen.
+    if (step === 0) return dest ? { label: `Select ${dest}`, onClick: goNext, enabled: true } : null;
     if (isMaldives) {
       switch (step) {
         case 1: return { label: "Continue", onClick: goNext, enabled: partyOk };
         case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
         case 3: return { label: "Continue", onClick: goNext, enabled: !!tier || !!pinnedResortId };
         case 4: return mealPrefs.size > 0
-          ? { label: "See my quote ✦", onClick: doBuildMaldives, enabled: true }
-          : { label: "Skip & see my quote", onClick: doBuildMaldives, enabled: true };
+          ? { label: "See my quote ✦", onClick: () => gatedBuild(doBuildMaldives), enabled: true }
+          : { label: "Skip & see my quote", onClick: () => gatedBuild(doBuildMaldives), enabled: true };
         default: return null;
       }
     }
@@ -322,8 +371,8 @@ export default function Build() {
       case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
       case 3: return { label: "Looks good, continue", onClick: goNext, enabled: routeStepOk };
       case 4: return picks.size > 0
-        ? { label: "Create my itinerary ✦", onClick: doBuild, enabled: true }
-        : { label: "Skip & build my trip", onClick: doBuild, enabled: true };
+        ? { label: "Create my itinerary ✦", onClick: () => gatedBuild(doBuild), enabled: true }
+        : { label: "Skip & build my trip", onClick: () => gatedBuild(doBuild), enabled: true };
       default: return null;
     }
   };
@@ -354,10 +403,11 @@ export default function Build() {
       ? (mealPrefs.size ? `${mealPrefs.size} pick${mealPrefs.size === 1 ? "" : "s"}` : null)  // Meal plan
       : (picks.size ? `${picks.size} pick${picks.size === 1 ? "" : "s"}` : null),             // Activities
   ];
-  // Any stage is tappable (including grey, upcoming ones) so the couple can jump
-  // around freely. Single-screen edit mode stays locked to its one step, and a
-  // pre-seeded destination keeps step 0 locked.
-  const canJump = (i) => !editMode && !(seedDest && i === 0);
+  // Sequential edit: tap back to any already-reached editable step (from the
+  // entry field up to the current step) to edit it again; forward still only via
+  // Continue, and steps before the entry stay locked. Outside edit, tapping a
+  // done stage jumps back; a pre-seeded destination keeps step 0 locked.
+  const canJump = (i) => editMode ? (i >= editFromStep && i <= step) : !(seedDest && i === 0);
   const jumpTo = (i) => { if (canJump(i)) setStep(i); };
   // Keep the current stage in view as the row scrolls.
   const stepBarRef = useRef(null);
@@ -365,6 +415,25 @@ export default function Build() {
     const el = stepBarRef.current?.children?.[step];
     el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [step]);
+
+  // Approach B: the wizard is open to everyone; identity is asked at the end.
+  // On "Create my itinerary", new users verify their mobile number (mandatory,
+  // no skip), then the generating splash runs and the itinerary is created.
+  if (showAuth) {
+    return (
+      <LoginV2
+        hideSkip
+        onComplete={() => {
+          setOtpVerified?.(true);
+          setShowAuth(false);
+          const fn = pendingBuildRef.current;
+          pendingBuildRef.current = null;
+          fn?.();
+        }}
+        validateOtp={(otp) => (otp === "0000" ? "Invalid OTP. Please try again." : null)}
+      />
+    );
+  }
 
   if (building) return <Building dest={dest} />;
 
@@ -382,7 +451,11 @@ export default function Build() {
             {STEP_LABELS.map((label, i) => {
               const done = i < step;
               const current = i === step;
-              const active = done || current;            // reached (coloured bar)
+              // Steps before the edit entry are locked (dimmed); the entry and
+              // steps up to the current one read as reached (coloured bar). A
+              // pre-seeded destination is fixed too, so it shows greyed out.
+              const locked = (editMode && i < editFromStep) || (!!seedDest && i === 0);
+              const active = !locked && (done || current); // reached (coloured bar)
               const jumpable = canJump(i);
               const val = stepSummary[i];
               return (
@@ -394,6 +467,7 @@ export default function Build() {
                   style={{
                     flexShrink: 0, padding: 0, border: "none", background: "none",
                     textAlign: "left", cursor: jumpable ? "pointer" : "default", fontFamily: "inherit",
+                    opacity: locked ? 0.4 : 1,
                   }}
                 >
                   <div style={{ height: 4, borderRadius: 4, background: active ? C.p600 : C.div, transition: "background .2s" }} />
@@ -408,7 +482,7 @@ export default function Build() {
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
-        {step === 0 && <StepDestination onOpen={setDetailDest} />}
+        {step === 0 && <StepDestination onOpen={setDetailDest} selected={dest} onSelect={chooseDest} />}
         {step === 1 && <StepParty party={party} setParty={setParty} onContinue={goNext} />}
         {step === 2 && (isMaldives
           ? <StepDatesMaldives dest={dest} startDate={startDate} setStartDate={setStartDate} nights={nights} setNights={setNights} />
@@ -441,11 +515,6 @@ export default function Build() {
       {detailDest && (
         <DestinationDetail dest={detailDest} onClose={() => setDetailDest(null)} onChoose={chooseDest} />
       )}
-
-      {/* Edit fork confirm (travellers / dates / cities) */}
-      {confirmEdit && (
-        <ConfirmEdit target={editTarget} onCancel={() => setConfirmEdit(false)} onConfirm={applyEdit} />
-      )}
     </div>
   );
 }
@@ -453,40 +522,52 @@ export default function Build() {
 // ════════════════════ Step 0: Destination ════════════════════
 // A compact grid of portrait cards (4+ visible, scroll for more). Each signals a
 // video and shows a one-line visa. Tapping opens a full-screen view.
-function StepDestination({ onOpen }) {
+function StepDestination({ onOpen, selected, onSelect }) {
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "16px 16px 10px" }}>
-        <h1 style={titleStyle}>Where to?</h1>
-        <p style={subStyle}>Tap a place to explore, then choose.</p>
+        <h1 style={titleStyle}>Select destination</h1>
+        <p style={subStyle}>Tap a destination to choose.</p>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 20px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 16px" }}>
+        {/* Bigger portrait photo cards. No video: tapping a card selects it and
+            moves straight to the next step. Visa and trending tags stay. */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {BUILD_DESTS.map((d) => {
             const soc = destSocial[d] || {};
+            const on = selected === d;
             return (
-              <button key={d} onClick={() => onOpen(d)} style={{
-                position: "relative", aspectRatio: "3 / 4", borderRadius: 18, overflow: "hidden",
-                padding: 0, border: "none", cursor: "pointer", background: C.div, textAlign: "left",
-              }}>
+              <div
+                key={d}
+                role="button"
+                onClick={() => onSelect(d)}
+                style={{
+                  position: "relative", aspectRatio: "3 / 4", borderRadius: 16, overflow: "hidden",
+                  cursor: "pointer", background: C.div,
+                  border: on ? `2.5px solid ${C.p600}` : "2.5px solid transparent",
+                  boxShadow: on ? "0 8px 22px rgba(253,1,79,0.28)" : "none",
+                }}
+              >
                 <img src={destHero(d)} alt={d} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 52%)" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 55%)" }} />
                 {soc.trending && (
                   <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,0.92)", color: C.sText, fontSize: 9.5, fontWeight: 800, padding: "3px 7px", borderRadius: 20, letterSpacing: ".3px" }}>🔥 TRENDING</span>
                 )}
-                <span style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", border: "1.5px solid rgba(255,255,255,0.7)" }}>
-                  <Play size={18} color="#fff" fill="#fff" style={{ marginLeft: 2 }} />
-                </span>
+                {on && (
+                  <span style={{ position: "absolute", top: 8, right: 8, width: 24, height: 24, borderRadius: "50%", background: C.p600, display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
+                    <Check size={14} color="#fff" strokeWidth={3} />
+                  </span>
+                )}
                 <div style={{ position: "absolute", left: 11, right: 11, bottom: 11 }}>
                   <p style={{ margin: 0, color: "#fff", fontSize: 17, fontWeight: 800, letterSpacing: "-0.2px" }}>{d}</p>
-                  <p style={{ margin: "2px 0 0", color: "rgba(255,255,255,0.88)", fontSize: 11, fontWeight: 600 }}>🛂 {visaShort(d)}</p>
+                  <p style={{ margin: "2px 0 0", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600 }}>🛂 {visaShort(d)}</p>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
-        <p style={{ textAlign: "center", color: C.inact, fontSize: 12.5, fontWeight: 600, margin: "20px 0 4px" }}>
-          That's all for now ✈️ more dreamy destinations landing soon.
+        <p style={{ textAlign: "center", color: C.inact, fontSize: 12, fontWeight: 600, margin: "14px 0 4px" }}>
+          More destinations landing soon ✈️
         </p>
       </div>
     </div>
@@ -553,6 +634,10 @@ function StepParty({ party, setParty, onContinue }) {
   // not-catered signals).
   const kidsBlocked = party.kids > 0;
   const soloBlocked = !!party.solo;
+  // Groups travel as couples: an odd adult count blocks Continue with a note.
+  const oddBlocked = isGroup && party.adults % 2 !== 0;
+  const [showCountList, setShowCountList] = useState(false);
+  const COUNT_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12];
   const cards = [
     { key: "couple", emoji: "💑", label: "2 Adults", on: party.couples === 1 && !kidsBlocked && !soloBlocked },
     { key: "group", emoji: "👯", label: "4 or More Adults", on: isGroup },
@@ -581,13 +666,46 @@ function StepParty({ party, setParty, onContinue }) {
               {c.on && <Check size={20} color={C.p600} strokeWidth={2.5} />}
             </button>
             {c.key === "group" && isGroup && (
-              <div style={{ marginTop: 10, border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", animation: "fadeUp 0.2s ease-out" }}>
-                <Stepper label="Travellers" value={party.adults} onChange={setAdults} min={4} />
+              <div style={{ marginTop: 10, border: `1px solid ${C.div}`, borderRadius: 14, animation: "fadeUp 0.2s ease-out" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 16px" }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>Travellers</span>
+                  <div style={{ position: "relative" }}>
+                    <button
+                      onClick={() => setShowCountList(v => !v)}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 10, background: C.white, border: `1.5px solid ${C.div}`, cursor: "pointer", fontFamily: "inherit", minWidth: 64, justifyContent: "center" }}
+                    >
+                      <span style={{ fontSize: 15, fontWeight: 700, color: C.head }}>{party.adults}</span>
+                      <ChevronDown size={14} color={C.head} style={{ transition: "transform 0.2s", transform: showCountList ? "rotate(180deg)" : "none" }} />
+                    </button>
+                    {showCountList && (
+                      <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 50, background: C.white, borderRadius: 12, border: `1px solid ${C.div}`, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "auto", width: 80, maxHeight: 240 }}>
+                        {COUNT_OPTIONS.map((n, idx) => (
+                          <button
+                            key={n}
+                            onClick={() => { setAdults(n); setShowCountList(false); }}
+                            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "12px 0", background: n === party.adults ? C.p100 : C.white, border: "none", cursor: "pointer", fontFamily: "inherit", borderBottom: idx < COUNT_OPTIONS.length - 1 ? `1px solid ${C.div}` : "none", fontSize: 15, fontWeight: n === party.adults ? 700 : 500, color: n === party.adults ? C.p600 : C.head }}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
         ))}
       </div>
+      {oddBlocked && (
+        <div style={{ marginTop: 14, padding: 16, borderRadius: 14, background: "linear-gradient(135deg, #FFF5F0 0%, #FFE4E8 100%)", border: "1px solid rgba(254,163,180,0.27)", animation: "fadeUp 0.3s ease-out" }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "#89123E", margin: "0 0 4px" }}>We're so sorry! 😔</p>
+          <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>
+            Right now, 30 Sundays only plans trips for couples, so the group needs an even number of travellers.
+          </p>
+          <p style={{ fontSize: 13, color: C.p600, fontWeight: 600, margin: "8px 0 0" }}>Pick an even number and let's plan something unforgettable. 💕</p>
+        </div>
+      )}
       {kidsBlocked && (
         <div style={{ marginTop: 14, padding: 16, borderRadius: 14, background: "linear-gradient(135deg, #FFF5F0 0%, #FFE4E8 100%)", border: "1px solid rgba(254,163,180,0.27)", animation: "fadeUp 0.3s ease-out" }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#89123E", margin: "0 0 4px" }}>We're so sorry! 😔</p>
@@ -722,28 +840,37 @@ function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
         })}
       </div>
 
-      {/* range summary */}
-      <div style={{ marginTop: 20, padding: "14px 16px", borderRadius: 14, background: C.bg, border: `1px solid ${C.div}` }}>
-        {hasRange ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>{shortDate(sel)} – {shortDate(endD)}</span>
-            <span style={{ fontSize: 15, fontWeight: 800, color: C.p600 }}>{nights} nights</span>
-          </div>
-        ) : (
-          <span style={{ fontSize: 13, fontWeight: 600, color: C.sub }}>
-            {startDate ? `Starts ${shortDate(sel)} · tap your return day` : "Tap a date to begin"}
-          </span>
-        )}
+      {/* Date range + nights + fit note as one block, pinned to the bottom of
+          the scroll area so it stays visible on small screens while the
+          calendar scrolls behind it. */}
+      <div style={{ position: "sticky", bottom: 0, margin: "20px -16px 0", padding: "10px 16px 0", background: C.white }}>
+        <div style={{ padding: "14px 16px", borderRadius: 14, background: C.bg, border: `1px solid ${C.div}` }}>
+          {hasRange ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>{shortDate(sel)} – {shortDate(endD)}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: C.p600 }}>{nights} nights</span>
+              </div>
+              {nights >= minN ? (
+                <p style={{ margin: "8px 0 0", fontSize: 12, fontWeight: 600, color: C.sText }}>
+                  ✨ Perfect length for {dest}. Enough time to settle in and enjoy every bit, you'll love this trip.
+                </p>
+              ) : (
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: C.wText }}>
+                  💡 We recommend at least {minN} nights for {dest}. A couple more and you'll enjoy it fully.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.sub }}>
+                {startDate ? `Starts ${shortDate(sel)} · tap your return day` : "Tap a date to begin"}
+              </span>
+              <p style={{ margin: "8px 0 0", fontSize: 12, color: C.sub }}>💡 We recommend at least {minN} nights for {dest}.</p>
+            </>
+          )}
+        </div>
       </div>
-      {hasRange && nights >= minN ? (
-        <p style={{ margin: "10px 2px 0", fontSize: 12, fontWeight: 600, color: C.sText }}>
-          ✨ Perfect length for {dest}. Enough time to settle in and enjoy every bit, you'll love this trip.
-        </p>
-      ) : (
-        <p style={{ margin: "10px 2px 0", fontSize: 12, color: hasRange ? C.wText : C.sub }}>
-          💡 We recommend at least {minN} nights for {dest}.{hasRange && " A couple more and you'll enjoy it fully."}
-        </p>
-      )}
     </div>
   );
 }
@@ -1003,6 +1130,21 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
   // route (variant #0, same order) is always visible under the default filter.
   const [filterCities, setFilterCities] = useState(() => areas.slice(0, 2).map(a => a.city));
   const [leadSent, setLeadSent] = useState(false);
+  // Region chips can wrap past two rows; collapse the extra rows behind a
+  // "View more" toggle so the routes below stay reachable.
+  const [regionsExpanded, setRegionsExpanded] = useState(false);
+  const regionChipsRef = useRef(null);
+  const [regionsOverflow, setRegionsOverflow] = useState(false);
+  const REGION_COLLAPSED_MAX = 40; // one row of chips; more rows collapse behind View more
+  useEffect(() => {
+    const measure = () => {
+      const el = regionChipsRef.current;
+      if (el) setRegionsOverflow(el.scrollHeight > REGION_COLLAPSED_MAX + 4);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [areas.length]);
   // Roughly two nights per region is the floor for each stop to feel real.
   const tooManyRegions = filterCities.length > Math.floor((nights || routeNights(route) || 7) / 2);
 
@@ -1171,19 +1313,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
       <div ref={routesRef}>
       <p style={sectionHead}>Choose your route for {n} Night{n > 1 ? "s" : ""}</p>
 
-      {tooShort ? (
-        <div style={{ padding: 16, borderRadius: 14, background: C.p100, border: `1px solid ${C.p300}` }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>{dest} shines with at least {minN} nights</p>
-          <p style={{ margin: "6px 0 14px", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>You've picked {n} night{n > 1 ? "s" : ""}. Add a couple more and we'll unlock routes that do {dest} justice.</p>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.white, borderRadius: 12, padding: "8px 12px" }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>{n} night{n > 1 ? "s" : ""}</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <button onClick={() => bumpNights(-1)} disabled={n <= 1} style={{ ...roundBtn, opacity: n <= 1 ? 0.3 : 1 }} aria-label="Fewer nights"><Minus size={16} color={C.head} /></button>
-              <button onClick={() => bumpNights(1)} style={{ ...roundBtn, border: "none", background: C.p600 }} aria-label="More nights"><Plus size={16} color="#fff" /></button>
-            </div>
-          </div>
-        </div>
-      ) : tooLong ? (
+      {tooLong ? (
         leadSent ? (
           <div style={{ padding: 16, borderRadius: 14, background: C.sBg || "#ECFDF3", border: `1px solid ${C.sBorder || "#C0E5D5"}` }}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>Thanks, you're in good hands ✨</p>
@@ -1201,7 +1331,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
       ) : (
         <>
           {/* Region filter pills — multi-select, 2 on by default, drive which routes show */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "0 0 14px" }}>
+          <div ref={regionChipsRef} style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "0 0 8px", maxHeight: regionsExpanded ? "none" : REGION_COLLAPSED_MAX, overflow: "hidden" }}>
             {areas.map(a => {
               const on = filterCities.includes(a.city);
               return (
@@ -1215,7 +1345,29 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
               );
             })}
           </div>
+          {regionsOverflow && (
+            <button onClick={() => setRegionsExpanded(v => !v)} style={{ display: "inline-flex", alignItems: "center", gap: 3, margin: "0 0 14px", padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, color: C.p600 }}>
+              {regionsExpanded ? "View less" : "View more"}
+              <ChevronDown size={14} color={C.p600} style={{ transition: "transform 0.2s", transform: regionsExpanded ? "rotate(180deg)" : "none" }} />
+            </button>
+          )}
 
+          {/* Below the recommended nights: keep the routes visible, with a soft
+              nudge (and a stepper) to add nights. Sits under the region chips
+              and above the suggested routes. */}
+          {tooShort && (
+            <div style={{ padding: 14, borderRadius: 14, background: C.p100, border: `1px solid ${C.p300}`, margin: "0 0 14px" }}>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>{dest} shines with at least {minN} nights</p>
+              <p style={{ margin: "6px 0 12px", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>You've picked {n} night{n > 1 ? "s" : ""}. Add a couple more for a fuller trip, or pick a shorter route below.</p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.white, borderRadius: 12, padding: "8px 12px" }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>{n} night{n > 1 ? "s" : ""}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <button onClick={() => bumpNights(-1)} disabled={n <= 1} style={{ ...roundBtn, opacity: n <= 1 ? 0.3 : 1 }} aria-label="Fewer nights"><Minus size={16} color={C.head} /></button>
+                  <button onClick={() => bumpNights(1)} style={{ ...roundBtn, border: "none", background: C.p600 }} aria-label="More nights"><Plus size={16} color="#fff" /></button>
+                </div>
+              </div>
+            </div>
+          )}
           {shownRoutes.length === 0 ? (
             <p style={{ textAlign: "center", color: C.sub, fontSize: 13, margin: "24px 0" }}>No routes include those regions. Try fewer.</p>
           ) : (
@@ -1242,22 +1394,6 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
 
       </div>
 
-      {/* Sticky selected-route summary — pinned above Continue; hides once the
-          routes section is on screen. Tap to jump to the routes list. */}
-      {!tooShort && !tooLong && !routesInView && (
-        <div
-          onClick={() => routesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          style={{ position: "sticky", bottom: 0, zIndex: 5, margin: "20px -16px -24px", padding: "10px 16px calc(10px + env(safe-area-inset-bottom))", background: C.white, borderTop: `1px solid ${C.div}`, boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: C.inact, letterSpacing: ".3px" }}>YOUR ROUTE</p>
-            <p style={{ margin: "1px 0 0", fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{route.map(s => `${s.city} ${s.n}N`).join(" · ")}</p>
-          </div>
-          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12.5, fontWeight: 700, color: C.p600, border: `1px solid ${C.p300}`, borderRadius: 20, padding: "6px 12px" }}>
-            <ChevronDown size={13} color={C.p600} /> Change
-          </span>
-        </div>
-      )}
 
       {cityView && <CityDetail dest={dest} city={cityView} onClose={() => setCityView(null)} />}
       {mapOpen && <RouteMapView dest={dest} nights={n} route={route} setRoute={setRoute} onClose={() => setMapOpen(false)} />}
@@ -1634,7 +1770,7 @@ function Building({ dest }) {
 }
 
 function ConfirmEdit({ target, onCancel, onConfirm }) {
-  const what = target === "dates" ? "your dates" : target === "travellers" ? "your travellers" : "your cities";
+  const what = target === "all" ? "your trip" : target === "dates" ? "your dates" : target === "travellers" ? "your travellers" : "your cities";
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 70, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "flex-end" }} onClick={onCancel}>
       <div onClick={e => e.stopPropagation()} style={{ width: "100%", background: C.white, borderRadius: "20px 20px 0 0", padding: "22px 20px calc(22px + env(safe-area-inset-bottom))" }}>
