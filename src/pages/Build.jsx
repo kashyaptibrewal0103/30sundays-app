@@ -343,14 +343,16 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   const partyOk = party.kids === 0 && !party.solo && (party.couples > 0 || party.adults % 2 === 0);
   const ctaFor = () => {
     // Sequential edit: Continue through each editable step in order; the final
-    // step (Activities / Meal plan) saves a new version with no confirmation.
+    // step saves a new version with no confirmation. Activities is not part of
+    // the edit flow, so Route is the last step (Maldives ends on Meal plan).
     if (editMode) {
       const stepValid = step === 0 ? !!dest
         : step === 1 ? partyOk
         : step === 2 ? (!!startDate && !!nights)
         : step === 3 ? (isMaldives ? (!!tier || !!pinnedResortId) : routeStepOk)
         : true;
-      if (step >= 4) return { label: "Save changes", onClick: applyEdit, enabled: stepValid };
+      const editLast = isMaldives ? 4 : 3;
+      if (step >= editLast) return { label: "Save changes", onClick: applyEdit, enabled: stepValid };
       return { label: "Continue", onClick: goNext, enabled: stepValid };
     }
     // Destination step: a sticky Select CTA once a place is chosen.
@@ -448,7 +450,8 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
           {/* Clickable stage stepper: name + a concise value; tap a done step to
               jump back. Scrolls sideways so full stage names stay readable. */}
           <div ref={stepBarRef} className="hide-scrollbar" style={{ flex: 1, display: "flex", gap: 10, minWidth: 0, overflowX: "auto" }}>
-            {STEP_LABELS.map((label, i) => {
+            {/* Activities is not part of the edit flow (non-Maldives ends on Route). */}
+            {(editMode && !isMaldives ? STEP_LABELS.slice(0, 4) : STEP_LABELS).map((label, i) => {
               const done = i < step;
               const current = i === step;
               // Steps before the edit entry are locked (dimmed); the entry and

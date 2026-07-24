@@ -766,7 +766,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               { target: "travellers", icon: <Users size={18} color={C.p600} />, label: "Travellers", value: `${travellers} traveller${travellers > 1 ? "s" : ""}` },
               { target: "dates", icon: <Calendar size={18} color={C.p600} />, label: "Travel dates", value: dateLabel },
               { target: "route", icon: <ArrowLeftRight size={18} color={C.p600} />, label: "Route", value: it.days.map(d => d.city).filter((c, i, a) => a.indexOf(c) === i).join(" · ") },
-              { target: "activities", icon: <Sparkles size={18} color={C.p600} />, label: "Activities", value: "Day plans & experiences" },
             ].map((row) => (
               <button key={row.target} onClick={() => goEdit(row.target)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 4px", border: "none", borderTop: `1px solid ${C.bg}`, background: "none", cursor: "pointer", fontFamily: "inherit" }}>
                 <span style={{ width: 38, height: 38, borderRadius: 10, background: C.p100, display: "grid", placeItems: "center", flexShrink: 0 }}>{row.icon}</span>
