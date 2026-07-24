@@ -710,7 +710,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             /* Explore: we don't have the customer's dates/party yet — prompt to add (inline, no login) */
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {[{ icon: <Calendar size={12} />, label: "Add travel dates" }, { icon: <Users size={12} />, label: "Add travellers" }].map(c => (
-                <button key={c.label} onClick={() => navigate(`/build?dest=${encodeURIComponent(it.dest)}`)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: C.p600, border: `1px dashed ${C.p300}`, borderRadius: 20, padding: "5px 10px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
+                <button key={c.label} onClick={() => navigate(`/build?dest=${encodeURIComponent(it.dest)}&skipActivities=1`)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: C.p600, border: `1px dashed ${C.p300}`, borderRadius: 20, padding: "5px 10px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
                   {c.icon} {c.label}
                 </button>
               ))}
@@ -1627,7 +1627,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               </div>
               <p style={{ fontSize: 11, color: C.inact, margin: 0 }}>Total for {travellers} · incl. GST & TCS{hasChosenFlights ? " & flights" : ""}</p>
             </div>
-            <Link to={`/build?dest=${encodeURIComponent(it.dest)}`} style={{
+            <Link to={`/build?dest=${encodeURIComponent(it.dest)}&skipActivities=1`} style={{
               display: "flex", alignItems: "center", gap: 6, padding: "13px 20px", borderRadius: 12,
               background: C.p600, color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
               boxShadow: "0 4px 16px rgba(227,27,83,0.3)",

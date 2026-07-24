@@ -160,6 +160,10 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   // destination pick + intro and start on the next step with it already chosen.
   const destParam = params.get("dest");
   const seedDest = !editMode && destParam && destMeta[destParam] ? destParam : null;
+  // Entering from a ready-made itinerary (Add dates / travellers / Plan my
+  // trip): the trip already has day plans, so skip the Activities step and
+  // finish on Route.
+  const skipActivities = !!seedDest && params.get("skipActivities") === "1";
 
   const [step, setStep] = useState(editMode ? editStep : (seedDest ? 1 : 0));
   const [dest, setDest] = useState(editBuilt?.dest || seedDest || null);
@@ -371,7 +375,9 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     switch (step) {
       case 1: return { label: "Continue", onClick: goNext, enabled: partyOk };
       case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
-      case 3: return { label: "Looks good, continue", onClick: goNext, enabled: routeStepOk };
+      case 3: return skipActivities
+        ? { label: "Create my itinerary ✦", onClick: () => gatedBuild(doBuild), enabled: routeStepOk }
+        : { label: "Looks good, continue", onClick: goNext, enabled: routeStepOk };
       case 4: return picks.size > 0
         ? { label: "Create my itinerary ✦", onClick: () => gatedBuild(doBuild), enabled: true }
         : { label: "Skip & build my trip", onClick: () => gatedBuild(doBuild), enabled: true };
@@ -450,8 +456,9 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
           {/* Clickable stage stepper: name + a concise value; tap a done step to
               jump back. Scrolls sideways so full stage names stay readable. */}
           <div ref={stepBarRef} className="hide-scrollbar" style={{ flex: 1, display: "flex", gap: 10, minWidth: 0, overflowX: "auto" }}>
-            {/* Activities is not part of the edit flow (non-Maldives ends on Route). */}
-            {(editMode && !isMaldives ? STEP_LABELS.slice(0, 4) : STEP_LABELS).map((label, i) => {
+            {/* Activities is dropped for the edit flow and the ready-made-itinerary
+                flow (both non-Maldives end on Route). */}
+            {((editMode || skipActivities) && !isMaldives ? STEP_LABELS.slice(0, 4) : STEP_LABELS).map((label, i) => {
               const done = i < step;
               const current = i === step;
               // Steps before the edit entry are locked (dimmed); the entry and
