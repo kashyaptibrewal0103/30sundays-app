@@ -532,7 +532,12 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
 // ════════════════════ Step 0: Destination ════════════════════
 // A compact grid of portrait cards (4+ visible, scroll for more). Each signals a
 // video and shows a one-line visa. Tapping opens a full-screen view.
+const DEST_FLAGS = { Bali: "🇮🇩", Vietnam: "🇻🇳", Thailand: "🇹🇭", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿", Georgia: "🇬🇪", Azerbaijan: "🇦🇿", Kazakhstan: "🇰🇿", Europe: "🇪🇺", Mauritius: "🇲🇺" };
+const visaTone = (v) => (/e-?visa|eta/i.test(v) ? "blue" : "green");
+
 function StepDestination({ onOpen, selected, onSelect }) {
+  // Photo rows: real destination image + name + visa tag (+ trending). One tap
+  // selects and moves straight to the next step. Quick to scan, no video.
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "16px 16px 10px" }}>
@@ -540,43 +545,45 @@ function StepDestination({ onOpen, selected, onSelect }) {
         <p style={subStyle}>Tap a destination to choose.</p>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 16px" }}>
-        {/* Bigger portrait photo cards. No video: tapping a card selects it and
-            moves straight to the next step. Visa and trending tags stay. */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {BUILD_DESTS.map((d) => {
             const soc = destSocial[d] || {};
             const on = selected === d;
+            const visa = visaShort(d);
+            const pill = visaTone(visa) === "blue"
+              ? { color: "#1570EF", background: "#EAF2FE" }
+              : { color: "#067647", background: "#E7F4EC" };
             return (
-              <div
+              <button
                 key={d}
-                role="button"
                 onClick={() => onSelect(d)}
                 style={{
-                  position: "relative", aspectRatio: "3 / 4", borderRadius: 16, overflow: "hidden",
-                  cursor: "pointer", background: C.div,
-                  border: on ? `2.5px solid ${C.p600}` : "2.5px solid transparent",
-                  boxShadow: on ? "0 8px 22px rgba(253,1,79,0.28)" : "none",
+                  display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
+                  padding: 10, borderRadius: 14, cursor: "pointer", fontFamily: "inherit",
+                  background: on ? C.p100 : C.white,
+                  border: `1.5px solid ${on ? C.p600 : C.div}`,
                 }}
               >
-                <img src={destHero(d)} alt={d} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 55%)" }} />
-                {soc.trending && (
-                  <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,0.92)", color: C.sText, fontSize: 9.5, fontWeight: 800, padding: "3px 7px", borderRadius: 20, letterSpacing: ".3px" }}>🔥 TRENDING</span>
-                )}
-                {on && (
-                  <span style={{ position: "absolute", top: 8, right: 8, width: 24, height: 24, borderRadius: "50%", background: C.p600, display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
-                    <Check size={14} color="#fff" strokeWidth={3} />
-                  </span>
-                )}
-                <div style={{ position: "absolute", left: 11, right: 11, bottom: 11 }}>
-                  <p style={{ margin: 0, color: "#fff", fontSize: 17, fontWeight: 800, letterSpacing: "-0.2px" }}>{d}</p>
-                  <p style={{ margin: "2px 0 0", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600 }}>🛂 {visaShort(d)}</p>
+                <img src={destHero(d)} alt={d} style={{ width: 60, height: 60, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px" }}>
+                    {DEST_FLAGS[d] ? `${DEST_FLAGS[d]} ` : ""}{d}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                    <span style={{ ...pill, fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap" }}>{visa}</span>
+                    {soc.trending && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "#9A6B00", background: "#FBEFD3", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, textTransform: "uppercase", letterSpacing: ".3px" }}>🔥 Trending</span>
+                    )}
+                  </div>
                 </div>
-              </div>
+                {on
+                  ? <span style={{ width: 24, height: 24, borderRadius: "50%", background: C.p600, display: "grid", placeItems: "center", flexShrink: 0 }}><Check size={14} color="#fff" strokeWidth={3} /></span>
+                  : <ChevronRight size={20} color={C.inact} style={{ flexShrink: 0 }} />}
+              </button>
             );
           })}
         </div>
-        <p style={{ textAlign: "center", color: C.inact, fontSize: 12, fontWeight: 600, margin: "14px 0 4px" }}>
+        <p style={{ textAlign: "center", color: C.inact, fontSize: 12, fontWeight: 600, margin: "16px 0 4px" }}>
           More destinations landing soon ✈️
         </p>
       </div>
