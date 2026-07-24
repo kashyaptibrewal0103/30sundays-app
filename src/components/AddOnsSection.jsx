@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { IdCard, Banknote, ShieldCheck, X as XIcon, Check, FileText, ExternalLink, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
+import { IdCard, Banknote, ShieldCheck, X as XIcon, Check, FileText, ExternalLink, ChevronDown, ChevronUp, ChevronRight, MoreVertical } from "lucide-react";
 import { C } from "../data";
 
 const ADD_ONS = [
@@ -330,30 +330,59 @@ function StatusChip({ tone, icon, text }) {
   );
 }
 
+// ─── Demo state switcher (3-dot), mirrors the Visa section ───
+function AddOnStateMenu({ mode, setMode }) {
+  const [open, setOpen] = useState(false);
+  const options = [{ k: "added", label: "Added" }, { k: "notadded", label: "Not added" }];
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <button onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }} aria-label="Change state"
+        style={{ width: 28, height: 28, borderRadius: 8, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <MoreVertical size={18} color="#666C99" />
+      </button>
+      {open && (
+        <>
+          <div onClick={(e) => { e.stopPropagation(); setOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
+          <div style={{ position: "absolute", top: 30, right: 0, zIndex: 40, background: C.white, border: `1px solid ${C.div}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden", minWidth: 132 }}>
+            {options.map((o) => (
+              <button key={o.k} onClick={(e) => { e.stopPropagation(); setMode(o.k); setOpen(false); }}
+                style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", background: mode === o.k ? C.p100 : "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: mode === o.k ? 700 : 500, color: mode === o.k ? C.p600 : C.head }}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Accordion line item (used in the collapsible variant) ───
-// Header (icon + label + subtitle + status chip + chevron) is always visible;
-// details expand inline below. No surrounding box - it reads as a plain list.
-function AddOnAccordionItem({ label, subtitle, Icon, statusChip, open, onToggle, showDivider, children }) {
+// Header (icon + label + subtitle + status chip + menu + chevron) is always
+// visible; details expand inline below. Reads as a plain list, no box.
+function AddOnAccordionItem({ label, subtitle, Icon, statusChip, menu, open, onToggle, showDivider, children }) {
   return (
     <div style={{ borderTop: showDivider ? "1px solid #E9EAEB" : "none" }}>
-      <button
-        onClick={onToggle}
-        style={{
-          width: "100%", display: "flex", alignItems: "center", gap: 12,
-          padding: "16px 0", background: "none", border: "none",
-          cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-        }}
-      >
-        <span style={{ width: 44, height: 44, borderRadius: 12, background: "#FFE6ED", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Icon size={22} color="#FD014F" strokeWidth={1.8} />
-        </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>{label}</div>
-          {subtitle && <div style={{ fontSize: 12.5, color: "#666C99", lineHeight: "17px", marginTop: 1 }}>{subtitle}</div>}
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 0" }}>
+        <button
+          onClick={onToggle}
+          aria-expanded={open}
+          style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 12, padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+        >
+          <span style={{ width: 44, height: 44, borderRadius: 12, background: "#FFE6ED", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Icon size={22} color="#FD014F" strokeWidth={1.8} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>{label}</div>
+            {subtitle && <div style={{ fontSize: 12.5, color: "#666C99", lineHeight: "17px", marginTop: 1 }}>{subtitle}</div>}
+          </div>
+        </button>
         {statusChip}
-        {open ? <ChevronUp size={20} color="#666C99" style={{ flexShrink: 0 }} /> : <ChevronDown size={20} color="#666C99" style={{ flexShrink: 0 }} />}
-      </button>
+        {menu}
+        <button onClick={onToggle} aria-label={open ? "Collapse" : "Expand"} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}>
+          {open ? <ChevronUp size={20} color="#666C99" /> : <ChevronDown size={20} color="#666C99" />}
+        </button>
+      </div>
       {open && <div style={{ padding: "0 0 18px 56px" }}>{children}</div>}
     </div>
   );
@@ -371,6 +400,12 @@ export default function AddOnsSection({ addOns, travelers = [], collapsible = fa
     forex: false,
     insurance: !!addOns?.insurance?.purchased,
   });
+  // Demo state per add-on (collapsible variant), switchable via the 3-dot menu
+  // so both the added and not-added cases can be previewed.
+  const [modes, setModes] = useState({
+    forex: addOns?.forex?.purchased ? "added" : "notadded",
+    insurance: addOns?.insurance?.purchased ? "added" : "notadded",
+  });
 
   const sheets = (
     <>
@@ -386,11 +421,10 @@ export default function AddOnsSection({ addOns, travelers = [], collapsible = fa
       forex: "Multi-currency travel card",
       insurance: "Medical, cancellation and baggage cover",
     };
-    const chipFor = (key) => {
-      if (key === "forex") return <StatusChip tone="gray" text="Not added" />;
-      if (addOns?.[key]?.purchased) return <StatusChip tone="green" icon={<Check size={12} color="#2E7D52" strokeWidth={3} />} text="Added" />;
-      return <StatusChip tone="gray" text="Not added" />;
-    };
+    const isAdded = (key) => modes[key] === "added";
+    const chipFor = (key) => isAdded(key)
+      ? <StatusChip tone="green" icon={<Check size={12} color="#2E7D52" strokeWidth={3} />} text="Added" />
+      : <StatusChip tone="gray" text="Not added" />;
 
     const primaryBtn = { marginTop: 14, width: "100%", padding: "12px 16px", borderRadius: 10, background: "#FD014F", color: "#fff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" };
     const secondaryBtn = { marginTop: 14, width: "100%", padding: "12px 16px", borderRadius: 10, background: C.white, color: "#FD014F", fontSize: 14, fontWeight: 600, border: "1.5px solid #FD014F", cursor: "pointer", fontFamily: "inherit" };
@@ -418,7 +452,7 @@ export default function AddOnsSection({ addOns, travelers = [], collapsible = fa
         );
       }
       if (key === "insurance") {
-        if (addOns?.insurance?.purchased) {
+        if (isAdded("insurance")) {
           return (
             <>
               <p style={detailText}>Your travel policy is active, covering medical, cancellation and baggage.</p>
@@ -435,6 +469,20 @@ export default function AddOnsSection({ addOns, travelers = [], collapsible = fa
               <li>Baggage loss: $500</li>
             </ul>
             <button style={primaryBtn} onClick={() => alert("Get insurance - add 30 Sundays Travel One to your trip.")}>Get insurance</button>
+          </>
+        );
+      }
+      // Forex
+      if (isAdded("forex")) {
+        return (
+          <>
+            <p style={detailText}>Your multi-currency forex card is active and loaded, ready to spend abroad with zero markup.</p>
+            <ul style={detailList}>
+              <li>Loaded currencies: USD, THB, EUR</li>
+              <li>Zero markup on conversions</li>
+              <li>Works at POS and ATMs worldwide</li>
+            </ul>
+            <DocumentRow available={Boolean(addOns?.forex?.documentUrl)} url={addOns?.forex?.documentUrl} label="Forex card" meta="Balance and card details" />
           </>
         );
       }
@@ -462,6 +510,7 @@ export default function AddOnsSection({ addOns, travelers = [], collapsible = fa
               subtitle={SUBTITLES[key]}
               Icon={Icon}
               statusChip={chipFor(key)}
+              menu={<AddOnStateMenu mode={modes[key]} setMode={(m) => setModes((o) => ({ ...o, [key]: m }))} />}
               open={!!openItems[key]}
               onToggle={() => setOpenItems((o) => ({ ...o, [key]: !o[key] }))}
               showDivider={i > 0}
