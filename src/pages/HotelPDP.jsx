@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { Star, ChevronUp, ChevronDown, UtensilsCrossed, ArrowLeftRight } from "lucide-react";
+import { Star, ChevronUp, ChevronDown, UtensilsCrossed, ArrowLeftRight, Sparkles, Check } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice, getHotelReviews } from "../data/hotelData";
 import { getMauritiusHotel } from "../data/mauritiusData";
@@ -17,6 +17,8 @@ export default function HotelPDP() {
   const dealsCtx = useDeals();
   const [showCurrentDetails, setShowCurrentDetails] = useState(false); // expand current-hotel in the bar
   const [confirmReplace, setConfirmReplace] = useState(false); // warning popup
+  const [showUpgrade, setShowUpgrade] = useState(false); // upgrade details sheet
+  const [confirmUpgrade, setConfirmUpgrade] = useState(false); // upgrade confirmation
 
   const itinerary = allItineraries.find(i => i.id === Number(itineraryId)) || dealsCtx.findCustomItinerary(Number(itineraryId), versionId);
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
@@ -56,15 +58,33 @@ export default function HotelPDP() {
 
   const hotelsQS = `?current=${encodeURIComponent(currentHotelId || "")}${dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : ""}`;
 
-  // Confirm → write the hotel onto the copy (create one if needed) + return.
-  const doReplace = () => {
-    if (!selectedRoom) return;
+  // The single upgrade offered on this stay: the cheapest 5-star option in the
+  // same city that isn't the hotel already shown. Only when viewing your own
+  // (sub-5-star) hotel. No "upgrade all" here — this is one stay only.
+  const upgradeHotel = isCurrentHotel && hotel.stars < 5
+    ? hotels.filter(h => h.id !== hotel.id && h.stars >= 5)
+            .sort((a, b) => a.rooms[0].pricePerNight - b.rooms[0].pricePerNight)[0] || null
+    : null;
+  const upgradeRoom = upgradeHotel?.rooms?.[0] || null;
+  const upgradeDelta = upgradeRoom ? (upgradeRoom.pricePerNight - currentRoomPrice) * nights : 0;
+  const upgradeTotal = upgradeRoom ? upgradeRoom.pricePerNight * nights : 0;
+  // Hotel names come from a destination-wide pool, so some carry another city
+  // (e.g. "Pan Pacific Hanoi" on a Hoi An stay). Drop a trailing city word so
+  // the upgrade reads for the stay the user is on.
+  const stripCity = (name) => (name || "").replace(/\s+(Hanoi|Ha Long|Hoi An|Da Nang|Bangkok|Phuket|Krabi|Chiang Mai|Bali|Ubud|Seminyak|Canggu|Sanur|Nusa Dua)$/i, "").trim();
+  const upgradeName = stripCity(upgradeHotel?.name);
+
+  // Write a chosen hotel+room onto the copy (create one if needed) + return.
+  // Shared by the room-replace flow and the upgrade flow, so both land in the
+  // deal's selectedHotels and surface in the itinerary's "changes" bar.
+  const applyStay = (h, room, nameOverride) => {
+    const nm = nameOverride || h.name;
     const stay = {
-      hotelId: hotel.id, hotelName: hotel.name,
-      roomId: selectedRoom.id, roomName: selectedRoom.name, mealPlan: selectedRoom.mealPlan,
-      image: hotel.images[0].url, stars: hotel.stars, bookingScore: hotel.bookingScore,
-      neighbourhood: hotel.neighbourhood, pricePerNight: selectedRoom.pricePerNight, nights,
-      priceDelta: storedDelta,
+      hotelId: h.id, hotelName: nm,
+      roomId: room.id, roomName: room.name, mealPlan: room.mealPlan,
+      image: h.images[0].url, stars: h.stars, bookingScore: h.bookingScore,
+      neighbourhood: h.neighbourhood, pricePerNight: room.pricePerNight, nights,
+      priceDelta: (room.pricePerNight - basePrice) * nights,
     };
     let did = dealId, vid = versionId;
     if (dealId && versionId) {
@@ -85,8 +105,10 @@ export default function HotelPDP() {
       });
       did = created.dealId; vid = created.versionId;
     }
-    navigate(`/itinerary/${itinerary.id}?dealId=${did}&versionId=${vid}&toast=hotel&h=${encodeURIComponent(hotel.name)}`);
+    navigate(`/itinerary/${itinerary.id}?dealId=${did}&versionId=${vid}&toast=hotel&h=${encodeURIComponent(nm)}`);
   };
+  const doReplace = () => { if (selectedRoom) applyStay(hotel, selectedRoom); };
+  const doUpgrade = () => { if (upgradeHotel && upgradeRoom) applyStay(upgradeHotel, upgradeRoom, upgradeName); };
 
   // Stay summary card (dates + travellers) — booking context only.
   const stayNode = (
@@ -98,8 +120,10 @@ export default function HotelPDP() {
     </div>
   );
 
-  // "Change hotel" ingress, shown right after the Select room section when the
-  // user is viewing their own hotel. Opens the alternatives list.
+  // "Change hotel" ingress + a "View hotel upgrade" ingress just below it,
+  // shown right after the Select room section when the user is viewing their
+  // own hotel. Change hotel opens the alternatives list; View upgrade opens the
+  // single 5-star upgrade for this stay.
   const changeHotelNode = isCurrentHotel ? (
     <div style={{ margin: "16px 16px 0" }}>
       <button
@@ -108,6 +132,26 @@ export default function HotelPDP() {
       >
         <ArrowLeftRight size={15} /> Change hotel
       </button>
+
+      {upgradeHotel && (
+        <div
+          onClick={() => setShowUpgrade(true)}
+          style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 11, padding: "12px 14px", borderRadius: 12, border: "1px solid #F5D98B", background: "linear-gradient(135deg, #FFFBEF 0%, #FDF3D6 100%)", cursor: "pointer" }}
+        >
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: "#FBE7B8", display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <Sparkles size={16} color="#B8860B" />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: C.head, display: "flex", alignItems: "center", gap: 3 }}>
+              Upgrade to 5<Star size={10} fill="#F5A623" stroke="#F5A623" strokeWidth={1.5} /> hotel
+            </p>
+            <p style={{ margin: "2px 0 0", fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {upgradeName} · <span style={{ color: "#B8860B", fontWeight: 600 }}>+₹{formatHotelPrice(upgradeDelta)}</span>
+            </p>
+          </div>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: "#B8860B", whiteSpace: "nowrap", flexShrink: 0 }}>View upgrade</span>
+        </div>
+      )}
     </div>
   ) : null;
 
@@ -183,8 +227,10 @@ export default function HotelPDP() {
     </div>
   );
 
-  // Replace-hotel confirmation.
-  const overlay = confirmReplace && (
+  // Replace-hotel confirmation + upgrade sheet + upgrade confirmation.
+  const overlay = (
+    <>
+    {confirmReplace && (
     <div style={{ position: "absolute", inset: 0, zIndex: 120, display: "flex", alignItems: "flex-end" }}>
       <div onClick={() => setConfirmReplace(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
       <div style={{ position: "relative", width: "100%", background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 18px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 32px rgba(0,0,0,0.18)" }}>
@@ -221,6 +267,83 @@ export default function HotelPDP() {
         </button>
       </div>
     </div>
+    )}
+
+    {showUpgrade && upgradeHotel && (
+    <div style={{ position: "absolute", inset: 0, zIndex: 120, display: "flex", alignItems: "flex-end" }}>
+      <div onClick={() => setShowUpgrade(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
+      <div style={{ position: "relative", width: "100%", background: C.white, borderRadius: "20px 20px 0 0", padding: "18px 18px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 32px rgba(0,0,0,0.18)" }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 14px" }} />
+        <h3 style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 4 }}>
+          Upgrade this stay to 5<Star size={14} fill="#F5A623" stroke="#F5A623" strokeWidth={1.5} />
+        </h3>
+        <p style={{ fontSize: 12.5, color: C.sub, margin: "0 0 14px" }}>A step up for your {stayInfo.city} stay.</p>
+        <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+          <img src={upgradeHotel.images[0].url} alt={upgradeHotel.name} style={{ width: 92, height: 92, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head }}>{upgradeName}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, margin: "3px 0" }}>
+              <div style={{ display: "flex", gap: 1 }}>
+                {Array.from({ length: upgradeHotel.stars }).map((_, s) => <Star key={s} size={11} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>· {upgradeHotel.bookingScore} Rated</span>
+            </div>
+            <p style={{ margin: 0, fontSize: 11.5, color: C.sub }}>{upgradeRoom.name}{upgradeRoom.mealPlan ? ` · ${upgradeRoom.mealPlan}` : ""}</p>
+          </div>
+        </div>
+        <div style={{ padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, color: C.sub }}>This stay · {nights} night{nights > 1 ? "s" : ""}</span>
+            <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontSize: 13, color: C.inact, textDecoration: "line-through" }}>₹{formatHotelPrice(oldStayTotal)}</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: C.head }}>₹{formatHotelPrice(upgradeTotal)}</span>
+            </span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: "#B8860B" }}>+₹{formatHotelPrice(upgradeDelta)} on your trip</span>
+          </div>
+        </div>
+        <button onClick={() => { setShowUpgrade(false); setConfirmUpgrade(true); }} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: "#FD014F", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>
+          Upgrade · +₹{formatHotelPrice(upgradeDelta)}
+        </button>
+        <button onClick={() => setShowUpgrade(false)} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.head, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          Maybe later
+        </button>
+      </div>
+    </div>
+    )}
+
+    {confirmUpgrade && upgradeHotel && (
+    <div style={{ position: "absolute", inset: 0, zIndex: 121, display: "flex", alignItems: "flex-end" }}>
+      <div onClick={() => setConfirmUpgrade(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
+      <div style={{ position: "relative", width: "100%", background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 18px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 32px rgba(0,0,0,0.18)" }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 16px" }} />
+        <h3 style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 8px" }}>Upgrade your stay?</h3>
+        <p style={{ fontSize: 13, color: C.sub, margin: "0 0 16px", lineHeight: "19px" }}>
+          You're upgrading <b style={{ color: C.head }}>{hotel.name}</b> to <b style={{ color: C.head }}>{upgradeName}</b> (5★) for your {stayInfo.city} stay.
+        </p>
+        <div style={{ padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, color: C.sub }}>This stay · {nights} night{nights > 1 ? "s" : ""}</span>
+            <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontSize: 13, color: C.inact, textDecoration: "line-through" }}>₹{formatHotelPrice(oldStayTotal)}</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: C.head }}>₹{formatHotelPrice(upgradeTotal)}</span>
+            </span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: "#B8860B" }}>+₹{formatHotelPrice(upgradeDelta)} on your trip</span>
+          </div>
+        </div>
+        <button onClick={doUpgrade} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: "#FD014F", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>
+          Confirm upgrade
+        </button>
+        <button onClick={() => setConfirmUpgrade(false)} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.head, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          Go back
+        </button>
+      </div>
+    </div>
+    )}
+    </>
   );
 
   // Mauritius stays carry honeymoon perks / value add-ons; show them here too.
