@@ -134,9 +134,7 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved }) {
           <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{adults}<User size={12} /></span>
           {kids > 0 && <><span>·</span><span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{kids}<Baby size={12} /></span></>}
         </div>
-        {isDraftCard
-          ? <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact }}>Not created yet</p>
-          : generatedOn && <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact }}>Generated {generatedOn}</p>}
+        {!isDraftCard && generatedOn && <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact }}>Generated {generatedOn}</p>}
       </div>
     </div>
   );
