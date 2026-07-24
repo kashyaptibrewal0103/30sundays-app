@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, Search, Heart, MapPin, Sparkles, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, Search, Heart, MapPin, Sparkles, Plus, Bell, Phone } from "lucide-react";
 import { C, destinations, allItineraries } from "../data";
 import TripPlanCard from "../components/TripPlanCard";
 import DatePicker from "../components/DatePicker";
@@ -72,6 +72,9 @@ const IlloOtp = () => (
 );
 
 const destNames = ["Thailand", "Vietnam", "Bali", "Maldives", "Sri Lanka", "New Zealand"];
+// Only couple trips to these destinations get an itinerary auto-generated.
+// Anything else is routed to the sales team, who build it manually.
+const AUTO_ITINERARY_DESTS = ["Thailand", "Vietnam", "Bali"];
 // Returning users without a fresh lead inquiry still land on a populated plan list.
 const DEFAULT_PLAN_DESTS = ["Bali", "Thailand", "Vietnam"];
 const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿" };
@@ -250,6 +253,11 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
 
   const ctaAction = () => {
     if (phase === "details") {
+      // Case 1: couple + auto-eligible destinations -> itinerary auto-generated.
+      // Case 2: anything else -> sales team builds it; consultant calls the user.
+      const isCouple = adults === 2 && !hasChildren;
+      const autoEligible = dests.length > 0 && dests.every((d) => AUTO_ITINERARY_DESTS.includes(d));
+      const salesRequest = !(isCouple && autoEligible);
       const data = {
         phone,
         countryCode: country.code,
@@ -259,6 +267,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
         children: hasChildren ? 1 : 0,
         startDate,
         nights,
+        salesRequest,
       };
       setLeadData(data);
       setUserState("lead");
@@ -266,8 +275,13 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
         navigate("/trips", { replace: true });
       } else if (returnTo === "account") {
         navigate("/account", { replace: true });
+      } else if (salesRequest) {
+        // Case 2: loader, then land on the home screen. The callback nudge
+        // there tells the user a travel consultant will call shortly.
+        setPhase("curating");
+        setTimeout(() => navigate("/"), 2400);
       } else {
-        // Transient curating state for feedback, then success
+        // Case 1: transient curating state for feedback, then success
         setPhase("curating");
         setTimeout(() => {
           setPhase("success");
@@ -316,7 +330,9 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
             Curating your getaway…
           </h2>
           <p style={{ fontSize: 14, color: C.sub, margin: 0, lineHeight: "20px", maxWidth: 300 }}>
-            Hand-picking itineraries based on your preferences. This takes just a moment.
+            {leadData?.salesRequest
+              ? "Hand-picking itineraries based on your preferences. A travel consultant will reach out shortly."
+              : "Hand-picking itineraries based on your preferences. This takes just a moment."}
           </p>
           <div style={{ display: "flex", gap: 6, marginTop: 26 }}>
             {[0, 1, 2].map(i => (
@@ -331,16 +347,54 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
       )}
 
       {/* ═══ SUCCESS SCREEN (post-signup, stays on Plan page) ═══ */}
-      {phase === "success" && (
+      {/* ═══ SUCCESS, sales-handled request: card + call CTA only, no plans ═══ */}
+      {phase === "success" && leadData?.salesRequest && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, padding: "12px 16px 90px" }}>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: "0 0 12px" }}>My Plans</h1>
+
+          {/* Consultant-callback card (always visible while the request is open) */}
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", background: "linear-gradient(135deg, #FFE4E8 0%, #FFF5F7 100%)", border: `1px solid ${C.p100}`, borderRadius: 16, padding: "16px" }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(227,27,83,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Bell size={20} color={C.p600} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 15, fontWeight: 700, color: C.p600, margin: 0 }}>We are working on your request</p>
+              <p style={{ fontSize: 13, color: C.sub, margin: "3px 0 0", lineHeight: "18px" }}>
+                A travel consultant will also call you shortly to personalise your getaway.
+              </p>
+            </div>
+          </div>
+
+          {/* Soft filler so the screen reads composed, not empty */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 24px" }}>
+            <div style={{ width: 84, height: 84, borderRadius: 24, background: `linear-gradient(135deg, ${C.p100} 0%, #FFF5F0 100%)`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <Sparkles size={36} color={C.p600} />
+            </div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: C.head, margin: "0 0 4px" }}>Your itinerary will appear here</p>
+            <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "19px", maxWidth: 260 }}>
+              Our travel consultant is crafting it with you. It shows up here as soon as it's ready.
+            </p>
+          </div>
+
+          <button
+            onClick={() => alert("Calling your travel consultant…")}
+            style={{ width: "100%", padding: "15px 0", borderRadius: 14, border: "none", background: C.p600, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}
+          >
+            <Phone size={17} color="#fff" /> Call travel consultant
+          </button>
+        </div>
+      )}
+
+      {phase === "success" && !leadData?.salesRequest && (
         <>
           {/* Header */}
           {(() => {
-          // Only finalised plans belong in My Plans. An in-progress build (a deal
-          // whose only version is still an open draft) is hidden until it has a quote.
-          const hasQuote = (d) => (d.properties?.length
+          const versionsOf = (d) => d.properties?.length
             ? d.properties.flatMap(p => p.versions || [])
-            : (d.versions || [])).some(v => v.status === "quote");
-          const active = deals.filter(d => d.status !== "lost" && hasQuote(d));
+            : (d.versions || []);
+          // Show every live vacation, including one that's only an open draft
+          // (saved to finish later). Lost vacations sink to the accordion below.
+          const active = deals.filter(d => d.status !== "lost" && versionsOf(d).length > 0);
           const older = deals.filter(d => d.status === "lost");
           // Open the right itinerary for a version (uses the real deal id even
           // for an expanded Maldives property card).
@@ -348,15 +402,31 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
             const itinId = v?.itineraryId ?? card.itineraryId;
             navigate(`/itinerary/${itinId}?dealId=${card.dealId ?? card.id}&versionId=${v.id}`);
           };
-          const recency = (d) => Math.max(...((d.versions || []).map(v => v.createdAt || 0)), 0);
-          // The single open (un-finalized) version is what the user is mid-edit on —
-          // pin its card to the very top so it's the first thing they see on return.
-          const hasOpenDraft = (d) => (d.versions || []).some(v => v.status === "draft");
-          // Maldives → one card per property; every other vacation → one card.
-          const toCards = (list) => list.flatMap(deal => deal.properties?.length
+          const recency = (vs) => Math.max(...(vs.map(v => v.createdAt || 0)), 0);
+          // Maldives → one unit per property; every other vacation → one unit.
+          const toUnits = (list) => list.flatMap(deal => deal.properties?.length
             ? deal.properties.map(p => ({ ...deal, id: `${deal.id}__${p.property.replace(/\s+/g, "")}`, dealId: deal.id, property: p.property, itineraryId: p.itineraryId, versions: p.versions, properties: undefined }))
-            : [deal]);
-          const activeCards = toCards(active);
+            : [{ ...deal, dealId: deal.id }]);
+          // Each unit shows up to two cards: a "Draft" card for the in-progress
+          // edit (no Compare, reopens where the user left off), and a "created"
+          // card for the finalised versions (with Compare + earlier versions).
+          // A trip edited on top of, say, V2 therefore shows both.
+          const toCards = (units) => units.flatMap(u => {
+            const quotes = u.versions.filter(v => v.status === "quote");
+            const drafts = u.versions.filter(v => v.status !== "quote");
+            const cards = [];
+            drafts.forEach(dv => {
+              const parent = quotes.find(q => q.id === dv.parentId);
+              cards.push({ ...u, id: `${u.id}__draft_${dv.id}`, versions: [dv], cardKind: "draft", baseNum: parent?.num ?? null });
+            });
+            if (quotes.length) cards.push({ ...u, id: `${u.id}__made`, versions: quotes, cardKind: "made" });
+            return cards;
+          });
+          // In-progress edits float up (their draft was just touched); the draft
+          // card sits right above its created card so the pair reads together.
+          const activeCards = toCards(
+            [...toUnits(active)].sort((a, b) => recency(b.versions) - recency(a.versions))
+          );
           return (
           <>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, padding: "12px 16px 8px" }}>
@@ -372,7 +442,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
           <div style={{ flex: 1, overflowY: "auto", padding: "8px 16px 80px" }} className="hide-scrollbar">
             {activeCards.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {[...activeCards].sort((a, b) => (hasOpenDraft(b) - hasOpenDraft(a)) || (recency(b) - recency(a))).map(card => (
+                {activeCards.map(card => (
                   <TripPlanCard key={card.id} deal={card} onOpen={(v) => openVersion(card, v)} onStartNew={() => navigate("/build")} onSaved={showSavedToast} />
                 ))}
               </div>
@@ -397,7 +467,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                 </button>
                 {showOlder && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-                    {[...older].sort((a, b) => recency(b) - recency(a)).map(deal => (
+                    {[...older].sort((a, b) => recency(b.versions || []) - recency(a.versions || [])).map(deal => (
                       <TripPlanCard key={deal.id} deal={deal} onOpen={(v) => openVersion(deal, v)} onStartNew={() => navigate("/build")} onSaved={showSavedToast} />
                     ))}
                   </div>

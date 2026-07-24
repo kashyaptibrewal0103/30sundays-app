@@ -4,11 +4,14 @@ import PhoneFrame from "./components/PhoneFrame";
 import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
 import TripNudge from "./components/TripNudge";
+import CallbackNudge from "./components/CallbackNudge";
 import Home from "./pages/Home";
 import HomeV2 from "./pages/HomeV2";
 import HomeV3 from "./pages/HomeV3";
 import HomeV4 from "./pages/HomeV4";
 import HomeV5 from "./pages/HomeV5";
+import HomeV5Clone from "./pages/HomeV5Clone";
+import HomeBannerLab from "./pages/HomeBannerLab";
 import HomeV6 from "./pages/HomeV6";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
@@ -33,6 +36,7 @@ import HotelPDP from "./pages/HotelPDP";
 import ReviewHotel from "./pages/ReviewHotel";
 import MyTrips from "./pages/MyTrips";
 import TripDetails from "./pages/TripDetails";
+import BookedTripItinerary from "./pages/BookedTripItinerary";
 import TripDocsDemo from "./pages/TripDocsDemo";
 import TravelerDocsDemo from "./pages/TravelerDocsDemo";
 import BookedHotelPDP from "./pages/BookedHotelPDP";
@@ -68,7 +72,7 @@ function DestinationLayout() {
   return <DiscoverWF />;
 }
 
-function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
+function AppContent({ userState, setUserState, otpVerified, setOtpVerified, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
@@ -88,6 +92,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
       <UserToggle userState={userState} setUserState={setUserState} />
       <Routes>
         <Route path="/" element={<HomeV5 userState={userState} />} />
+        <Route path="/landing-clone" element={<HomeV5Clone userState={userState} />} />
+        <Route path="/banner-lab" element={<HomeBannerLab userState={userState} />} />
         <Route path="/v3" element={<HomeV3 />} />
         <Route path="/v4" element={<HomeV4 userState={userState} />} />
         <Route path="/v5" element={<HomeV2 />} />
@@ -114,7 +120,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/saved" element={<SavedWishlist />} />
         <Route path="/saved/hotel/:id" element={<WishlistHotelDetail />} />
         <Route path="/saved/activity/:id" element={<WishlistActivityDetail />} />
-        <Route path="/build" element={<Build />} />
+        <Route path="/build" element={<Build userState={userState} otpVerified={otpVerified} setOtpVerified={setOtpVerified} />} />
         <Route path="/login-v2" element={<LoginV2 />} />
         <Route path="/logo-anim" element={<LogoAnim />} />
         <Route path="/media-lab" element={<MediaLab />} />
@@ -129,6 +135,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/review-hotel/:itineraryId/:stayIndex" element={<ReviewHotel selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/trips" element={<MyTrips userState={userState} leadData={leadData} />} />
         <Route path="/trips/:tripId" element={<TripDetails />} />
+        <Route path="/trips/:tripId/booked-itinerary" element={<BookedTripItinerary />} />
         <Route path="/trips/:tripId/documents" element={<TripDocsDemo />} />
         <Route path="/trips/:tripId/traveler-documents" element={<TravelerDocsDemo />} />
         <Route path="/trip-docs-demo/:tripId" element={<TripDocsDemo />} />
@@ -142,7 +149,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/account" element={<Account userState={userState} leadData={leadData} setUserState={setUserState} setLeadData={setLeadData} />} />
         <Route path="/watch/:videoId" element={<WatchDeepLink />} />
       </Routes>
-      {showNudge && <TripNudge userState={userState} />}
+      {showNudge && (leadData?.salesRequest ? <CallbackNudge /> : <TripNudge userState={userState} />)}
       {!hideShell && <BottomNav userState={userState} />}
     </PhoneFrame>
   );
@@ -151,6 +158,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
 export default function App() {
   const [userState, setUserState] = useState("new");
   const [leadData, setLeadData] = useState(null); // { phone, countryCode, name, dests, adults, children }
+  // Mobile OTP verification done this session (gates the Build flow for new users)
+  const [otpVerified, setOtpVerified] = useState(false);
   const [selectedFlights, setSelectedFlights] = useState({});
   const [selectedHotels, setSelectedHotels] = useState({});
 
@@ -163,6 +172,8 @@ export default function App() {
         <AppContent
           userState={userState}
           setUserState={setUserState}
+          otpVerified={otpVerified}
+          setOtpVerified={setOtpVerified}
           leadData={leadData}
           setLeadData={setLeadData}
           selectedFlights={selectedFlights}

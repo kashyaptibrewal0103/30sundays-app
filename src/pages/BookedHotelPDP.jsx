@@ -103,6 +103,7 @@ export default function BookedHotelPDP() {
       onBack={() => navigate(`/trips/${tripId}`)}
       stay={<BookingCard hotel={hotel} trip={trip} />}
       inclusions={getMauritiusInclusionsByName(hotel.name)}
+      addOns={tripHotel.addOns}
     />
   );
 }

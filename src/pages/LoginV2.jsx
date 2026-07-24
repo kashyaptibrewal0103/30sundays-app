@@ -155,7 +155,7 @@ function renderWithHighlights(text, highlights, color) {
 
 
 // ─── Static hero: logo + 3 value ticks (no title, no circle bg on tick) ───
-function StaticHero({ collapsed, onSkip, onBack }) {
+function StaticHero({ collapsed, onSkip, onBack, hideSkip = false }) {
   return (
     <div style={{
       position: "absolute", inset: 0, overflow: "hidden",
@@ -182,7 +182,7 @@ function StaticHero({ collapsed, onSkip, onBack }) {
         >
           <ArrowLeft size={18} color={T.navy} />
         </button>
-        <button
+        {!hideSkip && <button
           onClick={onSkip}
           className="lv2-skip-link"
           style={{
@@ -198,7 +198,7 @@ function StaticHero({ collapsed, onSkip, onBack }) {
         >
           <span>Skip</span>
           <ArrowRight size={14} className="lv2-skip-arrow" />
-        </button>
+        </button>}
       </div>
 
       {/* Centered content: logo + 3 ticks */}
@@ -331,7 +331,7 @@ const Divider = () => (
 //   onComplete({ country, phone, otp })  - called after OTP verifies successfully
 //   onSkip()                              - called when Skip tapped (default: navigate("/"))
 //   validateOtp(otpString) -> string|null - return error string to keep on OTP screen, or null/undefined to proceed
-export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp }) {
+export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp, hideSkip = false }) {
   const navigate = useNavigate();
   const [phase, setPhase] = useState("phone"); // phone | otp
   const [country, setCountry] = useState(countryCodes[0]);
@@ -440,6 +440,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
             collapsed={collapsed}
             onSkip={skip}
             onBack={() => navigate(-1)}
+            hideSkip={hideSkip}
           />
         </div>
       )}
@@ -597,7 +598,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
             >
               ← Change number
             </button>
-            <button onClick={skip} style={{
+            {!hideSkip && <button onClick={skip} style={{
               background: "rgba(0,0,0,0.04)",
               border: `0.5px solid ${T.line}`,
               borderRadius: 999, padding: "7px 14px",
@@ -605,7 +606,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
               cursor: "pointer",
             }}>
               Skip →
-            </button>
+            </button>}
           </div>
 
           <h2 style={{ fontSize: 24, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: -0.3 }}>

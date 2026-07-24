@@ -48,7 +48,7 @@ export const mockTrips = [
     coTravelers: [{ name: "Priya Sharma", phone: "+91 98765 43211", role: "Co-traveler" }],
     consultant: { name: "Riya Shah", phone: "+919876500011" },
     addOns: {
-      visa: { purchased: true, documentUrl: null },
+      visa: { type: "paid", purchased: true, documentUrl: null, stayInfo: "Single-entry, 60-day stay, issued by the Royal Thai Embassy" },
       insurance: { purchased: false },
       forex: { enabled: true },
     },
@@ -80,6 +80,12 @@ export const mockTrips = [
         baggage: [
           { traveler: "Trav 1", cabin: "7 Kg", checkin: "20 Kg" },
           { traveler: "Trav 2", cabin: "7 Kg", checkin: "20 Kg" },
+        ],
+        addOns: [
+          { type: "meal", label: "Meal", perTraveller: ["Veg meal", "Veg meal"] },
+          { type: "seat", label: "Seat", perTraveller: ["12A", "12B"] },
+          { type: "baggage", label: "Extra baggage", perTraveller: ["+15 kg", "+15 kg"] },
+          { type: "priority", label: "Priority pass", perTraveller: ["Included", "Included"] },
         ],
       },
       {
@@ -120,6 +126,12 @@ export const mockTrips = [
           { traveler: "Trav 1", cabin: "7 Kg", checkin: "20 Kg" },
           { traveler: "Trav 2", cabin: "7 Kg", checkin: "20 Kg" },
         ],
+        addOns: [
+          { type: "meal", label: "Meal", perTraveller: ["Non-veg meal", "Veg meal"] },
+          { type: "seat", label: "Seat", perTraveller: ["8C", "8D"] },
+          { type: "baggage", label: "Extra baggage", perTraveller: ["+15 kg", "+15 kg"] },
+          { type: "priority", label: "Priority pass", perTraveller: ["Included", "Included"] },
+        ],
       },
     ],
     hotels: [
@@ -135,6 +147,11 @@ export const mockTrips = [
         bookingRating: 8.1,
         photo: `${CDN}/hotels/thailand/hero-images/andakira.jpg`,
         fallbackPhoto: `${CDN}/thailand/pileh_lagoon_439.jpg`,
+        addOns: [
+          { title: "Daily breakfast for two", description: "Breakfast for two guests is included every morning of your stay. Enjoy the hotel's full spread, usually a buffet with hot and cold options. Just show your room number at the restaurant, there's nothing to pay on the spot." },
+          { title: "Airport transfer", description: "A private airport transfer is arranged for your arrival and departure. A driver meets you at the terminal and takes you straight to the hotel in a private vehicle. Pickup timings are matched to your flight schedule." },
+          { title: "Candlelight dinner", description: "A one-time candlelight dinner for two is set up during your stay, ideal for a special evening. It usually includes a set multi-course menu at a scenic spot in the property. Your host will help you pick the night and time." },
+        ],
       },
       {
         id: "ht-2",
@@ -148,6 +165,11 @@ export const mockTrips = [
         bookingRating: 8.7,
         photo: `${CDN}/thailand/long_beach_koh_phi_phi_468.jpg`,
         fallbackPhoto: `${CDN}/thailand/long_beach_koh_phi_phi_468.jpg`,
+        addOns: [
+          { title: "Daily breakfast for two", description: "Breakfast for two guests is included every morning of your stay, served at the hotel's main restaurant. Expect a generous buffet with local and continental options. There's nothing to pay at the table, it's already part of your booking." },
+          { title: "Spa credit", description: "A spa credit is loaded to your booking to use at the hotel's spa. Redeem it against massages or treatments of your choice, subject to availability. Any amount beyond the credit can be settled directly at the spa." },
+          { title: "Late checkout", description: "A guaranteed late checkout lets you relax on your final day without rushing. You can keep your room until the agreed later time at no extra charge. Handy when your flight departs in the evening." },
+        ],
       },
       {
         id: "ht-3",

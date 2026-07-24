@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Star, MapPin, Navigation, X as XIcon, ChevronLeft, ChevronRight, Bed, Maximize2, Bath, Eye, UtensilsCrossed } from "lucide-react";
 import { C } from "../data";
 import InclusionsSection from "./InclusionsSection";
+import AddOnDetailList from "./AddOnDetailList";
 
 const amenityIcons = {
   Breakfast: "🍳", Spa: "💆", "Swimming pool": "🏊", "Indoor Games": "🎮",
@@ -19,9 +20,11 @@ export default function HotelDetailScreen({
   selectedRoomId = null,   // highlights a room (booking only)
   stay = null,             // JSX: dates / travellers summary card
   roomFooter = null,       // (room) => JSX rendered inside each room card
+  afterRooms = null,       // JSX rendered right after the rooms section
   bottomBar = null,        // JSX: sticky bottom bar
   overlay = null,          // JSX: extra overlays (confirm popup)
   inclusions = null,       // special inclusions (honeymoon perks + value add-ons)
+  addOns = null,           // purchased add-ons (array of strings) -> plain bullet list
 }) {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
@@ -101,6 +104,14 @@ export default function HotelDetailScreen({
         {/* ═══ Special inclusions (honeymoon perks + value add-ons) ═══ */}
         <InclusionsSection inclusions={inclusions} />
 
+        {/* ═══ Add-ons included (collapsed; expand each for a short description) ═══ */}
+        {addOns?.length > 0 && (
+          <div style={{ margin: "24px 16px 0" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#181E4C", margin: "0 0 4px" }}>Add-ons included</h3>
+            <AddOnDetailList items={addOns} />
+          </div>
+        )}
+
         {/* ═══ Location ═══ */}
         <div style={{ margin: "24px 16px 0", borderRadius: 16, border: `1px solid ${C.div}`, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
           <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${hotel.name}, ${hotel.address}`)}`} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
@@ -169,6 +180,8 @@ export default function HotelDetailScreen({
             })}
           </div>
         </div>
+
+        {afterRooms}
 
         {/* ═══ Guest Reviews ═══ */}
         {reviews && (

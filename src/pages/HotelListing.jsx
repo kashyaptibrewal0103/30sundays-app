@@ -194,9 +194,11 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
         {/* ═══ Header (scrolls with content) ═══ */}
         <div style={{ background: "linear-gradient(180deg, #FFEBF1 0%, #FFFFFF 100%)", padding: "10px 16px 12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Link to={backToItinerary} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, flexShrink: 0 }}>
+            {/* History-aware back: returns to wherever the user came from
+                (hotel detail via its Change hotel ingress, or the itinerary) */}
+            <button onClick={() => navigate(-1)} aria-label="Back" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, flexShrink: 0, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
               <ArrowLeft size={20} color={C.head} />
-            </Link>
+            </button>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <h1 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>{stayInfo.city} hotels</h1>

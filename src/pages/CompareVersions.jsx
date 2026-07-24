@@ -237,7 +237,7 @@ export default function CompareVersions() {
 
       {/* Scroll body */}
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: `14px ${PAD}px 16px` }}>
-        <PriceHero diff={diff} labelA={vA.label || `V${vA.num}`} labelB={vB.label || `V${vB.num}`} mode={mode} />
+        <PriceHero diff={diff} labelA={vA.label || `V${vA.num}`} labelB={vB.label || `V${vB.num}`} />
 
         <div style={{ display: "flex", background: SLATE_BG, borderRadius: 11, padding: 3, margin: "14px 0 6px" }}>
           {[{ k: "diff", l: "What changed" }, { k: "full", l: "Everything" }].map((o) => (
@@ -270,13 +270,16 @@ export default function CompareVersions() {
 }
 
 // ── Price hero ──
-function PriceHero({ diff, labelA, labelB, mode }) {
+function PriceHero({ diff, labelA, labelB }) {
   const { a, b, delta, breakdown } = diff.price;
   const up = delta > 0;
   const Dir = up ? ArrowUpRight : ArrowDownRight;
   // Only a price drop is highlighted (green); an increase or no change reads black.
   const dirColor = delta < 0 ? C.sText : C.head;
-  const rows = mode === "full" ? breakdown : breakdown.filter((d) => d.delta !== 0);
+  // Always list only the components that actually moved the price, in both
+  // modes, so this summary card keeps a fixed height. That stops the mode
+  // switch below it from jumping, and drops any misleading "No change" rows.
+  const rows = breakdown.filter((d) => d.delta !== 0);
 
   return (
     <div style={{ borderRadius: 16, border: `1px solid ${C.div}`, background: C.white, padding: 14 }}>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { Star, ChevronUp, ChevronDown, UtensilsCrossed } from "lucide-react";
+import { Star, ChevronUp, ChevronDown, UtensilsCrossed, ArrowLeftRight } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice, getHotelReviews } from "../data/hotelData";
 import { getMauritiusHotel } from "../data/mauritiusData";
@@ -98,6 +98,19 @@ export default function HotelPDP() {
     </div>
   );
 
+  // "Change hotel" ingress, shown right after the Select room section when the
+  // user is viewing their own hotel. Opens the alternatives list.
+  const changeHotelNode = isCurrentHotel ? (
+    <div style={{ margin: "16px 16px 0" }}>
+      <button
+        onClick={() => navigate(`/hotels/${itineraryId}/${stayIndex}${hotelsQS}`)}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", borderRadius: 12, border: `1.5px solid #FD014F`, background: C.white, color: "#FD014F", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+      >
+        <ArrowLeftRight size={15} /> Change hotel
+      </button>
+    </div>
+  ) : null;
+
   // Per-room price + select control.
   const roomFooter = (room) => {
     const priceDelta = (room.pricePerNight * nights) - (currentRoomPrice * nights);
@@ -109,7 +122,6 @@ export default function HotelPDP() {
           <p style={{ fontSize: 16, fontWeight: 700, margin: "0 0 2px", color: priceDelta < 0 ? "#4EAC7E" : priceDelta > 0 ? "#FD014F" : C.sub }}>
             {priceDelta === 0 ? "No price change" : `${priceDelta > 0 ? "+" : "−"} ₹ ${formatHotelPrice(Math.abs(priceDelta))}`}
           </p>
-          <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>+₹ {formatHotelPrice(room.taxPerNight * nights)} taxes and charges</p>
         </div>
         {isSelected ? (
           <span style={{ fontSize: 14, fontWeight: 700, color: "#FD014F" }}>Selected</span>
@@ -147,7 +159,9 @@ export default function HotelPDP() {
           <button onClick={() => setShowCurrentDetails(s => !s)} disabled={!currentHotel} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", padding: 0, cursor: currentHotel ? "pointer" : "default", fontFamily: "inherit" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ fontSize: 11, color: C.sub }}>Replacing</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.head, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{currentHotel ? currentHotel.name : "current hotel"}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.head, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+                {isCurrentHotel ? (currentRoom?.name || "current room") : (currentHotel ? currentHotel.name : "current hotel")}
+              </span>
               {currentHotel && (showCurrentDetails ? <ChevronDown size={14} color={C.sub} style={{ flexShrink: 0 }} /> : <ChevronUp size={14} color={C.sub} style={{ flexShrink: 0 }} />)}
             </div>
             <p style={{ margin: "2px 0 0", display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
@@ -161,8 +175,8 @@ export default function HotelPDP() {
               <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>· {nights} night{nights > 1 ? "s" : ""}</span>
             </p>
           </button>
-          <button onClick={() => setConfirmReplace(true)} disabled={!selectedRoomId || isSameAsCurrent} style={{ flexShrink: 0, padding: "11px 18px", height: 44, borderRadius: 12, border: "none", background: (!selectedRoomId || isSameAsCurrent) ? C.inact : "#FD014F", color: "#fff", fontSize: 14, fontWeight: 700, cursor: (!selectedRoomId || isSameAsCurrent) ? "default" : "pointer", fontFamily: "inherit" }}>
-            {isSameAsCurrent ? "Selected" : "Replace hotel"}
+          <button onClick={() => setConfirmReplace(true)} disabled={!selectedRoomId} style={{ flexShrink: 0, padding: "11px 18px", height: 44, borderRadius: 12, border: "none", background: !selectedRoomId ? C.inact : "#FD014F", color: "#fff", fontSize: 14, fontWeight: 700, cursor: !selectedRoomId ? "default" : "pointer", fontFamily: "inherit" }}>
+            {isCurrentHotel ? "Replace room" : "Replace hotel"}
           </button>
         </div>
       </div>
@@ -175,9 +189,13 @@ export default function HotelPDP() {
       <div onClick={() => setConfirmReplace(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
       <div style={{ position: "relative", width: "100%", background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 18px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 32px rgba(0,0,0,0.18)" }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 16px" }} />
-        <h3 style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 8px" }}>Replace your hotel?</h3>
+        <h3 style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 8px" }}>{isCurrentHotel ? "Replace your room?" : "Replace your hotel?"}</h3>
         <p style={{ fontSize: 13, color: C.sub, margin: "0 0 16px", lineHeight: "19px" }}>
-          {currentHotel ? <>You're swapping <b style={{ color: C.head }}>{currentHotel.name}</b> for <b style={{ color: C.head }}>{hotel.name}</b> ({selectedRoom.name}).</> : <>Set <b style={{ color: C.head }}>{hotel.name}</b> ({selectedRoom.name}) for this stay.</>}
+          {isCurrentHotel
+            ? <>You're changing your room at <b style={{ color: C.head }}>{hotel.name}</b> from <b style={{ color: C.head }}>{currentRoom?.name}</b> to <b style={{ color: C.head }}>{selectedRoom.name}</b>.</>
+            : currentHotel
+              ? <>You're swapping <b style={{ color: C.head }}>{currentHotel.name}</b> for <b style={{ color: C.head }}>{hotel.name}</b> ({selectedRoom.name}).</>
+              : <>Set <b style={{ color: C.head }}>{hotel.name}</b> ({selectedRoom.name}) for this stay.</>}
         </p>
         <div style={{ padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
@@ -196,7 +214,7 @@ export default function HotelPDP() {
           )}
         </div>
         <button onClick={doReplace} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: "#FD014F", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>
-          Replace hotel
+          {isCurrentHotel ? "Replace room" : "Replace hotel"}
         </button>
         <button onClick={() => setConfirmReplace(false)} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.head, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
           Go back
@@ -218,7 +236,8 @@ export default function HotelPDP() {
       selectedRoomId={selectedRoomId}
       stay={stayNode}
       roomFooter={roomFooter}
-      bottomBar={bottomBar}
+      afterRooms={changeHotelNode}
+      bottomBar={isSameAsCurrent ? null : bottomBar}
       overlay={overlay}
       inclusions={inclusions}
     />

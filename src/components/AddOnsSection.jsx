@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { IdCard, Banknote, ShieldCheck, X as XIcon, Check, FileText, ExternalLink } from "lucide-react";
+import { IdCard, Banknote, ShieldCheck, X as XIcon, Check, FileText, ExternalLink, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import { C } from "../data";
 
 const ADD_ONS = [
@@ -315,9 +315,164 @@ function ForexSheet({ onClose }) {
   );
 }
 
+// ─── Status chip (Added / Optional / Not added) ───
+function StatusChip({ tone, icon, text }) {
+  const tones = {
+    green: { color: "#2E7D52", background: "#E6F4EC", border: "#BBE3CA" },
+    gray: { color: "#666C99", background: "#F1F2F6", border: "#E0E2EB" },
+  };
+  const t = tones[tone] || tones.gray;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: t.color, background: t.background, border: `1px solid ${t.border}`, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>
+      {icon}
+      {text}
+    </span>
+  );
+}
+
+// ─── Accordion line item (used in the collapsible variant) ───
+// Header (icon + label + subtitle + status chip + chevron) is always visible;
+// details expand inline below. No surrounding box - it reads as a plain list.
+function AddOnAccordionItem({ label, subtitle, Icon, statusChip, open, onToggle, showDivider, children }) {
+  return (
+    <div style={{ borderTop: showDivider ? "1px solid #E9EAEB" : "none" }}>
+      <button
+        onClick={onToggle}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", gap: 12,
+          padding: "16px 0", background: "none", border: "none",
+          cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+        }}
+      >
+        <span style={{ width: 44, height: 44, borderRadius: 12, background: "#FFE6ED", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={22} color="#FD014F" strokeWidth={1.8} />
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>{label}</div>
+          {subtitle && <div style={{ fontSize: 12.5, color: "#666C99", lineHeight: "17px", marginTop: 1 }}>{subtitle}</div>}
+        </div>
+        {statusChip}
+        {open ? <ChevronUp size={20} color="#666C99" style={{ flexShrink: 0 }} /> : <ChevronDown size={20} color="#666C99" style={{ flexShrink: 0 }} />}
+      </button>
+      {open && <div style={{ padding: "0 0 18px 56px" }}>{children}</div>}
+    </div>
+  );
+}
+
 // ─── Main Section ───
-export default function AddOnsSection({ addOns, travelers = [] }) {
+// `collapsible` renders the section as vertical cards inside a header that is
+// collapsed by default (used on the booked trip itinerary). Default is the
+// original 4-up tile grid, so other screens are unchanged.
+export default function AddOnsSection({ addOns, travelers = [], collapsible = false }) {
   const [openKey, setOpenKey] = useState(null);
+  // Accordion state (collapsible variant): purchased add-ons start expanded.
+  const [openItems, setOpenItems] = useState({
+    visa: !!addOns?.visa?.purchased,
+    forex: false,
+    insurance: !!addOns?.insurance?.purchased,
+  });
+
+  const sheets = (
+    <>
+      {openKey === "visa" && <VisaSheet state={addOns?.visa} travelers={travelers} onClose={() => setOpenKey(null)} />}
+      {openKey === "insurance" && <InsuranceSheet state={addOns?.insurance} travelers={travelers} onClose={() => setOpenKey(null)} />}
+      {openKey === "forex" && <ForexSheet onClose={() => setOpenKey(null)} />}
+    </>
+  );
+
+  if (collapsible) {
+    const SUBTITLES = {
+      visa: "Tourist e-Visa for your trip",
+      forex: "Multi-currency travel card",
+      insurance: "Medical, cancellation and baggage cover",
+    };
+    const chipFor = (key) => {
+      if (key === "forex") return <StatusChip tone="gray" text="Not added" />;
+      if (addOns?.[key]?.purchased) return <StatusChip tone="green" icon={<Check size={12} color="#2E7D52" strokeWidth={3} />} text="Added" />;
+      return <StatusChip tone="gray" text="Not added" />;
+    };
+
+    const primaryBtn = { marginTop: 14, width: "100%", padding: "12px 16px", borderRadius: 10, background: "#FD014F", color: "#fff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" };
+    const secondaryBtn = { marginTop: 14, width: "100%", padding: "12px 16px", borderRadius: 10, background: C.white, color: "#FD014F", fontSize: 14, fontWeight: 600, border: "1.5px solid #FD014F", cursor: "pointer", fontFamily: "inherit" };
+    const detailText = { margin: "0 0 8px", fontSize: 13, color: C.sub, lineHeight: "19px" };
+    const detailList = { margin: 0, paddingLeft: 18, fontSize: 13, color: C.sub, lineHeight: "20px" };
+
+    const renderDetail = (key) => {
+      if (key === "visa") {
+        if (addOns?.visa?.purchased) {
+          const people = travelers.length ? travelers : [{ name: "Your visa document" }];
+          return (
+            <>
+              <p style={detailText}>Your e-Visa is booked. We'll email the visa PDF as soon as it's stamped, usually within 1 business day of departure.</p>
+              {people.map((t, i) => (
+                <DocumentRow key={i} available={Boolean(addOns?.visa?.documentUrl)} url={addOns?.visa?.documentUrl} label={t.name} meta="e-Visa document" />
+              ))}
+            </>
+          );
+        }
+        return (
+          <>
+            <p style={{ ...detailText, margin: 0 }}>We can guarantee your tourist e-Visa before you fly, sorted while you pack.</p>
+            <button style={primaryBtn} onClick={() => alert("Get visa - our team will add it to your trip.")}>Get visa</button>
+          </>
+        );
+      }
+      if (key === "insurance") {
+        if (addOns?.insurance?.purchased) {
+          return (
+            <>
+              <p style={detailText}>Your travel policy is active, covering medical, cancellation and baggage.</p>
+              <DocumentRow available={Boolean(addOns?.insurance?.documentUrl)} url={addOns?.insurance?.documentUrl} label="Travel insurance policy" meta={travelers.map((t) => t.name).join(", ")} />
+            </>
+          );
+        }
+        return (
+          <>
+            <p style={detailText}>Comprehensive cover for your trip - medical, trip cancellation and baggage protection.</p>
+            <ul style={detailList}>
+              <li>Medical expenses: $50,000</li>
+              <li>Trip cancellation: $800</li>
+              <li>Baggage loss: $500</li>
+            </ul>
+            <button style={primaryBtn} onClick={() => alert("Get insurance - add 30 Sundays Travel One to your trip.")}>Get insurance</button>
+          </>
+        );
+      }
+      return (
+        <>
+          <p style={detailText}>Load multiple currencies on one card and skip messy conversions abroad.</p>
+          <ul style={detailList}>
+            <li>Zero markup on forex conversions</li>
+            <li>Works at POS and ATMs worldwide</li>
+            <li>Lock rates ahead of your trip</li>
+          </ul>
+          <button style={primaryBtn} onClick={() => alert("Set up a forex card with your trip manager.")}>Set up forex card</button>
+        </>
+      );
+    };
+
+    return (
+      <div style={{ marginBottom: 16 }}>
+        <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 4px" }}>Add Ons</h4>
+        <div>
+          {ADD_ONS.filter((a) => a.key !== "visa").map(({ key, label, Icon }, i) => (
+            <AddOnAccordionItem
+              key={key}
+              label={label}
+              subtitle={SUBTITLES[key]}
+              Icon={Icon}
+              statusChip={chipFor(key)}
+              open={!!openItems[key]}
+              onToggle={() => setOpenItems((o) => ({ ...o, [key]: !o[key] }))}
+              showDivider={i > 0}
+            >
+              {renderDetail(key)}
+            </AddOnAccordionItem>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -339,9 +494,7 @@ export default function AddOnsSection({ addOns, travelers = [] }) {
         </div>
       </div>
 
-      {openKey === "visa" && <VisaSheet state={addOns?.visa} travelers={travelers} onClose={() => setOpenKey(null)} />}
-      {openKey === "insurance" && <InsuranceSheet state={addOns?.insurance} travelers={travelers} onClose={() => setOpenKey(null)} />}
-      {openKey === "forex" && <ForexSheet onClose={() => setOpenKey(null)} />}
+      {sheets}
     </>
   );
 }

@@ -6,15 +6,18 @@ import { useDeals } from "../data/deals";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
-import HomeBanners from "../components/HomeBanners";
 import { SIX, getSeasonGroups, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
+
+// Clone of the landing page (HomeV5), on its own route so the original stays
+// untouched. Safe to iterate on here without affecting "/".
 
 const PAD = 18;
 const HERO_IMGS = [destData.Maldives.hero, destData.Bali.hero, destData.Vietnam.hero];
 const HERO_VIDEO = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
 
 // Fullscreen video player. Tap the backdrop or the close button to dismiss.
+// A "Plan my trip" CTA sits over the video so the couple can act while watching.
 function FullscreenVideo({ src, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -22,6 +25,13 @@ function FullscreenVideo({ src, onClose }) {
       <button onClick={onClose} aria-label="Close" style={{ position: "absolute", top: 16, right: 16, width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
         <XIcon size={20} color="#fff" />
       </button>
+      <Link
+        to="/build"
+        onClick={(e) => e.stopPropagation()}
+        style={{ position: "absolute", left: "50%", bottom: 80, transform: "translateX(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, background: C.p600, color: "#fff", borderRadius: 12, padding: "13px 26px", fontSize: 15, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", boxShadow: "0 6px 20px rgba(253,1,79,0.45)" }}
+      >
+        <Sparkles size={16} color="#fff" /> Plan my trip
+      </Link>
     </div>
   );
 }
@@ -218,7 +228,7 @@ function AllSixCountries() {
   );
 }
 
-export default function HomeV5({ userState = "new" }) {
+export default function HomeV5Clone({ userState = "new" }) {
   const { deals } = useDeals();
   const isNew = userState === "new";
   const groups = useMemo(() => getSeasonGroups(new Date()), []);
@@ -244,11 +254,6 @@ export default function HomeV5({ userState = "new" }) {
     <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.white }}>
       {/* Circular destination tabs, above the hero */}
       <DestCircles />
-
-      {/* Marketing banner carousel, between the circles and the hero */}
-      <div style={{ padding: "2px 0 14px" }}>
-        <HomeBanners />
-      </div>
 
       {/* ─── Cinematic full-bleed hero ─── */}
       <div style={{ position: "relative", height: "50vh", minHeight: 400, overflow: "hidden" }}>
@@ -295,7 +300,7 @@ export default function HomeV5({ userState = "new" }) {
         </div>
       )}
 
-      <div id="v5-rest"><LowerSections groups={groups} /></div>
+      <div id="v5clone-rest"><LowerSections groups={groups} /></div>
 
       {/* Torn between two? in the Sunday School multi-video style */}
       <EduMultiCarousel valueTitle="Torn between [two]?" lessons={seriesLessons} />

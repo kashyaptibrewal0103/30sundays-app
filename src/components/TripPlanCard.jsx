@@ -46,6 +46,11 @@ function StatusChip({ kind }) {
   return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: C.bg, color: C.inact, flexShrink: 0 }}>Expired</span>;
 }
 
+// Marks an in-progress edit that hasn't been created yet.
+function DraftChip() {
+  return <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.p100, color: C.p600, letterSpacing: ".3px" }}>Draft</span>;
+}
+
 // The one action affordance per item: quote → View, draft → Continue editing.
 function ActionLink({ quote }) {
   return (
@@ -79,6 +84,13 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved }) {
   const primaryIsQuote = isQuote(primary);
   const stateKind = lost ? "expired" : (primaryIsQuote ? "quote" : "draft");
 
+  // A "draft" card is the in-progress edit split out from its created versions.
+  // It shows a Draft tag, no Compare, and the version it was built on (V2) - or
+  // no version at all if the trip was never created.
+  const isDraftCard = deal.cardKind === "draft";
+  const versionBadgeNum = isDraftCard ? deal.baseNum : primary.num;
+  const showVersionBadge = versionBadgeNum != null;
+
   const dest = primary.destination ?? deal.dest;
   const itin = allItineraries.find(i => i.id === (primary.itineraryId ?? deal.itineraryId));
   const td = primary.customizations?.travelDates;
@@ -110,7 +122,8 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved }) {
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
             {!lost && <WishHeart on={isWished(primary.id)} onToggle={() => handleWish(primary.id)} />}
-            <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, letterSpacing: ".3px" }}>V{primary.num}</span>
+            {showVersionBadge && <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, letterSpacing: ".3px" }}>V{versionBadgeNum}</span>}
+            {isDraftCard && <DraftChip />}
             <StatusChip kind={stateKind} />
           </div>
         </div>
@@ -121,7 +134,9 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved }) {
           <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{adults}<User size={12} /></span>
           {kids > 0 && <><span>·</span><span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{kids}<Baby size={12} /></span></>}
         </div>
-        {generatedOn && <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact }}>Generated {generatedOn}</p>}
+        {isDraftCard
+          ? <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact }}>Not created yet</p>
+          : generatedOn && <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact }}>Generated {generatedOn}</p>}
       </div>
     </div>
   );
@@ -139,10 +154,11 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved }) {
     );
   }
 
-  const priceCaption = <span style={{ fontSize: 11, fontWeight: 500, color: C.sub }}> incl. taxes</span>;
+  const priceCaption = <span style={{ fontSize: 11, fontWeight: 500, color: C.sub }}> {isDraftCard ? "indicative" : "incl. taxes"}</span>;
 
-  // Compare is only offered when two or more versions share a destination.
-  const comparable = Object.values(
+  // Compare is only offered on the created card, when two or more versions
+  // share a destination. A draft card never offers it.
+  const comparable = !isDraftCard && Object.values(
     sorted.reduce((m, v) => { const d = v.destination || deal.dest; m[d] = (m[d] || 0) + 1; return m; }, {})
   ).some(n => n >= 2);
   const goCompare = (e) => {

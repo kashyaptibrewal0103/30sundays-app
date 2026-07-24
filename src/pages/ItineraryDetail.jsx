@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -186,7 +186,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Explore itineraries: capture dates/travellers inline here (login is deferred
   // to the final step), instead of bouncing to the login-gated plan flow.
   const [showTripSheet, setShowTripSheet] = useState(false);
-  const [showEditMenu, setShowEditMenu] = useState(false);
+  const [showEditMenu, setShowEditMenu] = useState(false); // "Edit your trip" field picker
   const [dayScore, setDayScore] = useState(null); // { metric, scoring, dayLabel, dayIdx } for the score drawer
   const [exploreStart, setExploreStart] = useState(""); // yyyy-mm-dd
   const [explorePax, setExplorePax] = useState(2);
@@ -405,11 +405,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       detail: (opt.activities || []).join(", "),
     }));
   const hotelChanges = Object.entries(selectedHotelOptions)
-    .filter(([si, h]) => !committedHotels[si] || committedHotels[si].hotelId !== h.hotelId)
+    // A different room in the same hotel is a change too, so compare rooms as
+    // well as properties.
+    .filter(([si, h]) => !committedHotels[si] || committedHotels[si].hotelId !== h.hotelId || committedHotels[si].roomId !== h.roomId)
     .map(([si, h]) => ({
       kind: "hotel", key: si,
       title: `Hotel · ${baseHotels[si]?.city || ""}`,
-      detail: h.hotelName,
+      detail: h.roomName ? `${h.hotelName} · ${h.roomName}` : h.hotelName,
     }));
   const changes = [...dayChanges, ...hotelChanges];
   const hasChanges = changes.length > 0;
@@ -600,34 +602,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     // Prototype: a real-time availability + price check. Sold-out stays block the
     // lock until resolved; price increases auto-apply with a "change?" option.
     setTimeout(() => {
-      // A stay is resolved only if its hotel changed since the previous check.
-      // First check (ref null) resolves nothing, so the seeded sold-out always
-      // appears; once the user swaps that hotel and re-checks, it clears.
-      const baseline = hotelsAtCheckRef.current;
-      const resolved = new Set();
-      if (baseline) {
-        Object.keys(selectedHotelOptions || {}).forEach((k) => {
-          const i = Number(k);
-          const cur = selectedHotelOptions[i]?.hotelId ?? selectedHotelOptions[i]?.hotelName;
-          const base = baseline[i]?.hotelId ?? baseline[i]?.hotelName;
-          if (cur && cur !== base) resolved.add(i);
-        });
-      }
-      hotelsAtCheckRef.current = JSON.parse(JSON.stringify(selectedHotelOptions || {}));
-      const result = runLiveCheck(it, hotels, resolved);
+      // Everything checks out available at the indicative rates: nothing blocks
+      // or bumps, so the final quote locks on the first tap.
+      const resolved = new Set((hotels || []).map((_, i) => i));
+      const raw = runLiveCheck(it, hotels, resolved);
+      const clean = {
+        ...raw,
+        stays: raw.stays.map(s => ({ ...s, status: "clear", delta: 0 })),
+        tour: { ...raw.tour, status: "clear", delta: 0 },
+        soldOut: [], priceUps: [], hotelDelta: 0, totalDelta: 0, blocking: false,
+      };
       setFetchingPrice(false);
-      setLiveResult(result);
-      if (result.blocking) {
-        showToast("A stay just sold out — pick another to lock your price");
-        document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        return; // do not finalize until availability is resolved
-      }
-      const base = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
-      const live = base + result.totalDelta;
+      setLiveResult(clean);
+      const live = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
       dealsCtx.requestPricing(dealId, versionId, live);
-      showToast(result.totalDelta > 0
-        ? `Prices updated · +₹${result.totalDelta.toLocaleString("en-IN")}/person at today's rates`
-        : `Quote ready · ₹${live.toLocaleString("en-IN")}/person · PDF generated ✓`);
+      showToast(`Quote ready · ₹${live.toLocaleString("en-IN")}/person · PDF generated ✓`);
     }, 1800);
   };
   const handleDownloadPdf = () => showToast("Quote PDF downloaded (demo)");
@@ -651,16 +640,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     setLeavePrompt(false);
     navigate(-1);
   };
-  const discardAndLeave = () => {
+  // Keep the edited version as a draft (edits already auto-persist) and leave.
+  const saveDraftAndLeave = () => {
     setLeavePrompt(false);
-    if (!quoted) {
-      dealsCtx.discardVersion(dealId, versionId); // never finalized → drop the draft
-    } else {
-      // Revert the stored copy back to the last finalized snapshot.
-      dealsCtx.updateDraft(dealId, versionId, {
-        customizations: { ...(version.customizations || {}), selectedDayOptions: committedDays, selectedHotels: committedHotels },
-      });
-    }
     navigate(-1);
   };
 
@@ -684,7 +666,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
           <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <span>Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
-            {inDeal && (
+            {/* Version badge only once the itinerary is created (priced) */}
+            {quoted && (
               <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4 }}>
                 V{version.num}
               </span>
@@ -727,7 +710,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             /* Explore: we don't have the customer's dates/party yet — prompt to add (inline, no login) */
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {[{ icon: <Calendar size={12} />, label: "Add travel dates" }, { icon: <Users size={12} />, label: "Add travellers" }].map(c => (
-                <button key={c.label} onClick={() => setShowTripSheet(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: C.p600, border: `1px dashed ${C.p300}`, borderRadius: 20, padding: "5px 10px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
+                <button key={c.label} onClick={() => navigate(`/build?dest=${encodeURIComponent(it.dest)}`)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: C.p600, border: `1px dashed ${C.p300}`, borderRadius: 20, padding: "5px 10px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
                   {c.icon} {c.label}
                 </button>
               ))}
@@ -736,6 +719,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           <p style={{ fontSize: 12.5, color: C.sub, margin: "3px 0 0", lineHeight: "17px" }}>{it.days.map(d => `${d.city} ${d.n}N`).join("  ·  ")}</p>
         </div>
         {wizardEditable && (
+          /* Opens the "Edit your trip" field picker */
           <button onClick={() => setShowEditMenu(true)} style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, border: `1px solid ${C.div}`, borderRadius: 20, padding: "6px 12px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
             <Pencil size={13} /> Edit
           </button>
@@ -767,7 +751,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         </div>
       )}
 
-      {/* Edit menu — one entry, three targets, each routes to the wizard and forks a new version */}
+      {/* Edit your trip — pick a field; the wizard opens at it and edits forward */}
       {showEditMenu && (
         <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
           <div onClick={() => setShowEditMenu(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} />
@@ -776,11 +760,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>Edit your trip</p>
               <button onClick={() => setShowEditMenu(false)} style={{ border: "none", background: "none", cursor: "pointer", padding: 0 }}><XIcon size={20} color={C.sub} /></button>
             </div>
-            <p style={{ fontSize: 12.5, color: C.sub, margin: "0 0 14px" }}>Each change saves a new version. Your current one stays in My Plans.</p>
+            <p style={{ fontSize: 12.5, color: C.sub, margin: "0 0 14px" }}>Pick what to change. You'll be able to edit it and the steps after it.</p>
             {[
-              { target: "dates", icon: <Calendar size={18} color={C.p600} />, label: "Travel dates", value: dateLabel },
+              { target: "destination", icon: <MapPin size={18} color={C.p600} />, label: "Destination", value: it.dest },
               { target: "travellers", icon: <Users size={18} color={C.p600} />, label: "Travellers", value: `${travellers} traveller${travellers > 1 ? "s" : ""}` },
-              { target: "route", icon: <MapPin size={18} color={C.p600} />, label: "Cities & route", value: it.days.map(d => d.city).join(" · ") },
+              { target: "dates", icon: <Calendar size={18} color={C.p600} />, label: "Travel dates", value: dateLabel },
+              { target: "route", icon: <ArrowLeftRight size={18} color={C.p600} />, label: "Route", value: it.days.map(d => d.city).filter((c, i, a) => a.indexOf(c) === i).join(" · ") },
+              { target: "activities", icon: <Sparkles size={18} color={C.p600} />, label: "Activities", value: "Day plans & experiences" },
             ].map((row) => (
               <button key={row.target} onClick={() => goEdit(row.target)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 4px", border: "none", borderTop: `1px solid ${C.bg}`, background: "none", cursor: "pointer", fontFamily: "inherit" }}>
                 <span style={{ width: 38, height: 38, borderRadius: 10, background: C.p100, display: "grid", placeItems: "center", flexShrink: 0 }}>{row.icon}</span>
@@ -794,7 +780,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </div>
         </div>
       )}
-
 
       {/* ═══ 2. Highlights (Vietnam) / See Your Trip (others) ═══ */}
       {isVietnam ? (
@@ -1110,7 +1095,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 name={h.name}
                 roomType={h.type}
                 city={h.city}
-                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}`}
+                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}`}
                 footer={
                   <>
                     {ls?.status === "price_up" && (
@@ -1644,7 +1629,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               </div>
               <p style={{ fontSize: 11, color: C.inact, margin: 0 }}>Total for {travellers} · incl. GST & TCS{hasChosenFlights ? " & flights" : ""}</p>
             </div>
-            <Link to={`/plan?dest=${it.dest}`} style={{
+            <Link to={`/build?dest=${encodeURIComponent(it.dest)}`} style={{
               display: "flex", alignItems: "center", gap: 6, padding: "13px 20px", borderRadius: 12,
               background: C.p600, color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
               boxShadow: "0 4px 16px rgba(227,27,83,0.3)",
@@ -1657,8 +1642,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <div style={{ minWidth: 0 }}>
           {validQuote ? (
             <>
+              <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Final price</p>
               <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
-              <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Quote valid till {new Date(version.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact }}>Quote generated on {new Date(version.pricedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
             </>
           ) : (
             <>
@@ -1674,8 +1660,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               <button data-testid="download-pdf" onClick={handleDownloadPdf} style={{ display: "flex", alignItems: "center", gap: 5, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: "#027A48", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                 <Download size={15} /> PDF
               </button>
-              <button data-testid="plan-my-trip" onClick={() => navigate(`/plan?dest=${it.dest}`)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
-                Plan My Trip <ArrowRight size={14} />
+              <button data-testid="call-consultant" onClick={() => alert("Calling your travel consultant…")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
+                <Phone size={15} /> Call consultant
               </button>
             </>
           ) : hasChanges ? (
@@ -1684,7 +1670,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             </button>
           ) : (
             <button data-testid="get-final-price" onClick={handleGetFinalPrice} disabled={fetchingPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)", opacity: fetchingPrice ? 0.7 : 1 }}>
-              {fetchingPrice ? "Checking availability…" : "Get final price"}
+              {fetchingPrice ? "Checking availability…" : "Create Itinerary"}
             </button>
           )}
         </div>
@@ -1744,7 +1730,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           <div style={{ position: "relative", width: "100%", maxWidth: 360, background: C.white, borderRadius: 20, padding: 20, boxShadow: "0 12px 40px rgba(0,0,0,0.22)" }}>
             <p style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: "0 0 6px" }}>Save your changes?</p>
             <p style={{ fontSize: 13.5, color: C.sub, margin: "0 0 18px", lineHeight: "20px" }}>
-              You've edited this itinerary but haven't created it yet. Create the itinerary to keep it, or discard your changes.
+              You've edited this itinerary but haven't created it yet. Create it now, or save your changes as a draft to finish later.
             </p>
             <button
               onClick={createItineraryAndLeave}
@@ -1753,10 +1739,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               Create the itinerary
             </button>
             <button
-              onClick={discardAndLeave}
-              style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: "#C2410C", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              onClick={saveDraftAndLeave}
+              style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.head, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
             >
-              Discard changes
+              Save as draft
             </button>
             <button
               onClick={() => setLeavePrompt(false)}
