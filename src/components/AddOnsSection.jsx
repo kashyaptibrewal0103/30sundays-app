@@ -421,7 +421,8 @@ export default function AddOnsSection({ addOns, travelers = [], collapsible = fa
       forex: "Multi-currency travel card",
       insurance: "Medical, cancellation and baggage cover",
     };
-    const isAdded = (key) => modes[key] === "added";
+    // Forex is information-only (always "Not added"); only Insurance switches.
+    const isAdded = (key) => key !== "forex" && modes[key] === "added";
     const chipFor = (key) => isAdded(key)
       ? <StatusChip tone="green" icon={<Check size={12} color="#2E7D52" strokeWidth={3} />} text="Added" />
       : <StatusChip tone="gray" text="Not added" />;
@@ -472,20 +473,7 @@ export default function AddOnsSection({ addOns, travelers = [], collapsible = fa
           </>
         );
       }
-      // Forex
-      if (isAdded("forex")) {
-        return (
-          <>
-            <p style={detailText}>Your multi-currency forex card is active and loaded, ready to spend abroad with zero markup.</p>
-            <ul style={detailList}>
-              <li>Loaded currencies: USD, THB, EUR</li>
-              <li>Zero markup on conversions</li>
-              <li>Works at POS and ATMs worldwide</li>
-            </ul>
-            <DocumentRow available={Boolean(addOns?.forex?.documentUrl)} url={addOns?.forex?.documentUrl} label="Forex card" meta="Balance and card details" />
-          </>
-        );
-      }
+      // Forex - information only: single not-added state, no CTA.
       return (
         <>
           <p style={detailText}>Load multiple currencies on one card and skip messy conversions abroad.</p>
@@ -494,7 +482,6 @@ export default function AddOnsSection({ addOns, travelers = [], collapsible = fa
             <li>Works at POS and ATMs worldwide</li>
             <li>Lock rates ahead of your trip</li>
           </ul>
-          <button style={primaryBtn} onClick={() => alert("Set up a forex card with your trip manager.")}>Set up forex card</button>
         </>
       );
     };
@@ -510,7 +497,7 @@ export default function AddOnsSection({ addOns, travelers = [], collapsible = fa
               subtitle={SUBTITLES[key]}
               Icon={Icon}
               statusChip={chipFor(key)}
-              menu={<AddOnStateMenu mode={modes[key]} setMode={(m) => setModes((o) => ({ ...o, [key]: m }))} />}
+              menu={key === "insurance" ? <AddOnStateMenu mode={modes[key]} setMode={(m) => setModes((o) => ({ ...o, [key]: m }))} /> : null}
               open={!!openItems[key]}
               onToggle={() => setOpenItems((o) => ({ ...o, [key]: !o[key] }))}
               showDivider={i > 0}
