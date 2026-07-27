@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -1527,7 +1527,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       <Divider />
 
       {/* ═══ 8. Cost breakdown ═══ */}
-      <div style={{ padding: "0 16px" }}>
+      <div id="cost-breakdown" style={{ padding: "0 16px", scrollMarginTop: 12 }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 12px" }}>Cost breakdown</p>
         <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden" }}>
           {[
@@ -1646,13 +1646,23 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           {validQuote ? (
             <>
               <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Final price</p>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
+                <button onClick={() => document.getElementById("cost-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" })} aria-label="View cost breakdown" style={{ background: "none", border: "none", padding: 2, cursor: "pointer", display: "inline-flex", lineHeight: 0 }}>
+                  <Info size={15} color={C.sub} />
+                </button>
+              </div>
               <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact }}>Quote generated on {new Date(version.pricedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
             </>
           ) : (
             <>
               <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Indicative total</p>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
+                <button onClick={() => document.getElementById("cost-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" })} aria-label="View cost breakdown" style={{ background: "none", border: "none", padding: 2, cursor: "pointer", display: "inline-flex", lineHeight: 0 }}>
+                  <Info size={15} color={C.sub} />
+                </button>
+              </div>
               <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact }}>Not saved yet, your consultant can't see this</p>
             </>
           )}
