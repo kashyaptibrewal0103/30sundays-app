@@ -542,6 +542,12 @@ export const mockTrips = [
           { traveler: "Trav 1", cabin: "7 Kg", checkin: "15 Kg" },
           { traveler: "Trav 2", cabin: "7 Kg", checkin: "15 Kg" },
         ],
+        addOns: [
+          { type: "meal", label: "Meal", perTraveller: ["Veg meal", "Veg meal"] },
+          { type: "seat", label: "Seats", perTraveller: ["14A", "14B"] },
+          { type: "priority", label: "Express check-in", perTraveller: ["Included", "Included"] },
+          { type: "baggage", label: "Extra baggage", perTraveller: ["+15 kg", "+15 kg"] },
+        ],
       },
     ],
     hotels: [
@@ -557,6 +563,12 @@ export const mockTrips = [
         bookingRating: 9.1,
         photo: `${CDN}/bali/tegallalang_rice_fields_4.jpg`,
         fallbackPhoto: `${CDN}/bali/tegallalang_rice_fields_4.jpg`,
+        addOns: [
+          { title: "Daily breakfast for two", description: "Breakfast for two is included every morning of your stay at the hotel's main restaurant. Nothing to pay at the table, it's already part of your booking." },
+          { title: "Airport pickup", description: "A private airport pickup is arranged for your arrival. A driver meets you at the terminal and takes you straight to the hotel, timed to your flight." },
+          { title: "Extra bed", description: "An additional bed is set up in your room for the stay, made up fresh on arrival, for a little more space and comfort." },
+          { title: "Airport drop", description: "A private airport drop is arranged for departure. A driver collects you from the hotel and takes you to the terminal in good time for your flight." },
+        ],
       },
       {
         id: "ht-5",
@@ -570,6 +582,12 @@ export const mockTrips = [
         bookingRating: 8.9,
         photo: `${CDN}/bali/bali_swing_experience_1.jpg`,
         fallbackPhoto: `${CDN}/bali/bali_swing_experience_1.jpg`,
+        addOns: [
+          { title: "Daily breakfast for two", description: "Breakfast for two is included every morning of your stay at the hotel's main restaurant. Nothing to pay at the table, it's already part of your booking." },
+          { title: "Airport pickup", description: "A private airport pickup is arranged for your arrival. A driver meets you at the terminal and takes you straight to the hotel, timed to your flight." },
+          { title: "Extra bed", description: "An additional bed is set up in your room for the stay, made up fresh on arrival, for a little more space and comfort." },
+          { title: "Airport drop", description: "A private airport drop is arranged for departure. A driver collects you from the hotel and takes you to the terminal in good time for your flight." },
+        ],
       },
     ],
     journeyMapCities: [

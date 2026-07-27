@@ -107,7 +107,7 @@ export default function HotelDetailScreen({
         {/* ═══ Add-ons included (collapsed; expand each for a short description) ═══ */}
         {addOns?.length > 0 && (
           <div style={{ margin: "24px 16px 0" }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#181E4C", margin: "0 0 4px" }}>Add-ons included</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#181E4C", margin: "0 0 4px" }}>{addOns.length} add-ons included</h3>
             <AddOnDetailList items={addOns} />
           </div>
         )}

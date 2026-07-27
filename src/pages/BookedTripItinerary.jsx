@@ -682,6 +682,17 @@ function FlightDetailSheet({ flight: fl, onClose }) {
           </div>
         </div>
 
+        {/* Add-ons included — above baggage, headed with the count */}
+        {fl.bookingStatus === "booked" && fl.addOns?.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              <Sparkles size={16} color="#FD014F" strokeWidth={1.9} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>{fl.addOns.length} add-ons included</span>
+            </div>
+            <AddOnDetailList items={fl.addOns.map((a) => ({ title: a.label, description: FLIGHT_ADDON_DESC[a.type] || "Included with your booking." }))} />
+          </div>
+        )}
+
         {/* Baggage */}
         {fl.baggage?.length > 0 && (
           <div style={{ marginTop: 16 }}>
@@ -703,36 +714,6 @@ function FlightDetailSheet({ flight: fl, onClose }) {
             ))}
           </div>
         )}
-
-        {/* Add-ons included — collapsed rows; expand each for a short description */}
-        {fl.bookingStatus === "booked" && fl.addOns?.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-              <Sparkles size={16} color="#FD014F" strokeWidth={1.9} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>Add-ons included</span>
-            </div>
-            <AddOnDetailList items={fl.addOns.map((a) => ({ title: a.label, description: FLIGHT_ADDON_DESC[a.type] || "Included with your booking." }))} />
-          </div>
-        )}
-
-        {/* Web check-in: live button when open, else tentative date */}
-        <div style={{ marginTop: 16 }}>
-          {fl.webCheckinOpen ? (
-            <button
-              onClick={() => alert(`Web check-in\n\nOpening ${fl.airline} web check-in…`)}
-              style={{ width: "100%", padding: "12px 0", borderRadius: 40, border: "1.5px solid #FD014F", background: "none", color: "#FD014F", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-            >
-              Web check-in
-            </button>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "#F9F9FB", border: "1px solid #E0E2EB" }}>
-              <Clock size={16} color="#666C99" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: "#666C99", lineHeight: "17px" }}>
-                Web check-in opens 48 hrs before departure{fl.checkinOpensOn ? ` · around ${fl.checkinOpensOn}` : ""}.
-              </span>
-            </div>
-          )}
-        </div>
 
       </div>
     </div>
@@ -848,7 +829,7 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false, showGetDi
         onClick={goPdp}
         showChevron={false}
         footer={(hotel.confirmationNo || hotel.addOns?.length > 0) ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6, paddingTop: 10, borderTop: "1px solid #E0E2EB" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
             {hotel.bookingStatus === "booked" && hotel.confirmationNo && (
               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 500, color: "#666C99" }}>Confirmation</span>
