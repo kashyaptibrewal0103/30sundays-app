@@ -25,6 +25,8 @@ import LoginV2 from "./LoginV2";
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
 const STEP_LABELS_DEFAULT = ["Destination", "Travelers", "Travel dates", "Route", "Activities"];
 const STEP_LABELS_MALDIVES = ["Destination", "Travelers", "Travel dates", "Resort", "Meal plan"];
+// Only these get the in-app itinerary wizard; other countries go to lead capture.
+const AUTO_ITINERARY_DESTS = ["Thailand", "Vietnam", "Bali"];
 
 // Deterministic "chosen by X% of Indian couples" from a route signature (55-88%).
 function couplePct(sig) {
@@ -170,6 +172,8 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   const [party, setParty] = useState(editBuilt?.partySize
     ? { ...editBuilt.partySize }
     : { couples: 1, adults: 0, kids: 0 });
+  // Lead name captured on the Travellers step (like the lead form).
+  const [name, setName] = useState(editBuilt?.leadName || "");
   const [vibes, setVibes] = useState(editBuilt?._vibes || []);
   const [startDate, setStartDate] = useState(editBuilt?.startDate || null);
   // Maldives asks for a fixed 3 or 4 nights, so it starts unset (no default fill).
@@ -208,6 +212,13 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
 
   const targetNights = nights || (dest ? destMeta[dest]?.defaultNights : 7);
 
+  // Entering with a pre-seeded destination (destination page "Plan my trip" or
+  // a ready-made itinerary) for a non-wizard country → send to the lead form.
+  const leadRedirect = !!seedDest && !AUTO_ITINERARY_DESTS.includes(seedDest);
+  useEffect(() => {
+    if (leadRedirect) navigate(`/plan?dest=${encodeURIComponent(seedDest)}`, { replace: true });
+  }, [leadRedirect, seedDest]);
+
   // When the route step is first reached, seed the recommended route.
   // Maldives has no route step, so it never seeds one.
   useEffect(() => {
@@ -245,6 +256,13 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   // advances). Watching from the detail view still advances directly.
   const pickDest = (d) => resetForDest(d);
   const chooseDest = (d) => { resetForDest(d); setDetailDest(null); setStep(1); };
+  // From the standalone Select-destination page: only Bali / Vietnam / Thailand
+  // continue into the customisation wizard; every other country goes to the
+  // existing lead-generation form.
+  const pickDestination = (d) => {
+    if (AUTO_ITINERARY_DESTS.includes(d)) chooseDest(d);
+    else navigate(`/plan?dest=${encodeURIComponent(d)}`);
+  };
 
   // ─── activities → build ───
   const picksByCity = useMemo(() => {
@@ -263,6 +281,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
         dest, nights: routeNights(route), route, picksByCity, vibes, startDate, party,
       });
       it._vibes = vibes; // keep for potential re-entry
+      it.leadName = name; // captured on the Travellers step, kept for re-entry
       const { dealId, versionId } = dealsCtx.createDeal({
         itineraryId: it.id,
         dest: it.dest,
@@ -270,7 +289,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
         img: it.img,
         createdBy: "customer",
         customItinerary: it,
-        customizations: { selectedDayOptions: {}, selectedHotels: {}, travelDates: { fromDate: startDate, nights: it.nights, travelers: travellers }, builtItinerary: it },
+        customizations: { leadName: name, selectedDayOptions: {}, selectedHotels: {}, travelDates: { fromDate: startDate, nights: it.nights, travelers: travellers }, builtItinerary: it },
         indicativePrice: Number(String(it.price).replace(/,/g, "")) || 0,
       });
       // Skip the reveal: drop straight onto the itinerary screen. Replace so
@@ -345,13 +364,14 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   // ─── primary CTA per step ───
   // Couples only: groups must be an even number of adults (pairs of couples).
   const partyOk = party.kids === 0 && !party.solo && (party.couples > 0 || party.adults % 2 === 0);
+  const nameOk = name.trim().length > 0; // Travellers step now also needs a name
   const ctaFor = () => {
     // Sequential edit: Continue through each editable step in order; the final
     // step saves a new version with no confirmation. Activities is not part of
     // the edit flow, so Route is the last step (Maldives ends on Meal plan).
     if (editMode) {
       const stepValid = step === 0 ? !!dest
-        : step === 1 ? partyOk
+        : step === 1 ? (partyOk && nameOk)
         : step === 2 ? (!!startDate && !!nights)
         : step === 3 ? (isMaldives ? (!!tier || !!pinnedResortId) : routeStepOk)
         : true;
@@ -363,7 +383,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     if (step === 0) return dest ? { label: `Select ${dest}`, onClick: goNext, enabled: true } : null;
     if (isMaldives) {
       switch (step) {
-        case 1: return { label: "Continue", onClick: goNext, enabled: partyOk };
+        case 1: return { label: "Continue", onClick: goNext, enabled: partyOk && nameOk };
         case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
         case 3: return { label: "Continue", onClick: goNext, enabled: !!tier || !!pinnedResortId };
         case 4: return mealPrefs.size > 0
@@ -373,7 +393,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
       }
     }
     switch (step) {
-      case 1: return { label: "Continue", onClick: goNext, enabled: partyOk };
+      case 1: return { label: "Continue", onClick: goNext, enabled: partyOk && nameOk };
       case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
       case 3: return skipActivities
         ? { label: "Create my itinerary ✦", onClick: () => gatedBuild(doBuild), enabled: routeStepOk }
@@ -443,6 +463,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     );
   }
 
+  if (leadRedirect) return null;
   if (building) return <Building dest={dest} />;
 
   return (
@@ -453,8 +474,12 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
           <button onClick={goBack} aria-label="Back" style={iconBtn}>
             <ArrowLeft size={20} color={C.head} />
           </button>
-          {/* Clickable stage stepper: name + a concise value; tap a done step to
-              jump back. Scrolls sideways so full stage names stay readable. */}
+          {/* The standalone Select-destination page (step 0, fresh entry) shows no
+              stepper - the wizard only appears once a wizard-eligible country is
+              chosen. Edit mode keeps the stepper on step 0. */}
+          {(editMode || step > 0) && (
+          /* Clickable stage stepper: name + a concise value; tap a done step to
+              jump back. Scrolls sideways so full stage names stay readable. */
           <div ref={stepBarRef} className="hide-scrollbar" style={{ flex: 1, display: "flex", gap: 10, minWidth: 0, overflowX: "auto" }}>
             {/* Activities is dropped for the edit flow and the ready-made-itinerary
                 flow (both non-Maldives end on Route). */}
@@ -487,13 +512,14 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
               );
             })}
           </div>
+          )}
         </div>
       </div>
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
-        {step === 0 && <StepDestination onOpen={setDetailDest} selected={dest} onSelect={chooseDest} />}
-        {step === 1 && <StepParty party={party} setParty={setParty} onContinue={goNext} />}
+        {step === 0 && <StepDestination onOpen={setDetailDest} selected={dest} onSelect={pickDestination} />}
+        {step === 1 && <StepParty name={name} setName={setName} party={party} setParty={setParty} onContinue={goNext} />}
         {step === 2 && (isMaldives
           ? <StepDatesMaldives dest={dest} startDate={startDate} setStartDate={setStartDate} nights={nights} setNights={setNights} />
           : <StepDates dest={dest} startDate={startDate} setStartDate={setStartDate} nights={nights} setNights={setNights} />
@@ -523,7 +549,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
 
       {/* Full-screen destination view */}
       {detailDest && (
-        <DestinationDetail dest={detailDest} onClose={() => setDetailDest(null)} onChoose={chooseDest} />
+        <DestinationDetail dest={detailDest} onClose={() => setDetailDest(null)} onChoose={pickDestination} />
       )}
     </div>
   );
@@ -644,7 +670,7 @@ const TrustBadge = ({ pct, dark }) => (
 // ════════════════════ Step 1: Party ════════════════════
 // Card-based. Couple and two-couples need no extra input (tap advances). A
 // bigger group reveals traveller + kids steppers inline.
-function StepParty({ party, setParty, onContinue }) {
+function StepParty({ name, setName, party, setParty, onContinue }) {
   const isGroup = party.couples === 0 && party.kids === 0 && !party.solo;
   // Selecting "couple with kids" or "solo traveller" doesn't advance — we
   // surface a couples-only note and disable Continue (Build reads these as
@@ -664,14 +690,34 @@ function StepParty({ party, setParty, onContinue }) {
   const pick = (key) => {
     if (key === "kids") { setParty({ couples: 1, adults: 0, kids: 1, solo: false }); return; } // not catered → blocks Continue
     if (key === "solo") { setParty({ couples: 0, adults: 1, kids: 0, solo: true }); return; } // not catered → blocks Continue
-    if (key === "couple") { setParty({ couples: 1, adults: 0, kids: 0, solo: false }); onContinue(); }
+    if (key === "couple") { setParty({ couples: 1, adults: 0, kids: 0, solo: false }); } // footer Continue advances (needs name)
     else setParty({ couples: 0, adults: 4, kids: 0, solo: false }); // reveal stepper, stay on screen
   };
   const setAdults = (v) => setParty(p => ({ ...p, adults: Math.max(4, v) }));
   return (
     <div style={{ padding: "18px 16px 24px" }}>
       <h1 style={titleStyle}>Who is Travelling?</h1>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18 }}>
+      {/* Name (like the lead form), above the traveller selection */}
+      <div style={{ marginTop: 16 }}>
+        <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.head, marginBottom: 6 }}>
+          Your name <span style={{ color: C.p600 }}>*</span>
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="What should we call you?"
+          style={{
+            width: "100%", boxSizing: "border-box", padding: "14px 16px", borderRadius: 14,
+            border: `1.5px solid ${name.trim() ? C.p600 : C.div}`, fontSize: 15, color: C.head,
+            background: "#FAFAFA", outline: "none", fontFamily: "inherit",
+          }}
+        />
+      </div>
+      <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.head, margin: "18px 0 0" }}>
+        Select number of travellers
+      </label>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
         {cards.map(c => (
           <div key={c.key}>
             <button onClick={() => pick(c.key)} style={{

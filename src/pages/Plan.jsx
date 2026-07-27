@@ -104,9 +104,10 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
     }
   }, []);
 
-  // phase: "auth" | "details" | "curating" | "success"
-  // ("auth" covers what used to be "phone" + "otp" - handled by LoginV2)
-  const [phase, setPhase] = useState(isReturning ? "success" : "auth");
+  // phase: "details" | "auth" | "curating" | "success"
+  // The lead form comes first; phone/OTP ("auth", handled by LoginV2) is the
+  // last step, after the form is filled.
+  const [phase, setPhase] = useState(isReturning ? "success" : "details");
   const [countryIdx, setCountryIdx] = useState(0);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
@@ -231,11 +232,22 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   let ctaEnabled = false;
   if (phase === "details") { ctaLabel = "Explore Itineraries"; ctaEnabled = name.trim().length > 0 && dests.length > 0; }
 
-  // Called by LoginV2 when OTP verifies successfully
+  // Finalise once the form is filled AND phone is verified: brief curating
+  // state, then land on the plans list (or the sales-request message).
+  const finalizeLead = () => {
+    if (returnTo === "trips") { navigate("/trips", { replace: true }); return; }
+    if (returnTo === "account") { navigate("/account", { replace: true }); return; }
+    setPhase("curating");
+    if (leadData?.salesRequest) setTimeout(() => navigate("/"), 2400);
+    else setTimeout(() => { setPhase("success"); setShowWelcome(true); }, 2400);
+  };
+
+  // Called by LoginV2 when OTP verifies - now the LAST step, after the form.
   const handleAuthComplete = ({ country: c, phone: p }) => {
     setPhone(p);
     setCountryIdx(countryCodes.findIndex((cc) => cc.code === c.code));
-    setPhase("details");
+    setLeadData((d) => ({ ...(d || {}), phone: p, countryCode: c.code }));
+    finalizeLead();
   };
 
   // OTP validation that LoginV2 calls - keep the legacy "0000 = invalid" rule
@@ -244,12 +256,8 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
     return null;
   };
 
-  // Skip from LoginV2 → bounce home (or return target)
-  const handleAuthSkip = () => {
-    if (returnTo === "trips") navigate("/trips", { replace: true });
-    else if (returnTo === "account") navigate("/account", { replace: true });
-    else navigate("/", { replace: true });
-  };
+  // Skip the OTP step - still finalise the lead (we already have the details).
+  const handleAuthSkip = () => finalizeLead();
 
   const ctaAction = () => {
     if (phase === "details") {
@@ -271,28 +279,14 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
       };
       setLeadData(data);
       setUserState("lead");
-      if (returnTo === "trips") {
-        navigate("/trips", { replace: true });
-      } else if (returnTo === "account") {
-        navigate("/account", { replace: true });
-      } else if (salesRequest) {
-        // Case 2: loader, then land on the home screen. The callback nudge
-        // there tells the user a travel consultant will call shortly.
-        setPhase("curating");
-        setTimeout(() => navigate("/"), 2400);
-      } else {
-        // Case 1: transient curating state for feedback, then success
-        setPhase("curating");
-        setTimeout(() => {
-          setPhase("success");
-          setShowWelcome(true);
-        }, 2400);
-      }
+      // Form done - now verify the phone (OTP) as the final step.
+      setPhase("auth");
     }
   };
 
   const goBack = () => {
-    if (phase === "details") setPhase("auth");
+    if (phase === "details") navigate(-1);
+    else if (phase === "auth") setPhase("details");
     else if (phase === "success") navigate("/");
     else navigate(-1);
   };
