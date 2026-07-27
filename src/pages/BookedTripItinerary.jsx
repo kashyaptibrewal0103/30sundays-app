@@ -689,7 +689,7 @@ function FlightDetailSheet({ flight: fl, onClose }) {
               <Sparkles size={16} color="#FD014F" strokeWidth={1.9} />
               <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>{fl.addOns.length} add-ons included</span>
             </div>
-            <AddOnDetailList items={fl.addOns.map((a) => ({ title: a.label, description: FLIGHT_ADDON_DESC[a.type] || "Included with your booking." }))} />
+            <p style={{ margin: "2px 0 0", fontSize: 13, color: "#535862", lineHeight: "19px" }}>{fl.addOns.map((a) => a.label).join(", ")}</p>
           </div>
         )}
 
@@ -781,7 +781,7 @@ function FlightsSection({ flights }) {
 
               {/* Purchased add-ons — plain count; names shown in the View details sheet */}
               {fl.bookingStatus === "booked" && fl.addOns?.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 12, borderTop: "1px solid #E0E2EB" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <Sparkles size={15} color="#2E7D52" strokeWidth={1.9} />
                   <span style={{ fontSize: 13, fontWeight: 500, color: "#181E4C" }}>
                     {fl.addOns.length} add-on{fl.addOns.length > 1 ? "s" : ""} included

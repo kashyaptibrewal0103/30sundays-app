@@ -108,7 +108,7 @@ export default function HotelDetailScreen({
         {addOns?.length > 0 && (
           <div style={{ margin: "24px 16px 0" }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: "#181E4C", margin: "0 0 4px" }}>{addOns.length} add-ons included</h3>
-            <AddOnDetailList items={addOns} />
+            <p style={{ margin: "2px 0 0", fontSize: 13.5, color: "#535862", lineHeight: "20px" }}>{addOns.map((a) => a.title || a).join(", ")}</p>
           </div>
         )}
 
