@@ -5,13 +5,14 @@ import {
   Share2, MapPin, Star, MessageCircle, Plane, Users, PalmtreeIcon,
   User as UserIcon, Phone, Pencil, Trash2, Plus, Bell, PlayCircle, Send,
   X, Download, Hotel, ShieldCheck, BookCheck, Stamp, Clock, Luggage,
-  Play, SkipBack, SkipForward, Volume2, Maximize,
+  Play, SkipBack, SkipForward, Volume2, Maximize, Check, Copy,
 } from "lucide-react";
 import { C } from "../data";
 import { getTripById, getCountdown } from "../data/tripData";
 import { getMauritiusInclusionsByName } from "../data/mauritiusData";
 import ConsultantCard from "../components/ConsultantCard";
 import AddOnsSection from "../components/AddOnsSection";
+import VisaSection from "../components/VisaSection";
 import InclusionsDrawer from "../components/InclusionsDrawer";
 import HotelStayCard from "../components/HotelStayCard";
 import RouteMap from "../components/JourneyMap";
@@ -529,6 +530,59 @@ function ItineraryGlance({ trip, setDetailTab }) {
   );
 }
 
+// ─── Airline logo (falls back to the 2-letter code tile if the image fails) ───
+function AirlineLogo({ code, name, size = 36 }) {
+  const [failed, setFailed] = useState(false);
+  if (failed || !code) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: 10, background: "#F4F2F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#666C99", flexShrink: 0 }}>
+        {code}
+      </div>
+    );
+  }
+  return (
+    <div style={{ width: size, height: size, borderRadius: 10, background: C.white, border: "1px solid #E9EAEB", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+      <img src={`https://pics.avs.io/120/120/${code}.png`} alt={name} onError={() => setFailed(true)} style={{ width: "80%", height: "80%", objectFit: "contain" }} />
+    </div>
+  );
+}
+
+// PNR block: grey "PNR" label above the bold, tap-to-copy number.
+function PnrBlock({ pnr, align = "right" }) {
+  const [copied, setCopied] = useState(false);
+  const copy = (e) => {
+    e.stopPropagation();
+    try { navigator.clipboard?.writeText(pnr); } catch (_) {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  };
+  return (
+    <div style={{ textAlign: align, flexShrink: 0 }}>
+      <div style={{ fontSize: 12, fontWeight: 500, color: "#666C99", lineHeight: "20px" }}>PNR</div>
+      <button
+        onClick={copy}
+        aria-label={copied ? "PNR copied" : `Copy PNR ${pnr}`}
+        style={{
+          marginTop: 6, display: "inline-flex", alignItems: "center", gap: 5,
+          background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
+          justifyContent: align === "right" ? "flex-end" : "flex-start",
+        }}
+      >
+        <span style={{ fontSize: 15, fontWeight: 700, color: "#181E4C", letterSpacing: ".3px", lineHeight: "20px" }}>{pnr}</span>
+        {copied
+          ? <Check size={14} color="#2E7D52" strokeWidth={3} style={{ flexShrink: 0 }} />
+          : <Copy size={14} color="#666C99" strokeWidth={2} style={{ flexShrink: 0 }} />}
+      </button>
+    </div>
+  );
+}
+
+// "+1" superscript when the flight lands the next day (arrival clock < departure).
+function arrivesNextDay(depart, arrive) {
+  const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + m; };
+  return toMin(arrive) < toMin(depart);
+}
+
 // ─── Flight Cards Carousel (Figma-styled: 322px, gray header + body) ───
 // Top-right pill: green "Booked" once confirmed, amber "Processing" until then.
 function BookingStatusBadge({ status }) {
@@ -545,28 +599,8 @@ function BookingStatusBadge({ status }) {
   );
 }
 
-// Slim full-width footer inside a booked card: a confirmation/PNR ref + a
-// download glyph, tinted green to reinforce the confirmed state.
-function BookingRefBar({ label, value, onDownload }) {
-  return (
-    <div
-      onClick={(e) => { e.stopPropagation(); onDownload(); }}
-      style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
-        padding: "8px 12px", background: "#E6F4EC", borderTop: "1px solid #BBE3CA", cursor: "pointer",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-        <span style={{ fontSize: 11, color: "#3E8E63", lineHeight: "16px" }}>{label}</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#1B5E3A", letterSpacing: ".3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
-      </div>
-      <Download size={16} color="#2E7D52" strokeWidth={2} style={{ flexShrink: 0 }} />
-    </div>
-  );
-}
-
-// Full flight details, opened from a flight card. Mirrors the planning/exploration
-// detail: route, baggage, web check-in (or its tentative open date), and ticket/PNR.
+// Full flight details, opened from a flight card: airline + PNR, route, add-ons
+// and baggage. Mirrors the booked-itinerary sheet.
 function FlightDetailSheet({ flight: fl, onClose }) {
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
@@ -578,13 +612,16 @@ function FlightDetailSheet({ flight: fl, onClose }) {
           <button onClick={onClose} aria-label="Close" style={{ border: "none", background: "none", cursor: "pointer", padding: 4, marginRight: -4 }}><X size={20} color="#666C99" /></button>
         </div>
 
-        {/* Airline + status */}
+        {/* Airline + status (left) · PNR (right) — same two-rail layout as the card */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 28, height: 20, borderRadius: 4, background: "#F4F2F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#666C99" }}>{fl.airlineLogo}</div>
-            <span style={{ fontSize: 14, color: "#181E4C" }}>{fl.airline}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <AirlineLogo code={fl.airlineLogo} name={fl.airline} size={46} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>{fl.airline}</div>
+              <div style={{ marginTop: 6 }}><BookingStatusBadge status={fl.bookingStatus} /></div>
+            </div>
           </div>
-          <BookingStatusBadge status={fl.bookingStatus} />
+          {fl.bookingStatus === "booked" && fl.pnr && <PnrBlock pnr={fl.pnr} />}
         </div>
 
         {/* Route + times */}
@@ -608,6 +645,17 @@ function FlightDetailSheet({ flight: fl, onClose }) {
           </div>
         </div>
 
+        {/* Add-ons included — above baggage, headed with the count */}
+        {fl.bookingStatus === "booked" && fl.addOns?.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              <Sparkles size={16} color="#FD014F" strokeWidth={1.9} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>{fl.addOns.length} add-ons included</span>
+            </div>
+            <p style={{ margin: "2px 0 0", fontSize: 13, color: "#535862", lineHeight: "19px" }}>{fl.addOns.map((a) => a.label).join(", ")}</p>
+          </div>
+        )}
+
         {/* Baggage */}
         {fl.baggage?.length > 0 && (
           <div style={{ marginTop: 16 }}>
@@ -630,48 +678,6 @@ function FlightDetailSheet({ flight: fl, onClose }) {
           </div>
         )}
 
-        {/* Web check-in: live button when open, else tentative date */}
-        <div style={{ marginTop: 16 }}>
-          {fl.webCheckinOpen ? (
-            <button
-              onClick={() => alert(`Web check-in\n\nOpening ${fl.airline} web check-in…`)}
-              style={{ width: "100%", padding: "12px 0", borderRadius: 40, border: "1.5px solid #FD014F", background: "none", color: "#FD014F", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-            >
-              Web check-in
-            </button>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "#F9F9FB", border: "1px solid #E0E2EB" }}>
-              <Clock size={16} color="#666C99" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: "#666C99", lineHeight: "17px" }}>
-                Web check-in opens 48 hrs before departure{fl.checkinOpensOn ? ` · around ${fl.checkinOpensOn}` : ""}.
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Ticket / PNR */}
-        <div style={{ marginTop: 12 }}>
-          {fl.bookingStatus === "booked" && fl.pnr ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 12px", borderRadius: 10, background: "#E6F4EC", border: "1px solid #BBE3CA" }}>
-              <div style={{ minWidth: 0 }}>
-                <span style={{ fontSize: 11, color: "#3E8E63" }}>PNR</span>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#1B5E3A", letterSpacing: ".3px" }}>{fl.pnr}</div>
-              </div>
-              <button
-                onClick={() => alert(`Downloading\n\nFlight ticket · PNR ${fl.pnr}`)}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 8, background: C.white, border: "1px solid #BBE3CA", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
-              >
-                <Download size={15} color="#2E7D52" strokeWidth={2} />
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#2E7D52" }}>Ticket</span>
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "#FEF5E5", border: "1px solid #F5D98B" }}>
-              <Clock size={16} color="#A66B00" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: "#A66B00", lineHeight: "17px" }}>Ticket and PNR will appear here once this flight is confirmed.</span>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -691,93 +697,67 @@ function FlightsSection({ flights }) {
             border: `1px solid ${fl.bookingStatus === "booked" ? "#8FD0AB" : "#E0E2EB"}`,
             overflow: "hidden",
           }}>
-            {/* Header strip: dates + times in gray */}
-            <div style={{ padding: "14px 16px 10px", background: "#F9F9FB", display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  <span style={{ fontSize: 12, fontWeight: 400, color: "#666C99", lineHeight: "16px" }}>{fl.date}</span>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>{fl.departTime}</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-end" }}>
-                  <span style={{ fontSize: 12, fontWeight: 400, color: "#666C99", lineHeight: "16px" }}>{fl.date}</span>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>{fl.arriveTime}</span>
-                </div>
-              </div>
-            </div>
-
             {/* Body */}
-            <div style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Airline row + booking status */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: 8, borderBottom: "1px solid #E0E2EB" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                  <div style={{
-                    width: 28, height: 20, borderRadius: 4, background: "#F4F2F0",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 10, fontWeight: 700, color: "#666C99", flexShrink: 0,
-                  }}>
-                    {fl.airlineLogo}
+            <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Airline + status (left) · PNR (right) — two aligned rails */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: 12, borderBottom: "1px solid #E0E2EB" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <AirlineLogo code={fl.airlineLogo} name={fl.airline} size={46} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>{fl.airline}</div>
+                    <div style={{ marginTop: 6 }}><BookingStatusBadge status={fl.bookingStatus} /></div>
                   </div>
-                  <span style={{ fontSize: 14, color: "#181E4C", lineHeight: "20px" }}>{fl.airline}</span>
                 </div>
-                <BookingStatusBadge status={fl.bookingStatus} />
+                {fl.bookingStatus === "booked" && fl.pnr && <PnrBlock pnr={fl.pnr} />}
               </div>
 
-              {/* Route */}
+              {/* Travel date */}
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#FD014F", letterSpacing: ".2px" }}>{fl.date}</div>
+
+              {/* Route: code + time clubbed on each side */}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", lineHeight: "24px" }}>{fl.from.code}</div>
-                  <div style={{ fontSize: 12, color: "#FD014F", lineHeight: "16px" }}>{fl.from.city}</div>
+                  <div style={{ fontSize: 14, color: "#666C99", lineHeight: "18px" }}>{fl.departTime}</div>
                 </div>
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                  <div style={{ fontSize: 11, color: "#181E4C", lineHeight: "16px" }}>{fl.duration}</div>
+                  <div style={{ fontSize: 12, color: "#181E4C", lineHeight: "16px" }}>{fl.duration}</div>
                   <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                     <div style={{ flex: 1, height: 0, borderTop: "1px dashed #E0E2EB" }} />
-                    <Plane size={16} color="#FDA201" style={{ transform: "rotate(45deg)" }} />
+                    <Plane size={16} color="#FD014F" style={{ transform: "rotate(45deg)" }} />
                     <div style={{ flex: 1, height: 0, borderTop: "1px dashed #E0E2EB" }} />
                   </div>
-                  <div style={{ fontSize: 11, color: "#181E4C", lineHeight: "16px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: fl.stops === "Direct" ? "#2E7D52" : "#FF5400", lineHeight: "16px" }}>
                     {fl.stops === "Direct" ? "Direct" : fl.stops}
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", lineHeight: "24px" }}>{fl.to.code}</div>
-                  <div style={{ fontSize: 12, color: "#FD014F", lineHeight: "16px" }}>{fl.to.city}</div>
+                  <div style={{ fontSize: 14, color: "#666C99", lineHeight: "18px" }}>
+                    {fl.arriveTime}
+                    {arrivesNextDay(fl.departTime, fl.arriveTime) && (
+                      <sup style={{ fontSize: 10, fontWeight: 700, color: "#FF5400", marginLeft: 2 }}>+1</sup>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Baggage allowance per traveller */}
-              {fl.baggage?.length > 0 && (
-                <div style={{ paddingTop: 12, borderTop: "1px solid #E0E2EB" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>Baggage</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C", textAlign: "center" }}>Cabin</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C", textAlign: "center" }}>Check-in</span>
-                  </div>
-                  {fl.baggage.map((b, bi) => (
-                    <div key={bi} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 4 }}>
-                      <span style={{ fontSize: 12.5, color: "#666C99" }}>Traveler {bi + 1}</span>
-                      <span style={{ fontSize: 12.5, color: "#666C99", textAlign: "center" }}>{b.cabin}</span>
-                      <span style={{ fontSize: 12.5, color: "#666C99", textAlign: "center" }}>{b.checkin}</span>
-                    </div>
-                  ))}
+              {/* Purchased add-ons — plain count; names shown in the View details sheet */}
+              {fl.bookingStatus === "booked" && fl.addOns?.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Sparkles size={15} color="#2E7D52" strokeWidth={1.9} />
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#181E4C" }}>
+                    {fl.addOns.length} add-on{fl.addOns.length > 1 ? "s" : ""} included
+                  </span>
                 </div>
               )}
-
-              {/* Tap-for-details hint */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: -2 }}>
-                <span style={{ fontSize: 12.5, fontWeight: 500, color: "#FD014F" }}>View details</span>
-                <ChevronRight size={15} color="#FD014F" />
-              </div>
             </div>
 
-            {/* PNR + download — only once ticketed */}
-            {fl.bookingStatus === "booked" && fl.pnr && (
-              <BookingRefBar
-                label="PNR"
-                value={fl.pnr}
-                onDownload={() => alert(`Downloading\n\nFlight ticket · PNR ${fl.pnr}`)}
-              />
-            )}
+            {/* Footer: tap to view flight details */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#F7F7F8", borderTop: "1px solid #EDEEF1" }}>
+              <span style={{ fontSize: 13, color: "#666C99" }}>Tap to view flight details</span>
+              <ChevronRight size={16} color="#666C99" />
+            </div>
           </div>
         ))}
       </div>
@@ -810,13 +790,30 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false, showGetDi
         roomType={hotel.roomType}
         city={hotel.address || hotel.city}
         onClick={goPdp}
-        showChevron={tripId !== undefined}
-        confirmationBar={hotel.bookingStatus === "booked" && hotel.confirmationNo ? (
-          <BookingRefBar
-            label="Confirmation"
-            value={hotel.confirmationNo}
-            onDownload={() => alert(`Downloading\n\nHotel voucher · ${hotel.name}\nConfirmation ${hotel.confirmationNo}`)}
-          />
+        showChevron={false}
+        footer={(hotel.confirmationNo || hotel.addOns?.length > 0) ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+            {hotel.bookingStatus === "booked" && hotel.confirmationNo && (
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "#666C99" }}>Confirmation</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "#181E4C", letterSpacing: ".3px" }}>{hotel.confirmationNo}</span>
+              </div>
+            )}
+            {hotel.addOns?.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Sparkles size={14} color="#2E7D52" strokeWidth={1.9} />
+                <span style={{ fontSize: 12.5, fontWeight: 500, color: "#181E4C" }}>
+                  {hotel.addOns.length} add-on{hotel.addOns.length > 1 ? "s" : ""} included
+                </span>
+              </div>
+            )}
+          </div>
+        ) : undefined}
+        confirmationBar={tripId !== undefined ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#F7F7F8", borderTop: "1px solid #EDEEF1" }}>
+            <span style={{ fontSize: 13, color: "#666C99" }}>Tap to view hotel details</span>
+            <ChevronRight size={16} color="#666C99" />
+          </div>
         ) : undefined}
       />
 
@@ -2107,7 +2104,8 @@ export default function TripDetails() {
           {!isCompleted && <PaymentBanner trip={trip} navigate={navigate} />}
 
           <DocumentsSection trip={trip} navigate={navigate} />
-          {trip.addOns && <AddOnsSection addOns={trip.addOns} travelers={[trip.leadTraveler, ...(trip.coTravelers || [])].filter(Boolean)} />}
+          {trip.addOns?.visa && <VisaSection visa={trip.addOns.visa} destination={trip.destination} travelers={[trip.leadTraveler, ...(trip.coTravelers || [])].filter(Boolean)} />}
+          {trip.addOns && <AddOnsSection collapsible addOns={trip.addOns} travelers={[trip.leadTraveler, ...(trip.coTravelers || [])].filter(Boolean)} />}
           <SectionDivider />
           <CoTravelersSection trip={trip} />
           <SectionDivider />
