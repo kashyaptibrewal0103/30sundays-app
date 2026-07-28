@@ -250,12 +250,34 @@ function ManageSheet({ partners, destination, onClose, onAddGuest, onRemove }) {
   );
 }
 
+// ── Confirmation before removing a co-traveler ──
+function ConfirmRemove({ name, onCancel, onConfirm }) {
+  const isMobile = useIsMobile();
+  return (
+    <div style={{ ...sheetFrame(isMobile), zIndex: 190, display: "grid", placeItems: "center", padding: 24 }}>
+      <div onClick={onCancel} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", animation: "fadeInBg 0.2s ease-out" }} />
+      <div style={{ position: "relative", width: "100%", maxWidth: 320, background: C.white, borderRadius: 16, padding: "22px 20px", textAlign: "center", animation: "sheetSlideUp 0.2s ease-out" }}>
+        <div style={{ width: 46, height: 46, borderRadius: "50%", background: "#FDECEF", display: "grid", placeItems: "center", margin: "0 auto 12px" }}>
+          <Trash2 size={20} color={C.p600} />
+        </div>
+        <h4 style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 6px" }}>Remove {name || "guest"}?</h4>
+        <p style={{ fontSize: 13, color: C.sub, margin: "0 0 20px", lineHeight: "19px" }}>They'll no longer be able to plan this trip with you. You can invite them again anytime.</p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: `1.5px solid ${C.div}`, background: C.white, color: C.head, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+          <button onClick={onConfirm} style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Remove</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function InvitePartnerSection({ destination }) {
   const [partners, setPartners] = useState([]);
   const [view, setView] = useState(null); // 'manage' | 'add' | 'contacts'
   const [draftName, setDraftName] = useState("");
   const [draftMobile, setDraftMobile] = useState("");
   const [toast, setToast] = useState(null);
+  const [pendingRemove, setPendingRemove] = useState(null); // { index, name }
 
   const joinedCount = partners.filter((p) => p.joined).length;
 
@@ -284,7 +306,15 @@ export default function InvitePartnerSection({ destination }) {
     if (native.length) { setDraftName(native[0].name || ""); setDraftMobile(native[0].tel || ""); }
   };
 
-  const remove = (i) => setPartners((prev) => prev.filter((_, idx) => idx !== i));
+  const askRemove = (i) => setPendingRemove({ index: i, name: partners[i]?.name });
+  const confirmRemove = () => {
+    if (!pendingRemove) return;
+    const { index, name } = pendingRemove;
+    setPartners((prev) => prev.filter((_, idx) => idx !== index));
+    setPendingRemove(null);
+    if (partners.length <= 1) setView(null); // removed the last one → back to itinerary
+    showToast(`${(name || "Guest").split(" ")[0]} removed`);
+  };
 
   return (
     <div style={{ padding: "0 16px" }}>
@@ -336,7 +366,14 @@ export default function InvitePartnerSection({ destination }) {
           destination={destination}
           onClose={() => setView(null)}
           onAddGuest={openAdd}
-          onRemove={remove}
+          onRemove={askRemove}
+        />
+      )}
+      {pendingRemove && (
+        <ConfirmRemove
+          name={pendingRemove.name}
+          onCancel={() => setPendingRemove(null)}
+          onConfirm={confirmRemove}
         />
       )}
       {view === "add" && (
