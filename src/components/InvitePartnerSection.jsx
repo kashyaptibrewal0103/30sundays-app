@@ -128,12 +128,10 @@ const ContactsBtn = ({ onClick, label }) => (
   </button>
 );
 
-// ── Mock contact picker (fallback) ──
-function MockContactsSheet({ onClose, onAdd }) {
+// ── Single-select contact picker (fallback): tap a contact to prefill the
+//    add-guest form. ──
+function MockContactsSheet({ onClose, onPick }) {
   const isMobile = useIsMobile();
-  const [picked, setPicked] = useState([]);
-  const toggle = (tel) => setPicked((p) => (p.includes(tel) ? p.filter((t) => t !== tel) : [...p, tel]));
-
   return (
     <div style={{ ...sheetFrame(isMobile), zIndex: 186, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", animation: "fadeInBg 0.2s ease-out" }} />
@@ -143,83 +141,110 @@ function MockContactsSheet({ onClose, onAdd }) {
           <h4 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Choose from contacts</h4>
           <button onClick={onClose} aria-label="Close" style={{ border: "none", background: "none", cursor: "pointer", padding: 4, marginRight: -4 }}><XIcon size={20} color={C.sub} /></button>
         </div>
-        <p style={{ fontSize: 13, color: C.sub, margin: "0 0 12px", lineHeight: "18px" }}>Pick the people you're travelling with.</p>
+        <p style={{ fontSize: 13, color: C.sub, margin: "0 0 12px", lineHeight: "18px" }}>Tap a contact to fill in their details.</p>
 
-        {MOCK_CONTACTS.map((ct) => {
-          const on = picked.includes(ct.tel);
-          return (
-            <button key={ct.tel} onClick={() => toggle(ct.tel)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 0", background: "none", border: "none", borderTop: `1px solid ${C.div}`, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-              <Avatar name={ct.name} size={38} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{ct.name}</p>
-                <p style={{ fontSize: 12.5, color: C.sub, margin: "1px 0 0" }}>{ct.tel}</p>
-              </div>
-              <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, border: `1.5px solid ${on ? C.p600 : C.inact}`, background: on ? C.p600 : "transparent", display: "grid", placeItems: "center" }}>
-                {on && <Check size={13} color="#fff" strokeWidth={3} />}
-              </div>
-            </button>
-          );
-        })}
+        {MOCK_CONTACTS.map((ct) => (
+          <button key={ct.tel} onClick={() => onPick(ct)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 0", background: "none", border: "none", borderTop: `1px solid ${C.div}`, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+            <Avatar name={ct.name} size={38} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{ct.name}</p>
+              <p style={{ fontSize: 12.5, color: C.sub, margin: "1px 0 0" }}>{ct.tel}</p>
+            </div>
+            <ChevronRight size={18} color={C.inact} style={{ flexShrink: 0 }} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const inputStyle = (valid) => ({
+  width: "100%", boxSizing: "border-box", padding: "13px 14px", borderRadius: 12,
+  border: `1.5px solid ${valid ? C.p600 : C.div}`, fontSize: 15, color: C.head,
+  background: "#FAFAFA", outline: "none", fontFamily: "inherit",
+});
+const fieldLabel = { display: "block", fontSize: 13, fontWeight: 600, color: C.head, margin: "0 0 6px" };
+
+// ── Add-guest sheet: enter name + mobile manually or prefill from contacts,
+//    then Invite. ──
+function AddGuestSheet({ name, setName, mobile, setMobile, destination, onContacts, onInvite, onClose }) {
+  const isMobile = useIsMobile();
+  const m = normalizeMobile(mobile);
+  const canInvite = name.trim().length > 0 && m.valid;
+  return (
+    <div style={{ ...sheetFrame(isMobile), zIndex: 184, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", animation: "fadeInBg 0.2s ease-out" }} />
+      <div style={{ position: "relative", background: C.white, borderRadius: "16px 16px 0 0", padding: "16px 20px 28px", maxHeight: "82%", overflowY: "auto", animation: "sheetSlideUp 0.25s ease-out" }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: "#E0E2EB", margin: "0 auto 14px" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <h4 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Add guest</h4>
+          <button onClick={onClose} aria-label="Close" style={{ border: "none", background: "none", cursor: "pointer", padding: 4, marginRight: -4 }}><XIcon size={20} color={C.sub} /></button>
+        </div>
+        <p style={{ fontSize: 13, color: C.sub, margin: "0 0 16px", lineHeight: "18px" }}>Enter their details, or pick from your contacts. We'll invite them to plan this {destination} trip.</p>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={fieldLabel}>Full name</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Their full name" style={inputStyle(name.trim().length > 0)} />
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={fieldLabel}>Mobile number</label>
+          <input type="tel" inputMode="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="+91 98765 43210" style={inputStyle(m.valid)} />
+          {mobile.trim() && !m.valid && (
+            <p style={{ fontSize: 12, color: "#D92D20", margin: "6px 2px 0" }}>Enter a valid 10-digit mobile number.</p>
+          )}
+        </div>
+
+        <ContactsBtn onClick={onContacts} label="Add from contacts" />
 
         <button
-          onClick={() => { onAdd(MOCK_CONTACTS.filter((c) => picked.includes(c.tel))); onClose(); }}
-          disabled={picked.length === 0}
-          style={{
-            marginTop: 16, width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-            background: picked.length ? C.p600 : C.div, color: picked.length ? "#fff" : C.inact,
-            fontSize: 15, fontWeight: 700, cursor: picked.length ? "pointer" : "default", fontFamily: "inherit",
-          }}
+          onClick={onInvite}
+          disabled={!canInvite}
+          style={{ marginTop: 16, width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 15, fontWeight: 700, cursor: canInvite ? "pointer" : "default", fontFamily: "inherit", opacity: canInvite ? 1 : 0.4 }}
         >
-          {picked.length ? `Add ${picked.length} ${picked.length > 1 ? "people" : "person"}` : "Select contacts"}
+          Invite
         </button>
       </div>
     </div>
   );
 }
 
-// ── Invite + manage sheet: empty state shows the two methods; once people are
-//    added it also lists them. This is the single place the methods live. ──
-function ManageSheet({ partners, destination, onClose, onWhatsApp, onContacts, onRemove }) {
+// ── Manage sheet: lists added co-travelers (name + mobile) with a WhatsApp
+//    share icon and remove, plus an Add-guest CTA. ──
+function ManageSheet({ partners, destination, onClose, onAddGuest, onRemove }) {
   const isMobile = useIsMobile();
-  const has = partners.length > 0;
   return (
     <div style={{ ...sheetFrame(isMobile), zIndex: 180, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", animation: "fadeInBg 0.2s ease-out" }} />
       <div style={{ position: "relative", background: C.white, borderRadius: "16px 16px 0 0", padding: "16px 20px 28px", maxHeight: "82%", overflowY: "auto", animation: "sheetSlideUp 0.25s ease-out" }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: "#E0E2EB", margin: "0 auto 14px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-          <h4 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>{has ? "Your co-travelers" : "Invite your partner"}</h4>
+          <h4 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Your co-travelers</h4>
           <button onClick={onClose} aria-label="Close" style={{ border: "none", background: "none", cursor: "pointer", padding: 4, marginRight: -4 }}><XIcon size={20} color={C.sub} /></button>
         </div>
-        <p style={{ fontSize: 13, color: C.sub, margin: "0 0 14px", lineHeight: "18px" }}>
-          {has ? `Everyone here can plan this ${destination} trip with you.` : `Add the people travelling with you so you can plan this ${destination} trip together.`}
-        </p>
+        <p style={{ fontSize: 13, color: C.sub, margin: "0 0 8px", lineHeight: "18px" }}>Everyone here can plan this {destination} trip with you.</p>
 
         {partners.map((p, i) => (
-          <div key={i} style={{ borderTop: i === 0 ? "none" : `1px solid ${C.div}`, padding: "12px 0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Avatar name={p.name} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name || "Your partner"}</p>
-                <p style={{ fontSize: 12.5, color: C.sub, margin: "2px 0 0" }}>{p.display}</p>
-              </div>
-              <StatusChip joined={p.joined} />
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, borderTop: `1px solid ${C.div}`, padding: "12px 0" }}>
+            <Avatar name={p.name} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name || "Your partner"}</p>
+              <p style={{ fontSize: 12.5, color: C.sub, margin: "2px 0 0" }}>{p.display}</p>
             </div>
-            <div style={{ display: "flex", gap: 18, marginTop: 8, paddingLeft: 54 }}>
-              <button onClick={() => openWhatsApp(p, destination)} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: "#1FA855" }}>
-                <MessageCircle size={14} /> Send on WhatsApp
-              </button>
-              <button onClick={() => onRemove(i)} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: C.inact, marginLeft: "auto" }}>
-                <Trash2 size={14} /> Remove
-              </button>
-            </div>
+            <button onClick={() => openWhatsApp(p, destination)} aria-label={`Share invite with ${p.name || "guest"} on WhatsApp`} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #BCE9CB", background: "#EAF7EF", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
+              <MessageCircle size={17} color="#1FA855" />
+            </button>
+            <button onClick={() => onRemove(i)} aria-label={`Remove ${p.name || "guest"}`} style={{ width: 36, height: 36, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
+              <Trash2 size={16} color={C.sub} />
+            </button>
           </div>
         ))}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
-          <ContactsBtn onClick={onContacts} label="Add from contacts" />
-          <WhatsAppBtn onClick={onWhatsApp} label="Invite via WhatsApp" />
-        </div>
+        <button
+          onClick={onAddGuest}
+          style={{ marginTop: 16, width: "100%", padding: "13px 0", borderRadius: 12, border: `1.5px solid ${C.p600}`, background: C.white, color: C.p600, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        >
+          <UserPlus size={17} /> Add guest
+        </button>
       </div>
     </div>
   );
@@ -227,39 +252,47 @@ function ManageSheet({ partners, destination, onClose, onWhatsApp, onContacts, o
 
 export default function InvitePartnerSection({ destination }) {
   const [partners, setPartners] = useState([]);
-  const [view, setView] = useState(null); // 'list' | 'contacts'
+  const [view, setView] = useState(null); // 'manage' | 'add' | 'contacts'
+  const [draftName, setDraftName] = useState("");
+  const [draftMobile, setDraftMobile] = useState("");
+  const [toast, setToast] = useState(null);
 
   const joinedCount = partners.filter((p) => p.joined).length;
 
-  const addContacts = (list) => {
-    const mapped = list
-      .map((c) => {
-        const m = normalizeMobile(c.tel);
-        return m.valid ? { name: (c.name || "").trim(), national: m.national, display: m.display, wa: m.wa, joined: false } : null;
-      })
-      .filter(Boolean);
-    setPartners((prev) => {
-      const seen = new Set(prev.map((p) => p.national));
-      return [...prev, ...mapped.filter((p) => !seen.has(p.national))];
-    });
+  const openAdd = () => { setDraftName(""); setDraftMobile(""); setView("add"); };
+  const openEntry = () => (partners.length ? setView("manage") : openAdd());
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3200); };
+
+  // Invite the guest currently in the draft form, then drop back to the
+  // itinerary with a success toast.
+  const invite = () => {
+    const m = normalizeMobile(draftMobile);
+    const nm = draftName.trim();
+    if (!nm || !m.valid) return;
+    setPartners((prev) => (prev.some((p) => p.national === m.national)
+      ? prev
+      : [...prev, { name: nm, national: m.national, display: m.display, wa: m.wa, joined: false }]));
+    setDraftName(""); setDraftMobile(""); setView(null);
+    showToast(`Invitation sent to ${nm.split(" ")[0]}`);
   };
 
+  // "Add from contacts": native picker prefills the form; else the mock sheet.
   const handleContacts = async () => {
     const native = await pickNativeContacts();
-    if (native === null) { setView("contacts"); return; } // unsupported → mock picker
-    if (native.length) addContacts(native);
+    if (native === null) { setView("contacts"); return; }
+    if (native.length) { setDraftName(native[0].name || ""); setDraftMobile(native[0].tel || ""); }
   };
 
-  const inviteViaWhatsApp = () => openWhatsApp(null, destination); // generic; planner picks contact in WA
   const remove = (i) => setPartners((prev) => prev.filter((_, idx) => idx !== i));
 
   return (
     <div style={{ padding: "0 16px" }}>
       <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Plan together</p>
 
-      {/* One compact, tappable row — the method choice happens in the sheet */}
+      {/* One compact, tappable row — no partners opens Add guest, else Manage */}
       <button
-        onClick={() => setView("list")}
+        onClick={openEntry}
         aria-label={partners.length ? "View travel companions" : "Invite your travel partner"}
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, border: `1px solid ${C.div}`, background: C.white, boxShadow: "0 1px 4px rgba(24,30,76,0.04)", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
       >
@@ -297,18 +330,38 @@ export default function InvitePartnerSection({ destination }) {
         )}
       </button>
 
-      {view === "list" && (
+      {view === "manage" && (
         <ManageSheet
           partners={partners}
           destination={destination}
           onClose={() => setView(null)}
-          onWhatsApp={inviteViaWhatsApp}
-          onContacts={handleContacts}
+          onAddGuest={openAdd}
           onRemove={remove}
         />
       )}
+      {view === "add" && (
+        <AddGuestSheet
+          name={draftName}
+          setName={setDraftName}
+          mobile={draftMobile}
+          setMobile={setDraftMobile}
+          destination={destination}
+          onContacts={handleContacts}
+          onInvite={invite}
+          onClose={() => setView(partners.length ? "manage" : null)}
+        />
+      )}
       {view === "contacts" && (
-        <MockContactsSheet onClose={() => setView(partners.length ? "list" : null)} onAdd={addContacts} />
+        <MockContactsSheet
+          onClose={() => setView("add")}
+          onPick={(c) => { setDraftName(c.name || ""); setDraftMobile(c.tel || ""); setView("add"); }}
+        />
+      )}
+
+      {toast && (
+        <div style={{ position: "fixed", left: "50%", bottom: 96, transform: "translateX(-50%)", zIndex: 300, background: C.head, color: "#fff", padding: "12px 18px", borderRadius: 12, fontSize: 13.5, fontWeight: 600, boxShadow: "0 8px 24px rgba(0,0,0,0.22)", display: "flex", alignItems: "center", gap: 8, maxWidth: "88%", animation: "fadeInBg 0.2s ease-out" }}>
+          <Check size={16} color="#4EAC7E" strokeWidth={3} /> {toast}
+        </div>
       )}
     </div>
   );
