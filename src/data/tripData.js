@@ -737,6 +737,44 @@ export const mockTrips = [
           { name: "Locavore", cuisine: "Indonesian • Farm-to-table", rating: 4.9, priceRange: "₹3,000 – 5,500", city: "Ubud, Bali", photo: `${CDN}/bali/bali_swing_experience_1.jpg` },
         ],
       },
+      // Day 2 — a full leisure day: nothing scheduled, the day is theirs.
+      {
+        date: fmt(addDays(today, -2)),
+        dateDisplay: fmtDisplay(addDays(today, -2)),
+        dayNumber: 2,
+        city: "Ubud",
+        leisure: true,
+        activities: [],
+        hotel: { name: "Komaneka at Bisma", stars: 5, bookingRating: 9.1, roomType: "Valley Pool Villa", city: "Ubud", photo: `${CDN}/bali/tegallalang_rice_fields_4.jpg` },
+        ideas: [
+          { title: "Campuhan Ridge Walk", caption: "Easy scenic walk · Ubud", photo: `${CDN}/bali/tegallalang_rice_fields_4.jpg` },
+          { title: "Ubud Art Market", caption: "Handicrafts & souvenirs", photo: `${CDN}/bali/bali_swing_experience_1.jpg` },
+          { title: "Café hopping", caption: "Ubud town centre", photo: `${CDN}/bali/banyumala_waterfall_56.jpg` },
+        ],
+        restaurants: [
+          { name: "Locavore", cuisine: "Indonesian • Farm-to-table", rating: 4.9, priceRange: "₹3,000 – 5,500", city: "Ubud, Bali", photo: `${CDN}/bali/bali_swing_experience_1.jpg` },
+        ],
+      },
+      // Day 3 — a transfer + leisure day: hotel-to-hotel transfer we've arranged,
+      // rest of the day is free.
+      {
+        date: fmt(addDays(today, -1)),
+        dateDisplay: fmtDisplay(addDays(today, -1)),
+        dayNumber: 3,
+        city: "Seminyak",
+        leisure: true,
+        activities: [],
+        transfers: [
+          { from: "Ubud", to: "Seminyak", mode: "Hotel-to-hotel · private car", duration: "1.5 hrs", included: true },
+        ],
+        hotel: { name: "The Legian Seminyak", stars: 5, bookingRating: 8.9, roomType: "Ocean View Suite", city: "Seminyak", photo: `${CDN}/bali/banyumala_waterfall_56.jpg` },
+        ideas: [
+          { title: "Seminyak Beach sunset", caption: "10 min from your hotel", photo: `${CDN}/bali/banyumala_waterfall_56.jpg` },
+          { title: "Beach clubs", caption: "Potato Head, Ku De Ta", photo: `${CDN}/bali/bali_swing_experience_1.jpg` },
+          { title: "Boutique shopping", caption: "Seminyak Village", photo: `${CDN}/bali/tegallalang_rice_fields_4.jpg` },
+        ],
+        restaurants: [],
+      },
     ],
   },
 

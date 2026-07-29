@@ -16,6 +16,7 @@ import VisaSection from "../components/VisaSection";
 import InclusionsDrawer from "../components/InclusionsDrawer";
 import HotelStayCard from "../components/HotelStayCard";
 import RouteMap from "../components/JourneyMap";
+import { TransferSection, LeisureCard, ExploreIdeas } from "../components/DayWiseExtras";
 import { buildActivityDetail } from "../data/activityData";
 import { Sparkles } from "lucide-react";
 
@@ -1502,6 +1503,8 @@ function DatePicker({ days, selectedDay, onSelect }) {
         const dateObj = new Date(d.date);
         const dayNum = dateObj.getDate();
         const monthShort = dateObj.toLocaleDateString("en-US", { month: "short" });
+        const isFree = !(d.activities?.length);
+        const tag = isFree ? (d.transfers?.length ? "Transfer + free" : "Free day") : null;
         return (
           <button
             key={i}
@@ -1522,6 +1525,9 @@ function DatePicker({ days, selectedDay, onSelect }) {
               <MapPin size={12} color={active ? "rgba(255,255,255,0.9)" : "#666C99"} />
               <span style={{ fontSize: 11, fontWeight: 400, lineHeight: "15px", color: active ? "rgba(255,255,255,0.9)" : "#666C99", whiteSpace: "nowrap" }}>{d.city}</span>
             </span>
+            {tag && (
+              <span style={{ fontSize: 10, fontWeight: 600, lineHeight: "14px", color: active ? "#fff" : "#FD014F", whiteSpace: "nowrap" }}>{tag}</span>
+            )}
           </button>
         );
       })}
@@ -1955,12 +1961,24 @@ function DayWiseTab({ trip }) {
   }
 
   const day = days[selectedDay] || days[0];
+  const hasActivities = (day.activities?.length || 0) > 0;
+  const hasTransfers = (day.transfers?.length || 0) > 0;
 
   return (
     <div style={{ background: C.white }}>
       <DatePicker days={days} selectedDay={selectedDay} onSelect={setSelectedDay} />
-      <DayVideoPlayer day={day} />
-      <ExperienceSection day={day} tripId={trip.id} dayIdx={selectedDay} />
+      {hasTransfers && <TransferSection transfers={day.transfers} />}
+      {hasActivities ? (
+        <>
+          <DayVideoPlayer day={day} />
+          <ExperienceSection day={day} tripId={trip.id} dayIdx={selectedDay} />
+        </>
+      ) : (
+        <>
+          <LeisureCard hasTransfer={hasTransfers} />
+          <ExploreIdeas ideas={day.ideas} />
+        </>
+      )}
       <div style={{ padding: "24px 16px 0" }}>
         <TripJourneyMap trip={trip} />
       </div>
