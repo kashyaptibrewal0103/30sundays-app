@@ -18,6 +18,7 @@ import { getDayScoring, getDayTours, getAllDaysScoring } from "../data/dayScorin
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import InvitePartnerSection from "../components/InvitePartnerSection";
+import { TransferSection, LeisureCard, LeisureStrip, ExploreIdeas } from "../components/DayWiseExtras";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { buildActivityDetail } from "../data/activityData";
 import { getMauritiusHotel } from "../data/mauritiusData";
@@ -57,7 +58,7 @@ function getDayActivities(it) {
         name,
         img: actImgs[(si * 3 + ai + d) % (actImgs.length || 1)] || it.img,
       }));
-      expanded.push({ city: stay.city, n: 1, sub: stay.sub, activities, dayNum });
+      expanded.push({ city: stay.city, n: 1, sub: stay.sub, activities, dayNum, ...(it.dayMeta?.[dayNum] || {}) });
       dayNum++;
     }
   });
@@ -348,6 +349,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     const seen = new Set();
     const items = [];
     daysWithActivities.forEach((day, dayIdx) => {
+      if (day.leisure || day.departure) return; // free / travel days aren't arranged experiences
       day.activities.forEach((act, actIdx) => {
         if (seen.has(act.name)) return;
         seen.add(act.name);
@@ -843,6 +845,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                   <MapPin size={10} color={activeDay === i ? "rgba(255,255,255,0.7)" : C.sub} />
                   <span style={{ fontSize: 11, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{day.city}</span>
                 </div>
+                {(() => {
+                  const tag = day.departure ? "Departure"
+                    : day.leisure ? (day.transfers?.length ? "Transfer + free" : "Free day")
+                    : day.transfers?.length ? "Transfer + tour" : null;
+                  return tag ? (
+                    <p style={{ fontSize: 10, fontWeight: 600, margin: "2px 0 0", color: activeDay === i ? "#fff" : C.p600, whiteSpace: "nowrap" }}>{tag}</p>
+                  ) : null;
+                })()}
               </button>
             ))}
           </div>
@@ -864,13 +874,29 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 </div>
               ))}
             </div>
-          ) : (() => {
+          ) : daysWithActivities[activeDay]?.departure ? (
+            <TransferSection transfers={daysWithActivities[activeDay].transfers} />
+          ) : daysWithActivities[activeDay]?.leisure ? (() => {
             const day = daysWithActivities[activeDay];
+            const hasTransfers = (day.transfers?.length || 0) > 0;
+            return (
+              <div>
+                {hasTransfers && <TransferSection transfers={day.transfers} />}
+                {hasTransfers
+                  ? <LeisureStrip />
+                  : <LeisureCard onChangePlan={() => setChangeDayIndex(activeDay)} />}
+                <ExploreIdeas ideas={day.ideas} />
+              </div>
+            );
+          })() : (() => {
+            const day = daysWithActivities[activeDay];
+            const hasTransfers = (day.transfers?.length || 0) > 0;
             const sc = getDayScoring(day, activeDay, daysWithActivities);
             return (
               <div>
-                {/* Videos first */}
-                <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
+                {hasTransfers && <TransferSection transfers={day.transfers} />}
+                {/* Videos */}
+                <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16, marginTop: hasTransfers ? 16 : 0 }}>
                   {day?.activities.map((act, i) => (
                     <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
                       width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
@@ -936,7 +962,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                         <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
                       </div>
                       <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                        • {displayActivities.join(", ")}
+                        {day.departure
+                          ? "Departure, transfer to the airport"
+                          : day.leisure
+                            ? (day.transfers?.length
+                                ? `Transfer to ${day.transfers[0].to}, then the day is yours`
+                                : "Leisure day, the day is yours")
+                            : `• ${displayActivities.join(", ")}`}
                       </p>
                       {hasOptions && (
                         <button
@@ -2785,6 +2817,7 @@ function ActivityDetailSheet({ detail, onClose }) {
 // ═══ Day Detail - full-screen page with prev/next day switcher ═══
 function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canChangeDay, onChangeDay, onPhotoOpen, onClose }) {
   const [activeMetric, setActiveMetric] = useState(null);
+  const [transferDetail, setTransferDetail] = useState(null);
   const day = days[dayIndex];
 
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
@@ -2804,6 +2837,28 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
   const photos = dest && customerPhotos[dest] ? customerPhotos[dest] : [];
   const galleryItems = photos.length >= 6 ? photos.slice(0, 6) : [...photos, ...(day?.activities || [])].slice(0, 6);
   const activityNames = (day?.activities || []).map(a => a.name).filter(Boolean).join(", ");
+
+  // Day-type flags (from dayMeta). Scoring shows for every type except a full
+  // leisure day; transfers come from meta, so drop getDayTours' auto intro.
+  const isLeisure = !!day?.leisure;
+  const isDeparture = !!day?.departure;
+  const hasTransfers = (day?.transfers?.length || 0) > 0;
+  const isFullLeisure = isLeisure && !hasTransfers && !isDeparture;
+  const showScoring = !isFullLeisure;
+  const heroTitle = isDeparture ? "Departure day" : isLeisure ? `Leisure in ${day?.city}` : activityNames;
+  const toursNoIntro = tours.map((t) => ({ ...t, intro: null }));
+  // Each transfer becomes its own tour-style block: route heading, car photo,
+  // and a tappable card (chevron) that opens the transfer detail.
+  const transferBlocks = (day?.transfers || []).map((t) => ({
+    heading: t.header || `${t.from} to ${t.to} transfer`,
+    intro: null,
+    items: [{
+      name: t.name || `Private transfer to ${t.to}`,
+      img: t.img || day?.activities?.[0]?.img,
+      desc: t.desc || `${t.from} to ${t.to}`,
+      onTap: () => setTransferDetail(t),
+    }],
+  }));
 
   const hasPrev = dayIndex > 0;
   const hasNext = dayIndex < days.length - 1;
@@ -2837,22 +2892,52 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
         {/* Brand hero - title + scoring bonded on one soft-pink surface */}
         <div style={{ background: "linear-gradient(180deg, #FFF1F4 0%, #FFF6F8 100%)", padding: "4px 0 16px", borderBottom: `1px solid ${C.div}` }}>
           <div style={{ padding: "8px 20px 14px" }}>
-            <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#181E4C", lineHeight: 1.25 }}>{activityNames}</h2>
+            <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#181E4C", lineHeight: 1.25 }}>{heroTitle}</h2>
           </div>
-          <div style={{ padding: "0 16px" }}>
-            <div style={{ borderRadius: 16, overflow: "hidden", background: "#fff", border: "1px solid #FFE0E7", boxShadow: "0 2px 10px rgba(253,1,79,0.06)" }}>
-              <DayScoreRow scoring={scoring} onOpen={setActiveMetric} bg="#fff" borderColor="transparent" divider="#FFE0E7" />
+          {showScoring && (
+            <div style={{ padding: "0 16px" }}>
+              <div style={{ borderRadius: 16, overflow: "hidden", background: "#fff", border: "1px solid #FFE0E7", boxShadow: "0 2px 10px rgba(253,1,79,0.06)" }}>
+                <DayScoreRow scoring={scoring} onOpen={setActiveMetric} bg="#fff" borderColor="transparent" divider="#FFE0E7" />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Your day will cover */}
-        <div style={{ padding: "16px 20px 8px" }}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 500, color: "#181E4C" }}>Your day will cover:</h3>
-          {tours.map((tour, ti) => (
-            <TourBlock key={ti} tour={tour} itineraryId={itineraryId} dayIdx={dayIndex} />
-          ))}
+        {/* Your day will cover - content varies by day type */}
+        <div style={{ padding: "16px 20px 0" }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 500, color: "#181E4C" }}>Your day will cover:</h3>
         </div>
+        {isDeparture ? (
+          <div style={{ padding: "12px 20px 8px" }}>
+            {transferBlocks.map((tb, ti) => (
+              <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} />
+            ))}
+          </div>
+        ) : isFullLeisure ? (
+          <>
+            <LeisureCard hasTransfer={false} />
+            <ExploreIdeas ideas={day.ideas} />
+          </>
+        ) : (isLeisure && hasTransfers) ? (
+          <>
+            <div style={{ padding: "12px 20px 0" }}>
+              {transferBlocks.map((tb, ti) => (
+                <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} />
+              ))}
+            </div>
+            <LeisureStrip />
+            <ExploreIdeas ideas={day.ideas} />
+          </>
+        ) : (
+          <div style={{ padding: "12px 20px 8px" }}>
+            {transferBlocks.map((tb, ti) => (
+              <TourBlock key={`tr-${ti}`} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} />
+            ))}
+            {(hasTransfers ? toursNoIntro : tours).map((tour, ti) => (
+              <TourBlock key={ti} tour={tour} itineraryId={itineraryId} dayIdx={dayIndex} />
+            ))}
+          </div>
+        )}
 
         <div style={{ height: 1, background: "#E0E2EB", margin: "8px 0" }} />
 
@@ -2895,6 +2980,59 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
           onClose={() => setActiveMetric(null)}
         />
       )}
+
+      {/* Transfer detail sheet */}
+      {transferDetail && (
+        <TransferDetailSheet transfer={transferDetail} onClose={() => setTransferDetail(null)} />
+      )}
+    </div>
+  );
+}
+
+// Bottom sheet with the full transfer detail, opened from a transfer card.
+function TransferDetailSheet({ transfer: t, onClose }) {
+  const meta = [t.sharing, t.vehicle && (t.vehicle.charAt(0).toUpperCase() + t.vehicle.slice(1)), t.duration].filter(Boolean).join(" · ");
+  const included = [
+    "Meet & greet at the pickup point",
+    "English-speaking chauffeur",
+    "Air-conditioned vehicle, bottled water",
+    "All tolls, parking and taxes",
+  ];
+  const Row = ({ label, value }) => (
+    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, padding: "10px 0", borderTop: `1px solid ${C.div}` }}>
+      <span style={{ fontSize: 12.5, color: C.sub }}>{label}</span>
+      <span style={{ fontSize: 13.5, fontWeight: 600, color: C.head, textAlign: "right" }}>{value}</span>
+    </div>
+  );
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", animation: "fadeInBg 0.2s ease-out" }} />
+      <div style={{ position: "relative", background: C.white, borderRadius: "16px 16px 0 0", maxHeight: "86%", overflowY: "auto", animation: "sheetSlideUp 0.25s ease-out", paddingBottom: "calc(20px + env(safe-area-inset-bottom))" }}>
+        {t.img && (
+          <div style={{ position: "relative", height: 180, background: `url(${t.img}) center/cover no-repeat` }}>
+            <button onClick={onClose} aria-label="Close" style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <XIcon size={18} color="#fff" />
+            </button>
+          </div>
+        )}
+        <div style={{ padding: "16px 20px 8px" }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 700, color: C.head }}>{t.name || `Transfer to ${t.to}`}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: C.head, fontWeight: 600 }}>
+            <span>{t.from}</span>
+            <ArrowRight size={14} color={C.sub} />
+            <span>{t.to}</span>
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <Row label="Vehicle" value={meta || "Private car"} />
+            {t.duration && <Row label="Approx. time" value={t.duration} />}
+            <Row label="Cost" value="Included in your package" />
+          </div>
+          <p style={{ margin: "16px 0 8px", fontSize: 13, fontWeight: 700, color: C.sub, letterSpacing: 0.3 }}>WHAT'S INCLUDED</p>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5, color: C.head, lineHeight: "22px" }}>
+            {included.map((x, i) => <li key={i}>{x}</li>)}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2926,6 +3064,7 @@ function TourBlock({ tour, itineraryId, dayIdx }) {
             }} />
             <div
               onClick={() => {
+                if (it.onTap) { it.onTap(); return; }
                 if (it.actIdx == null || itineraryId == null || dayIdx == null) return;
                 navigate(`/itinerary/${itineraryId}/day/${dayIdx}/activity/${it.actIdx}`);
               }}
@@ -2934,7 +3073,7 @@ function TourBlock({ tour, itineraryId, dayIdx }) {
                 background: "#fff", borderRadius: 8,
                 boxShadow: "0 4px 16px -4px rgba(16,24,40,0.06)",
                 border: "1px solid #F0F1F5",
-                cursor: it.actIdx != null ? "pointer" : "default",
+                cursor: (it.actIdx != null || it.onTap) ? "pointer" : "default",
               }}
             >
               <div style={{ width: 64, height: 64, borderRadius: 8, overflow: "hidden", background: "#F5F5F5", flexShrink: 0 }}>
@@ -2944,7 +3083,7 @@ function TourBlock({ tour, itineraryId, dayIdx }) {
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#181E4C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</p>
                 <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666C99", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{it.desc}</p>
               </div>
-              {it.actIdx != null && (
+              {(it.actIdx != null || it.onTap) && (
                 <div style={{ flexShrink: 0, paddingRight: 4, color: "#FD014F", display: "flex", alignItems: "center" }}>
                   <ChevronRight size={18} />
                 </div>

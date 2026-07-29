@@ -154,12 +154,13 @@ export default function ChangeDaySheet({ dayData, combinations = [], onSelect, o
   const shownAlts = showMore ? alts : alts.slice(0, DEFAULT_ALTS);
   const remaining = alts.length - shownAlts.length;
 
-  // Pick a relaxed "leisure day" option (no plans), priced flat.
+  // A relaxed "leisure day" (no plans). Cheaper than an activity day, so the
+  // confirmation surfaces the saving (per-traveller delta).
   const leisureOpt = {
     id: "leisure-day",
     activities: ["Free day, explore at your own pace"],
     scoring: { pace: "relaxed", activityHours: 0, travelHours: 0, crowdLevel: "low" },
-    priceDelta: 0,
+    priceDelta: -2000,
     heroImage: currentOpt?.heroImage || options[0]?.heroImage,
     isCurrent: false,
   };
@@ -211,20 +212,6 @@ export default function ChangeDaySheet({ dayData, combinations = [], onSelect, o
 
           {/* Scrollable body */}
           <div ref={scrollRef} onScroll={onScroll} className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(86px + env(safe-area-inset-bottom))" }}>
-            {/* Quiet leisure-day shortcut (low emphasis, before the picks) */}
-            <button onClick={() => onSelect(leisureOpt)} style={{
-              display: "flex", alignItems: "center", gap: 10, width: "100%", marginBottom: 14,
-              padding: "10px 12px", borderRadius: 12, border: `1px dashed ${C.div}`, background: C.white,
-              cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-            }}>
-              <span style={{ fontSize: 17, flexShrink: 0 }}>🌴</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: C.head }}>Make this a leisure day</span>
-                <span style={{ display: "block", fontSize: 11.5, color: C.sub }}>No plans, just relax at your own pace.</span>
-              </span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, flexShrink: 0 }}>Select</span>
-            </button>
-
             {/* Our picks */}
             <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Our picks</p>
             {(currentOpt || shownAlts.length) ? (
@@ -259,8 +246,18 @@ export default function ChangeDaySheet({ dayData, combinations = [], onSelect, o
             )}
           </div>
 
-          {/* Floating filters bar */}
-          <div style={{ position: "absolute", bottom: "calc(18px + env(safe-area-inset-bottom))", left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none", zIndex: 4 }}>
+          {/* Pinned muted footer: quiet leisure-day fallback, always visible but secondary */}
+          <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, background: "#F7F7F8", padding: "12px 16px calc(12px + env(safe-area-inset-bottom))" }}>
+            <button onClick={() => onSelect(leisureOpt)} style={{
+              display: "block", width: "100%", background: "none", border: "none", cursor: "pointer",
+              fontFamily: "inherit", textAlign: "center", fontSize: 12.5, color: C.sub, lineHeight: "18px",
+            }}>
+              Prefer a free day? <span style={{ color: C.p600, fontWeight: 600 }}>Make it a leisure day</span>
+            </button>
+          </div>
+
+          {/* Floating filters bar - sits above the pinned leisure footer */}
+          <div style={{ position: "absolute", bottom: "calc(66px + env(safe-area-inset-bottom))", left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none", zIndex: 4 }}>
             <button
               data-testid="toggle-filters"
               onClick={() => setShowFilters(true)}

@@ -1,42 +1,46 @@
-import { Car, Plane, ArrowRight, Sun, Check } from "lucide-react";
+import { Car, Bus, Plane, ArrowRight, Sun, RefreshCw } from "lucide-react";
 import { C } from "../data";
 
-// Pick a leg icon: a flight/airport leg gets a plane, everything else a car.
-function transferIcon(t) {
-  const s = `${t.from || ""} ${t.to || ""} ${t.mode || ""}`.toLowerCase();
-  return /airport|flight|fly/.test(s) ? Plane : Car;
+// A van/shuttle gets a bus glyph, everything else a car.
+function vehicleIcon(v) {
+  return /van|bus|coach|shuttle|tempo/i.test(v || "") ? Bus : Car;
+}
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+function SharingChip({ sharing }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 600, color: "#1570EF", background: "#EAF2FE", border: "1px solid #BBD6F8", padding: "3px 9px", borderRadius: 20, flexShrink: 0, whiteSpace: "nowrap" }}>
+      {sharing}
+    </span>
+  );
 }
 
-// ─── Arranged transfers for the day (airport↔hotel, hotel↔hotel) ───
-// Clearly marked "Included" so it reads as something we've booked, not a suggestion.
-export function TransferSection({ transfers }) {
+// ─── Arranged transfers (airport↔hotel, hotel↔hotel) ───
+// The "Transfers included" heading already conveys inclusion, so cards stay
+// clean: vehicle, route, and a Private/Shared tag.
+export function TransferSection({ transfers, heading = "Transfers included" }) {
   if (!transfers?.length) return null;
   return (
-    <div style={{ padding: "20px 20px 0" }}>
-      <h4 style={{ fontSize: 16, fontWeight: 600, color: "#181E4C", margin: "0 0 12px", lineHeight: "22px" }}>Arranged for you</h4>
+    <div style={{ padding: "16px 16px 0" }}>
+      <h4 style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: "0 0 12px", lineHeight: "22px" }}>{heading}</h4>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {transfers.map((t, i) => {
-          const Icon = transferIcon(t);
+          const V = vehicleIcon(t.vehicle);
+          const meta = [t.mode, t.vehicle && cap(t.vehicle), t.duration].filter(Boolean).join(" · ");
           return (
-            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 12, border: "1px solid #E0E2EB", background: C.white }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FFE6ED", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Icon size={20} color="#FD014F" strokeWidth={1.9} />
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, border: `1px solid ${C.div}`, background: C.white }}>
+              <div style={{ width: 54, height: 46, borderRadius: 10, background: "#FFE6ED", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <V size={28} color="#FD014F" strokeWidth={1.6} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600, color: C.head, lineHeight: "20px" }}>
                   <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.from}</span>
-                  <ArrowRight size={14} color="#666C99" style={{ flexShrink: 0 }} />
+                  <ArrowRight size={14} color={C.sub} style={{ flexShrink: 0 }} />
                   <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.to}</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 6 }}>
-                  {(t.mode || t.duration) ? (
-                    <span style={{ fontSize: 12.5, color: "#666C99" }}>{[t.mode, t.duration].filter(Boolean).join(" · ")}</span>
-                  ) : <span />}
-                  {t.included && (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#2E7D52", background: "#E6F4EC", border: "1px solid #BBE3CA", padding: "3px 9px", borderRadius: 20, flexShrink: 0 }}>
-                      <Check size={12} color="#2E7D52" strokeWidth={3} /> Included
-                    </span>
-                  )}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                  {t.sharing && <SharingChip sharing={t.sharing} />}
+                  {meta && <span style={{ fontSize: 12.5, color: C.sub }}>{meta}</span>}
                 </div>
               </div>
             </div>
@@ -47,43 +51,91 @@ export function TransferSection({ transfers }) {
   );
 }
 
-// ─── Calm "free day" hero shown INSTEAD of the video on leisure days ───
-// Removes the arranged-looking player so a free day never reads as a booked tour.
-export function LeisureCard({ hasTransfer }) {
+// ─── Thin "rest of the day is leisure" strip (transfer + leisure days) ───
+export function LeisureStrip({ note }) {
   return (
-    <div style={{ padding: "16px 20px 0" }}>
-      <div style={{ position: "relative", overflow: "hidden", borderRadius: 14, padding: "22px 20px", background: "linear-gradient(135deg, #FFF0F4 0%, #FEF6E9 100%)", border: "1px solid #F8D8E1" }}>
-        <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.white, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, boxShadow: "0 4px 12px rgba(227,27,83,0.12)" }}>
-          <Sun size={24} color="#FD014F" strokeWidth={1.8} />
+    <div style={{ margin: "16px 16px 0", display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 12, background: "linear-gradient(135deg, #FFF0F4 0%, #FEF6E9 100%)", border: "1px solid #F8D8E1" }}>
+      <Sun size={18} color="#FD014F" strokeWidth={1.9} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: 13, fontWeight: 500, color: C.head, lineHeight: "18px" }}>
+        {note || "Rest of the day is leisure - relax, take it easy and explore at your own pace."}
+      </span>
+    </div>
+  );
+}
+
+// ─── Compact "this day is leisure" card (full leisure days) ───
+// Icon + title on one row, a one-line note, and an optional change-plan action.
+export function LeisureCard({ hasTransfer, onChangePlan }) {
+  return (
+    <div style={{ padding: "16px 16px 0" }}>
+      <div style={{ borderRadius: 14, padding: "16px 18px", background: "linear-gradient(135deg, #FFF0F4 0%, #FEF6E9 100%)", border: "1px solid #F8D8E1" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", background: C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(227,27,83,0.12)" }}>
+            <Sun size={22} color="#FD014F" strokeWidth={1.8} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0, lineHeight: "22px" }}>{hasTransfer ? "Rest of the day is yours" : "This day is leisure"}</h4>
+            <p style={{ fontSize: 12.5, color: "#535862", margin: "2px 0 0", lineHeight: "17px" }}>
+              Nothing's planned{hasTransfer ? " after your transfer" : ""}, relax at your own pace. Ideas below, nothing pre-booked.
+            </p>
+          </div>
         </div>
-        <h4 style={{ fontSize: 18, fontWeight: 700, color: "#181E4C", margin: "0 0 6px", lineHeight: "24px" }}>
-          {hasTransfer ? "Rest of the day is yours" : "This day is yours"}
-        </h4>
-        <p style={{ fontSize: 13.5, color: "#535862", margin: 0, lineHeight: "20px" }}>
-          Nothing is scheduled{hasTransfer ? " after your transfer" : ""}. Relax at your own pace, or explore the ideas below. Nothing here is pre-booked, just tell your trip manager if you'd like us to arrange something.
-        </p>
+        {onChangePlan && (
+          <button
+            onClick={onChangePlan}
+            style={{ marginTop: 14, width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: `1.5px solid ${C.p600}`, background: C.white, color: C.p600, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            <RefreshCw size={15} color={C.p600} /> Change day plan
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── Optional, clearly-unbooked ideas for a leisure day ───
-// Same tile look as the rest of the app, but headed and captioned so it's obvious
-// these are self-explore suggestions, not part of the arranged plan.
-export function ExploreIdeas({ ideas }) {
+// ─── Optional, clearly-unbooked recommendations for a leisure day ───
+export function ExploreIdeas({ ideas, title = "Recommended places to explore" }) {
   if (!ideas?.length) return null;
   return (
-    <div style={{ padding: "24px 20px 0" }}>
-      <h4 style={{ fontSize: 16, fontWeight: 600, color: "#181E4C", margin: "0 0 2px", lineHeight: "22px" }}>Ideas to explore on your own</h4>
-      <p style={{ fontSize: 12.5, color: "#666C99", margin: "0 0 14px", lineHeight: "17px" }}>Just suggestions, nothing is booked.</p>
+    <div style={{ padding: "24px 16px 0" }}>
+      <h4 style={{ fontSize: 16, fontWeight: 600, color: C.head, margin: "0 0 2px", lineHeight: "22px" }}>{title}</h4>
+      <p style={{ fontSize: 12.5, color: C.sub, margin: "0 0 14px", lineHeight: "17px" }}>Just suggestions, nothing is booked.</p>
       <div className="hs" style={{ gap: 12, paddingRight: 16 }}>
         {ideas.map((it, i) => (
           <div key={i} style={{ width: 140, flexShrink: 0 }}>
             <div style={{ width: 140, height: 100, borderRadius: 12, background: it.photo ? `url(${it.photo}) center/cover no-repeat` : "#F4F2F0", marginBottom: 8 }} />
-            <p style={{ fontSize: 13.5, fontWeight: 500, color: "#181E4C", margin: "0 0 2px", lineHeight: "18px" }}>{it.title}</p>
-            {it.caption && <p style={{ fontSize: 11.5, color: "#666C99", margin: 0, lineHeight: "15px" }}>{it.caption}</p>}
+            <p style={{ fontSize: 13.5, fontWeight: 500, color: C.head, margin: "0 0 2px", lineHeight: "18px" }}>{it.title}</p>
+            {it.caption && <p style={{ fontSize: 11.5, color: C.sub, margin: 0, lineHeight: "15px" }}>{it.caption}</p>}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Departure day card (transfer to the airport + a short note) ───
+export function DepartureCard({ departure = {} }) {
+  const V = vehicleIcon(departure.vehicle);
+  const meta = [departure.sharing, departure.vehicle && cap(departure.vehicle), departure.duration].filter(Boolean).join(" · ");
+  return (
+    <div style={{ padding: "16px 16px 0" }}>
+      <div style={{ borderRadius: 14, border: `1px solid ${C.div}`, background: C.white, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", background: "linear-gradient(135deg, #FFF0F4 0%, #FEF6E9 100%)", borderBottom: `1px solid ${C.div}` }}>
+          <Plane size={18} color="#FD014F" strokeWidth={1.9} style={{ transform: "rotate(45deg)" }} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.head }}>Departure day</span>
+        </div>
+        <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 54, height: 46, borderRadius: 10, background: "#FFE6ED", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <V size={28} color="#FD014F" strokeWidth={1.6} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.head, lineHeight: "20px" }}>Transfer to {departure.to || "the airport"}</div>
+              {meta && <div style={{ fontSize: 12.5, color: C.sub, marginTop: 4 }}>{meta}</div>}
+            </div>
+          </div>
+          {departure.note && <p style={{ fontSize: 12.5, color: C.sub, margin: 0, lineHeight: "18px" }}>{departure.note}</p>}
+        </div>
       </div>
     </div>
   );

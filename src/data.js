@@ -19,6 +19,8 @@ export const VS = {
 
 // ─── CDN image pools ───
 const CDN = "https://cdn.30sundays.club/app_content";
+// Black luxury car, used as the thumbnail for all private/shared transfers.
+const TRANSFER_CAR_IMG = "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=320&h=320&q=80&auto=format&fit=crop";
 
 const baliImgs = [
   `${CDN}/bali/bali_swing_experience_1.jpg`,
@@ -202,6 +204,34 @@ export const allItineraries = [
     pace: "Unhurried", crowds: "Low", vegFood: "Medium" },
   { id: 3, dest: "Bali", vibe: "Relaxed", name: "Temples, Rice & Terraces", nights: 7, price: "72,498", route: [{ city: "Ubud", n: 3 }, { city: "Kintamani", n: 2 }, { city: "Sanur", n: 2 }], veg: true, img: baliImgs[2],
     days: [{ city: "Ubud", n: 3, sub: "Art villages · Hot springs · Rice paddies" }, { city: "Kintamani", n: 2, sub: "Volcano views · Lake · Coffee" }, { city: "Sanur", n: 2, sub: "Quiet beach · Cycling · Markets" }],
+    // Per-day overrides (keyed by day number) so each day type renders right:
+    //  D1 transfer + leisure, D3 full leisure, D4 transfer + tour, D7 departure.
+    dayMeta: {
+      1: { leisure: true, transfers: [
+        { from: "DPS Airport", to: "Ubud Grand Resort", vehicle: "car", sharing: "Private", duration: "1.5 hrs",
+          name: "Airport private transfer", img: TRANSFER_CAR_IMG,
+          desc: "Private car · 1.5 hrs. Land in Bali and get whisked straight to your Ubud hotel." },
+      ], ideas: [
+        { title: "Campuhan Ridge Walk", caption: "Easy scenic walk · Ubud", photo: baliImgs[2] },
+        { title: "Ubud Art Market", caption: "Handicrafts & souvenirs", photo: baliImgs[0] },
+        { title: "Café hopping", caption: "Ubud town centre", photo: baliImgs[3] },
+      ] },
+      3: { leisure: true, ideas: [
+        { title: "Campuhan Ridge Walk", caption: "Easy scenic walk · Ubud", photo: baliImgs[2] },
+        { title: "Ubud Art Market", caption: "Handicrafts & souvenirs", photo: baliImgs[0] },
+        { title: "Café hopping", caption: "Ubud town centre", photo: baliImgs[3] },
+      ] },
+      4: { transfers: [
+        { from: "Ubud Grand Resort", to: "Kintamani Grand Resort", vehicle: "van", sharing: "Shared", duration: "1.5 hrs",
+          name: "Transfer to Kintamani", img: TRANSFER_CAR_IMG,
+          desc: "Shared van · 1.5 hrs. Scenic drive from Ubud up to the Kintamani highlands." },
+      ] },
+      7: { departure: true, transfers: [
+        { from: "Sanur Grand Resort", to: "Ngurah Rai Airport (DPS)", vehicle: "car", sharing: "Private", duration: "45 min",
+          name: "Departure transfer", img: TRANSFER_CAR_IMG,
+          desc: "Private car · 45 min. We'll pick you up from your Sanur hotel in time for your flight home." },
+      ] },
+    },
     pace: "Unhurried", crowds: "Low", vegFood: "High" },
   { id: 4, dest: "Bali", vibe: "Explorer", name: "Surf & Summit", nights: 7, price: "58,498", route: [{ city: "Ubud", n: 2 }, { city: "Kintamani", n: 2 }, { city: "Canggu", n: 3 }], veg: false, img: baliImgs[3],
     days: [{ city: "Ubud", n: 2, sub: "Monkey Forest · Temples · Markets" }, { city: "Kintamani", n: 2, sub: "Mt Batur trek · Hot springs" }, { city: "Canggu", n: 3, sub: "Surf · Beach clubs · Tanah Lot" }],
