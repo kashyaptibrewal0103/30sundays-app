@@ -65,7 +65,7 @@ export function LeisureStrip({ note }) {
 
 // ─── Compact "this day is leisure" card (full leisure days) ───
 // Icon + title on one row, a one-line note, and an optional change-plan action.
-export function LeisureCard({ hasTransfer, onChangePlan }) {
+export function LeisureCard({ hasTransfer, onChangePlan, ctaLabel = "Change day plan" }) {
   return (
     <div style={{ padding: "16px 16px 0" }}>
       <div style={{ borderRadius: 14, padding: "16px 18px", background: "linear-gradient(135deg, #FFF0F4 0%, #FEF6E9 100%)", border: "1px solid #F8D8E1" }}>
@@ -85,7 +85,7 @@ export function LeisureCard({ hasTransfer, onChangePlan }) {
             onClick={onChangePlan}
             style={{ marginTop: 14, width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: `1.5px solid ${C.p600}`, background: C.white, color: C.p600, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
           >
-            <RefreshCw size={15} color={C.p600} /> Change day plan
+            <RefreshCw size={15} color={C.p600} /> {ctaLabel}
           </button>
         )}
       </div>

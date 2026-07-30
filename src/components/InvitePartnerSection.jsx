@@ -208,8 +208,17 @@ function AddGuestSheet({ name, setName, mobile, setMobile, destination, onContac
   );
 }
 
-// ── Manage sheet: lists added co-travelers (name + mobile) with a WhatsApp
-//    share icon and remove, plus an Add-guest CTA. ──
+// Official WhatsApp glyph (lucide has no brand icons).
+function WhatsAppIcon({ size = 16, color = "#fff" }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill={color} aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.004c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0012.04 2zm0 18.15h-.003a8.2 8.2 0 01-4.18-1.145l-.3-.178-3.114.816.83-3.038-.196-.312a8.2 8.2 0 01-1.26-4.39c0-4.54 3.7-8.23 8.24-8.23a8.2 8.2 0 015.82 2.41 8.19 8.19 0 012.41 5.83c0 4.54-3.7 8.24-8.24 8.24zm4.52-6.16c-.247-.124-1.465-.723-1.692-.806-.227-.083-.393-.124-.558.124-.165.248-.64.806-.785.97-.145.166-.29.186-.537.062-.248-.124-1.046-.386-1.993-1.23-.737-.657-1.235-1.47-1.38-1.717-.144-.248-.015-.382.109-.505.111-.11.248-.29.372-.434.124-.145.165-.248.248-.414.083-.166.041-.31-.021-.434-.062-.124-.558-1.345-.765-1.84-.201-.484-.406-.418-.558-.426l-.475-.008a.916.916 0 00-.662.31c-.227.248-.868.848-.868 2.069 0 1.22.889 2.4 1.013 2.565.124.166 1.75 2.672 4.24 3.746.593.256 1.055.409 1.416.523.595.19 1.136.163 1.564.099.477-.071 1.465-.599 1.671-1.177.207-.579.207-1.075.145-1.178-.062-.104-.227-.166-.475-.29z"/>
+    </svg>
+  );
+}
+
+// ── Manage sheet: lists added co-travelers (name + mobile), each with a clear
+//    "Invite on WhatsApp" button and a remove action, plus an Add-guest CTA. ──
 function ManageSheet({ partners, destination, onClose, onAddGuest, onRemove }) {
   const isMobile = useIsMobile();
   return (
@@ -224,17 +233,23 @@ function ManageSheet({ partners, destination, onClose, onAddGuest, onRemove }) {
         <p style={{ fontSize: 13, color: C.sub, margin: "0 0 8px", lineHeight: "18px" }}>Everyone here can plan this {destination} trip with you.</p>
 
         {partners.map((p, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, borderTop: `1px solid ${C.div}`, padding: "12px 0" }}>
-            <Avatar name={p.name} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name || "Your partner"}</p>
-              <p style={{ fontSize: 12.5, color: C.sub, margin: "2px 0 0" }}>{p.display}</p>
+          <div key={i} style={{ borderTop: `1px solid ${C.div}`, padding: "14px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Avatar name={p.name} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name || "Your partner"}</p>
+                <p style={{ fontSize: 12.5, color: C.sub, margin: "2px 0 0" }}>{p.display}</p>
+              </div>
+              <button onClick={() => onRemove(i)} aria-label={`Remove ${p.name || "guest"}`} style={{ width: 36, height: 36, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
+                <Trash2 size={16} color={C.sub} />
+              </button>
             </div>
-            <button onClick={() => openWhatsApp(p, destination)} aria-label={`Share invite with ${p.name || "guest"} on WhatsApp`} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #BCE9CB", background: "#EAF7EF", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
-              <MessageCircle size={17} color="#1FA855" />
-            </button>
-            <button onClick={() => onRemove(i)} aria-label={`Remove ${p.name || "guest"}`} style={{ width: 36, height: 36, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
-              <Trash2 size={16} color={C.sub} />
+            <button
+              onClick={() => openWhatsApp(p, destination)}
+              aria-label={`Invite ${p.name || "guest"} on WhatsApp`}
+              style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 7, padding: "7px 14px", borderRadius: 999, border: "1px solid #BCE9CB", background: "#F3FBF6", color: "#1B7F4B", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              <WhatsAppIcon size={15} color="#25D366" /> Invite on WhatsApp
             </button>
           </div>
         ))}
