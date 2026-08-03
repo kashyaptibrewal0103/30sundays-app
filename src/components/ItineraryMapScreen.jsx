@@ -13,11 +13,12 @@ const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const GLYPH = {
   flight: '<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L12 19v-5.5z"/></svg>',
   stay: '<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M2 17h2v-2h16v2h2v-6.5a2.5 2.5 0 0 0-2.5-2.5H18V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v2H4.5A2.5 2.5 0 0 0 2 10.5zM8 8V6h8v2z"/></svg>',
-  activity: '<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 2 3 7v2h18V7zM5 11v7H4v2h16v-2h-1v-7h-2v7h-2v-7h-2v7h-2v-7H8v7H6v-7z"/></svg>',
+  activity: '<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M3 22V8l3 1.5V6h3v2l3-1.5V6h3v2l3-1.5V8v14h-5v-4a2 2 0 0 0-4 0v4z"/></svg>',
   transfer: '<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M5 11l1.4-4.1A2 2 0 0 1 8.3 5.5h7.4a2 2 0 0 1 1.9 1.4L19 11h.5A1.5 1.5 0 0 1 21 12.5V17h-2.1a2 2 0 0 1-3.8 0H8.9a2 2 0 0 1-3.8 0H3v-4.5A1.5 1.5 0 0 1 4.5 11z"/></svg>',
+  leisure: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M18.4 5.6l1.4-1.4M4.2 19.8l1.4-1.4"/></svg>',
   idea: '<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2zM9 20h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/></svg>',
 };
-const COLOR = { flight: C.blue || "#1F78FF", stay: "#4EAC7E", activity: "#712BDA", transfer: "#9AA0A6", idea: "#FDA201" };
+const COLOR = { flight: C.blue || "#1F78FF", stay: "#4EAC7E", activity: "#712BDA", transfer: "#FF5400", leisure: "#FDA201", idea: "#FDA201" };
 
 function poiPin({ type, num }) {
   return L.divIcon({
@@ -103,7 +104,9 @@ export default function ItineraryMapScreen({ days, hotels, dest, travelDates, on
     const hotel = hotelFor(day.city);
     if (hotel) pts.push({ type: "stay", title: hotel.name, sub: "Your stay", label: day.city, coord: coordsFor(day.city), data: hotel, city: day.city });
     (day.transfers || []).forEach((t) => pts.push({ type: "transfer", title: t.header || t.name || `${t.from} to ${t.to} transfer`, sub: "Transfer", coord: null, data: t, city: day.city }));
-    if (!day.leisure && !day.departure) {
+    if (day.leisure) {
+      pts.push({ type: "leisure", title: `Free time in ${day.city}`, sub: "Leisure", coord: null, city: day.city });
+    } else if (!day.departure) {
       (day.activities || []).forEach((a) => { if (a?.name) pts.push({ type: "activity", title: a.name, sub: "Activity", coord: coordsFor(day.city), data: a, city: day.city }); });
     }
     return pts;
@@ -130,7 +133,7 @@ export default function ItineraryMapScreen({ days, hotels, dest, travelDates, on
       });
     }
     let n = 0;
-    const numbered = raw.map((p) => (p.type === "transfer" ? { ...p } : { ...p, num: ++n }));
+    const numbered = raw.map((p) => (p.type === "transfer" || p.type === "leisure" ? { ...p } : { ...p, num: ++n }));
     return { points: withOffsets(numbered), ideas: ideaList };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDay, days, hotels, dest]);
@@ -209,7 +212,7 @@ export default function ItineraryMapScreen({ days, hotels, dest, travelDates, on
             <FitBounds points={pinPts} />
             {pinPts.length > 1 && <Polyline positions={pinPts} pathOptions={{ color: C.p600, weight: 3, dashArray: "7 6" }} />}
             {points.filter((p) => p.coord).map((p, i) => (
-              <Marker key={i} position={[p.coord.lat, p.coord.lng]} icon={poiPin({ type: p.type, num: p.num })} zIndexOffset={p.type === "activity" ? 0 : 1000} eventHandlers={{ click: () => setDetail(p) }}>
+              <Marker key={i} position={[p.coord.lat, p.coord.lng]} icon={poiPin({ type: p.type, num: p.num })} zIndexOffset={p.type === "activity" ? 0 : 1000} eventHandlers={(p.type === "activity" || p.type === "stay") ? { click: () => setDetail(p) } : undefined}>
                 {(p.type === "flight" || p.type === "stay") && (
                   <Tooltip permanent direction="bottom" offset={[0, 12]} className="route-tip">{p.label}</Tooltip>
                 )}
@@ -225,11 +228,7 @@ export default function ItineraryMapScreen({ days, hotels, dest, travelDates, on
           <div style={{ width: 44, height: 5, borderRadius: 3, background: "#D2D5DA", margin: "0 auto" }} />
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "2px 16px calc(20px + env(safe-area-inset-bottom))" }}>
-          {points.map((p, i) => (
-            (p.type === "flight" || p.type === "transfer")
-              ? <StripRow key={"p" + i} p={p} onOpen={() => setDetail(p)} />
-              : <PointCard key={"p" + i} p={p} onOpen={() => setDetail(p)} />
-          ))}
+          {points.map((p, i) => (<DayRow key={"p" + i} p={p} onOpen={() => setDetail(p)} />))}
           {ideas.length > 0 && (
             <>
               <p style={{ margin: "10px 2px 8px", fontSize: 15, fontWeight: 700, color: C.head }}>Ideas for your free time</p>
@@ -271,60 +270,24 @@ function Badge({ type, num }) {
   );
 }
 
-// Thin strip row for a flight / transfer (no big media).
-function StripRow({ p, onOpen }) {
+// Uniform itinerary row for all five card types (flight, transfer, activity,
+// hotel/stay, leisure): a colored type icon + number + title + type label.
+// Only hotel and activity rows are tappable and open the place-detail screen.
+const SUB_LABEL = { flight: "Flight", transfer: "Transfer", activity: "Activity", stay: "Your stay", leisure: "Leisure" };
+function DayRow({ p, onOpen }) {
+  const tappable = p.type === "stay" || p.type === "activity";
   const title = p.type === "transfer" && p.data ? `${p.data.from} to ${p.data.to}` : p.title;
-  const sub = p.type === "transfer"
-    ? [p.data?.sharing, p.data?.vehicle && cap(p.data.vehicle), p.data?.duration].filter(Boolean).join(" · ")
-    : "Flight · arranged as part of your trip";
+  const sub = p.type === "stay" ? (p.sub || SUB_LABEL.stay) : (SUB_LABEL[p.type] || p.sub);
+  const glyph = (GLYPH[p.type] || "").replace(/width="\d+"/, 'width="20"').replace(/height="\d+"/, 'height="20"');
+  const Tag = tappable ? "button" : "div";
   return (
-    <button onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 12px", marginBottom: 12, background: "#fff", border: `1px solid ${C.div}`, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-      <span style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: p.type === "transfer" ? "#EFEFEF" : COLOR[p.type], display: "flex", alignItems: "center", justifyContent: "center" }}
-        dangerouslySetInnerHTML={{ __html: (GLYPH[p.type] || "").replace(/#fff/g, p.type === "transfer" ? "#8A8F98" : "#fff") }} />
+    <Tag onClick={tappable ? onOpen : undefined} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", padding: "15px 16px", marginBottom: 12, background: "#fff", border: `1px solid ${C.div}`, borderRadius: 16, cursor: tappable ? "pointer" : "default", fontFamily: "inherit", textAlign: "left", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+      <span style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: COLOR[p.type], display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: glyph }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.num ? `${p.num}. ` : ""}{title}</p>
-        {sub && <p style={{ margin: "2px 0 0", fontSize: 12.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</p>}
+        <p style={{ margin: 0, fontSize: 16.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.num ? `${p.num}. ` : ""}{title}</p>
+        <p style={{ margin: "3px 0 0", fontSize: 14, color: C.sub }}>{sub}</p>
       </div>
-      <ChevronRight size={18} color={C.inact} style={{ flexShrink: 0 }} />
-    </button>
-  );
-}
-
-// Rich expanded card for a booked point. Activities autoplay a portrait video;
-// hotels show a photo. Both open the full place-detail screen on tap.
-function PointCard({ p, onOpen }) {
-  if (p.type === "activity") {
-    return (
-      <button onClick={onOpen} style={{ display: "flex", gap: 12, width: "100%", marginBottom: 14, background: "#fff", border: `1px solid ${C.div}`, borderRadius: 16, overflow: "hidden", cursor: "pointer", fontFamily: "inherit", textAlign: "left", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", padding: 0 }}>
-        <div style={{ position: "relative", width: 116, flexShrink: 0, aspectRatio: "9 / 16", background: "#000" }}>
-          <video src={SAMPLE_VIDEO} poster={p.data?.img} autoPlay muted loop playsInline style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          <div style={{ position: "absolute", top: 8, left: 8 }}><Badge type={p.type} num={p.num} /></div>
-        </div>
-        <div style={{ flex: 1, minWidth: 0, padding: "14px 12px 14px 2px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.head }}>{p.num ? `${p.num}. ` : ""}{p.title}</p>
-          <p style={{ margin: "5px 0 0", fontSize: 13, color: C.sub, lineHeight: "18px" }}>Curated experience · included in your trip</p>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, fontSize: 12.5, fontWeight: 700, color: C.p600 }}><Play size={13} fill={C.p600} color={C.p600} /> Watch &amp; view details</span>
-        </div>
-      </button>
-    );
-  }
-  // Hotel (stay) card: photo on top + name + rating + room.
-  return (
-    <button onClick={onOpen} style={{ display: "block", width: "100%", marginBottom: 14, background: "#fff", border: `1px solid ${C.div}`, borderRadius: 16, overflow: "hidden", cursor: "pointer", fontFamily: "inherit", textAlign: "left", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", padding: 0 }}>
-      <div style={{ position: "relative", height: 156, background: p.data?.img ? `url(${p.data.img}) center/cover no-repeat` : "#EDEFF2" }}>
-        <div style={{ position: "absolute", top: 10, left: 10 }}><Badge type={p.type} num={p.num} /></div>
-      </div>
-      <div style={{ padding: "12px 14px" }}>
-        <p style={{ margin: 0, fontSize: 16.5, fontWeight: 700, color: C.head }}>{p.num ? `${p.num}. ` : ""}{p.title}</p>
-        {p.data && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "5px 0 2px" }}>
-            {p.data.stars && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 600, color: "#B8860B" }}><Star size={12} fill="#F5A623" color="#F5A623" /> {p.data.stars}-star</span>}
-            {p.data.rating && <span style={{ fontSize: 12.5, fontWeight: 700, color: C.head }}>{p.data.rating} <span style={{ color: C.sub, fontWeight: 400 }}>rated</span></span>}
-          </div>
-        )}
-        <p style={{ margin: "4px 0 0", fontSize: 13.5, color: C.sub }}>{p.data?.type || p.sub}</p>
-      </div>
-    </button>
+    </Tag>
   );
 }
 
