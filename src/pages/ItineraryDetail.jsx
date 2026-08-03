@@ -9,6 +9,7 @@ import ChangeDaySheet from "../components/ChangeDaySheet";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
 import JourneyMap from "../components/JourneyMap";
+import ItineraryMapScreen from "../components/ItineraryMapScreen";
 import WatchTeaser from "../components/WatchTeaser";
 import DayScoringRow from "../components/DayScoringRow";
 import DayScoringModal from "../components/DayScoringModal";
@@ -156,6 +157,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [pendingDayChange, setPendingDayChange] = useState(null); // { dayIndex, option } awaiting confirm
   const [showChanges, setShowChanges] = useState(false); // floating "changes since last version" panel
   const [leavePrompt, setLeavePrompt] = useState(false); // "discard / create itinerary" on back with unsaved edits
+  const [showMap, setShowMap] = useState(false); // full-screen Itinerary Map
   const [toast, setToast] = useState(null); // { message, undoData } or null
   const toastTimerRef = useRef(null);
   const [showPricingSheet, setShowPricingSheet] = useState(false);
@@ -365,6 +367,33 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     });
     return items.slice(0, 8);
   }, [daysWithActivities]);
+
+  // Journey-map stops grouped by city, each carrying its activities (with the
+  // day/activity index) so tapping a pin can open that place's reel.
+  const mapStops = useMemo(() => {
+    const groups = [];
+    daysWithActivities.forEach((day, di) => {
+      let g = groups[groups.length - 1];
+      if (!g || g.city !== day.city) { g = { city: day.city, n: 0, activities: [], hero: null, hotel: null, transfer: null }; groups.push(g); }
+      g.n += 1;
+      // Only real tour days contribute previewable activities.
+      if (!day.leisure && !day.departure) {
+        (day.activities || []).forEach((a, ai) => {
+          if (a?.name && !g.activities.some((x) => x.name === a.name)) {
+            g.activities.push({ name: a.name, img: a.img, dayIndex: di, activityIndex: ai });
+          }
+        });
+        if (!g.hero && day.activities?.[0]?.img) g.hero = day.activities[0].img;
+      }
+      if (!g.transfer && day.transfers?.length) g.transfer = day.transfers[0];
+    });
+    // Attach each city's hotel for the "where you'll stay" detail card.
+    groups.forEach((g) => {
+      const h = baseHotels.find((x) => x.city === g.city);
+      if (h) { g.hotel = h; if (!g.hero) g.hero = h.img; }
+    });
+    return groups;
+  }, [daysWithActivities, baseHotels]);
 
   // Merge saved hotel selections. In a deal, per-version picks win; otherwise
   // fall back to the app-level (Explore) selection.
@@ -1505,7 +1534,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {/* ═══ 6. Journey Map ═══ */}
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Journey Map</p>
-        <JourneyMap stops={it.days} height={220} />
+        <JourneyMap stops={mapStops} height={220} onExpand={() => setShowMap(true)} />
       </div>
 
       <Divider />
@@ -1730,6 +1759,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           onChangeDay={(i) => { setDayDetailIndex(null); setChangeDayIndex(i); }}
           onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
           onClose={() => setDayDetailIndex(null)}
+        />
+      )}
+
+      {/* ═══ Itinerary Map (full-screen, from the Journey Map preview) ═══ */}
+      {showMap && (
+        <ItineraryMapScreen
+          days={daysWithActivities}
+          hotels={hotels}
+          dest={it.dest}
+          travelDates={travelDates}
+          onClose={() => setShowMap(false)}
         />
       )}
 
