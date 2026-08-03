@@ -7,7 +7,7 @@ import {
   Instagram, Youtube, Linkedin, X as XIcon, Send, Check,
   ArrowLeft, Phone, Mail, Calendar, MapPin, Trash2, AlertTriangle,
   Gift, Megaphone, Palmtree, UserPlus, Plus, BookUser,
-  ChevronDown, CreditCard, Copy, AlertCircle,
+  ChevronDown, CreditCard, Copy, AlertCircle, ReceiptIndianRupee, Download, Clock,
 } from "lucide-react";
 import { C } from "../data";
 import { useDeals } from "../data/deals";
@@ -46,6 +46,11 @@ const DEMO_PROFILES = {
       { title: "Booking credit · Bali trip", date: "28 Apr 2026", amount: 1000 },
       { title: "Referral bonus · Aarav joined", date: "12 Apr 2026", amount: 500 },
     ],
+    // TCS deduction certificates (Form 27D), latest trip first.
+    tcsCertificates: [
+      { id: "tcs-p1", destination: "Maldives", dates: "18 – 24 Aug 2026", tcsAmount: 8250, fy: "2026-27", status: "pending", availableFrom: "May 2027" },
+      { id: "tcs-p2", destination: "Bali", dates: "12 – 19 Feb 2026", tcsAmount: 6240, fy: "2025-26", status: "available", certNo: "27D/2526/AB1042", issuedOn: "14 May 2026" },
+    ],
     travellers: [
       { name: "Priya Sharma", relation: "Primary traveller", isSelf: true, docs: [
         passportDoc("passport_priya.jpg", { no: "M4521889", dob: "02 Mar 1991", issue: "15 Aug 2021", expiry: "14 Aug 2031", place: "Mumbai" }),
@@ -72,6 +77,11 @@ const DEMO_PROFILES = {
       { title: "Redeemed on Maldives trip", date: "18 Mar 2026", amount: -800 },
       { title: "Referral bonus · Priya joined", date: "10 Feb 2026", amount: 500 },
       { title: "Welcome bonus", date: "05 Jan 2026", amount: 3000 },
+    ],
+    tcsCertificates: [
+      { id: "tcs-r1", destination: "Maldives", dates: "05 – 11 Jul 2026", tcsAmount: 11400, fy: "2026-27", status: "pending", availableFrom: "May 2027" },
+      { id: "tcs-r2", destination: "Bali", dates: "20 – 27 Nov 2025", tcsAmount: 6980, fy: "2025-26", status: "available", certNo: "27D/2526/RK0771", issuedOn: "12 May 2026" },
+      { id: "tcs-r3", destination: "Thailand", dates: "08 – 14 Mar 2025", tcsAmount: 3820, fy: "2024-25", status: "available", certNo: "27D/2425/RK0338", issuedOn: "10 May 2025" },
     ],
     travellers: [
       { name: "Rohan Kapoor", relation: "Primary traveller", isSelf: true, docs: [
@@ -125,6 +135,11 @@ export default function Account({ userState, leadData, setUserState, setLeadData
   const [showSupport, setShowSupport] = useState(false);
   const [showRate, setShowRate] = useState(false);
   const [showRefer, setShowRefer] = useState(false);
+  const [showTcs, setShowTcs] = useState(false);
+
+  // TCS certificate is only offered to logged-in users with eligible trips.
+  const tcsCerts = (isLoggedIn && profile?.tcsCertificates) || [];
+  const tcsReady = tcsCerts.filter((c) => c.status === "available").length;
 
   const handleLogout = () => {
     setUserState("new");
@@ -132,30 +147,21 @@ export default function Account({ userState, leadData, setUserState, setLeadData
     navigate("/");
   };
 
-  const accountGroup = [
+  // Single settings list (matches the app): TCS certificate sits above Logout.
+  const mainList = [
     { icon: Wallet, label: "Wallet", onClick: () => setShowWallet(true) },
     { icon: Gift, label: "Refer & Earn", onClick: () => setShowRefer(true) },
-    { icon: Bookmark, label: "Saved & Wishlist", badge: wishlistTotal || undefined, onClick: () => navigate("/saved") },
-    { icon: Users, label: "Travellers & documents", onClick: () => setShowTravellers(true) },
-  ];
-  const supportGroup = [
     { icon: HelpCircle, label: "Contact Support", onClick: () => setShowSupport(true) },
-    { icon: MessageCircle, label: "Help center & FAQs", soon: true },
-    { icon: Lightbulb, label: "Suggest a feature", onClick: () => setFeedback("feature") },
-    { icon: Bug, label: "Report a problem", onClick: () => setFeedback("problem") },
-  ];
-  const aboutGroup = [
-    { icon: Star, label: "Rate us", onClick: () => setShowRate(true) },
-    { icon: Share2, label: "Share with friends", soon: true },
-    { icon: FileText, label: "Terms & Conditions", soon: true },
-    { icon: Shield, label: "Privacy Policy", soon: true },
+    { icon: FileText, label: "Terms & Conditions" },
+    ...(tcsCerts.length ? [{ icon: ReceiptIndianRupee, label: "TCS certificate", badge: tcsReady || undefined, onClick: () => setShowTcs(true) }] : []),
+    ...(isLoggedIn ? [{ icon: LogOut, label: "Logout", onClick: handleLogout }] : []),
   ];
 
   return (
     <div style={{ minHeight: "100%", background: `linear-gradient(180deg, ${C.p100}55 0%, ${C.bg} 12%)` }}>
       {/* Header */}
       <div style={{ padding: "12px 16px 16px" }}>
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: C.head }}>My Account</h2>
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: C.head }}>Account</h2>
       </div>
 
       {/* Profile card or Login CTA */}
@@ -220,37 +226,8 @@ export default function Account({ userState, leadData, setUserState, setLeadData
         )}
       </div>
 
-      {/* Setting groups */}
-      <SettingsGroup title="Account" items={accountGroup} />
-      <SettingsGroup title="Support & feedback" items={supportGroup} />
-      <SettingsGroup
-        title="About 30 Sundays"
-        items={aboutGroup}
-        footer={isLoggedIn ? { icon: LogOut, label: "Logout", onClick: handleLogout } : null}
-      />
-
-      {/* Follow us */}
-      <div style={{ padding: "8px 16px 0", textAlign: "center" }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: C.sub, margin: "0 0 12px" }}>Follow us</p>
-        <div style={{ display: "flex", justifyContent: "center", gap: 14 }}>
-          {SOCIALS.map(s => {
-            const Icon = s.icon;
-            return (
-              <a
-                key={s.label} href={s.url} target="_blank" rel="noreferrer" aria-label={s.label}
-                style={{
-                  width: 42, height: 42, borderRadius: "50%", background: C.white,
-                  border: `1px solid ${C.div}`, display: "flex", alignItems: "center",
-                  justifyContent: "center", color: C.p600, textDecoration: "none",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                }}
-              >
-                <Icon size={19} />
-              </a>
-            );
-          })}
-        </div>
-      </div>
+      {/* Single settings list - TCS certificate sits just above Logout */}
+      <SettingsGroup items={mainList} />
 
       {/* Footer */}
       <div style={{ textAlign: "center", padding: "24px 0 100px" }}>
@@ -293,6 +270,85 @@ export default function Account({ userState, leadData, setUserState, setLeadData
       {showRefer && profile && (
         <ReferEarnScreen profile={profile} onClose={() => setShowRefer(false)} />
       )}
+
+      {showTcs && (
+        <TcsCertificatesScreen certificates={tcsCerts} onClose={() => setShowTcs(false)} />
+      )}
+    </div>
+  );
+}
+
+// ── TCS deduction certificate (Form 27D) ──
+// Shown only for eligible logged-in users. Each trip's certificate is either
+// downloadable (available) or shows when it will be available (pending).
+function TcsCertificatesScreen({ certificates, onClose }) {
+  const frame = typeof document !== "undefined" ? document.getElementById("phone-frame") : null;
+
+  const content = (
+    <ScreenFrame title="TCS certificate" onClose={onClose}>
+      {/* What it is */}
+      <div style={{ borderRadius: 14, background: C.p100 + "88", border: `1px solid ${C.p300}`, padding: "14px 14px", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <ReceiptIndianRupee size={16} color={C.p600} />
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>Claim your TCS back</span>
+        </div>
+        <p style={{ fontSize: 12.5, color: C.sub, margin: 0, lineHeight: "18px" }}>
+          The TCS collected on your trip can be claimed as a refund when you file your income tax return. Download your TCS deduction certificate (Form 27D) right here.
+        </p>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {certificates.map((c) => <TcsCard key={c.id} c={c} />)}
+      </div>
+
+      <p style={{ fontSize: 11.5, color: C.inact, textAlign: "center", margin: "16px 8px 0", lineHeight: "17px" }}>
+        Certificates for a trip are issued after the financial year in which the TCS was collected.
+      </p>
+    </ScreenFrame>
+  );
+
+  return frame ? createPortal(content, frame) : content;
+}
+
+function TcsCard({ c }) {
+  const available = c.status === "available";
+  return (
+    <div style={{ borderRadius: 16, background: C.white, border: `1px solid ${C.div}`, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.04)" }}>
+      {/* Trip identifiers */}
+      <div style={{ padding: "14px 16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <MapPin size={16} color={C.p600} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 15.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.destination}</span>
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 600, color: C.sub, background: C.bg, border: `1px solid ${C.div}`, padding: "3px 9px", borderRadius: 999, flexShrink: 0 }}>FY {c.fy}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+          <Calendar size={14} color={C.sub} />
+          <span style={{ fontSize: 13, color: C.sub }}>{c.dates}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
+          <span style={{ fontSize: 12.5, color: C.sub }}>TCS collected</span>
+          <span style={{ fontSize: 17, fontWeight: 800, color: C.head }}>₹{c.tcsAmount.toLocaleString("en-IN")}</span>
+        </div>
+      </div>
+
+      {/* Status footer: download (available) or availability note (pending) */}
+      {available ? (
+        <button
+          onClick={() => alert(`TCS certificate (Form 27D)\n\n${c.destination} · FY ${c.fy}\nCertificate no. ${c.certNo}\nTCS ₹${c.tcsAmount.toLocaleString("en-IN")}\n\nDownloading PDF…`)}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", minHeight: 46, background: "#F6FEF9", border: "none", borderTop: "1px solid #ABEFC6", color: "#067647", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          <Download size={16} color="#067647" /> Download certificate
+        </button>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", background: "#FEF6E9", borderTop: "1px solid #F5D98B" }}>
+          <Clock size={16} color="#A66B00" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 12.5, color: "#A66B00", lineHeight: "17px" }}>
+            Will be available in <b>{c.availableFrom}</b>.
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -300,7 +356,7 @@ export default function Account({ userState, leadData, setUserState, setLeadData
 function SettingsGroup({ title, items, footer }) {
   return (
     <div style={{ padding: "8px 16px 0" }}>
-      <h3 style={{ fontSize: 13, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>{title}</h3>
+      {title && <h3 style={{ fontSize: 13, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>{title}</h3>}
       <div style={{
         borderRadius: 16, background: C.white, overflow: "hidden",
         boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: `1px solid ${C.div}`,
