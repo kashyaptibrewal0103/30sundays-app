@@ -31,14 +31,14 @@ function poiPin({ type, num }) {
   });
 }
 
-function FitBounds({ points }) {
+function FitBounds({ points, bottomPad = 300 }) {
   const map = useMap();
   useEffect(() => {
     if (!points.length) return;
     if (points.length === 1) map.setView(points[0], 11);
-    else map.fitBounds(points, { paddingTopLeft: [40, 30], paddingBottomRight: [40, 300] });
+    else map.fitBounds(points, { paddingTopLeft: [40, 30], paddingBottomRight: [40, bottomPad] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(points)]);
+  }, [JSON.stringify(points), bottomPad]);
   return null;
 }
 
@@ -209,7 +209,7 @@ export default function ItineraryMapScreen({ days, hotels, dest, travelDates, on
         {pinPts.length > 0 && (
           <MapContainer center={pinPts[0]} zoom={9} style={{ height: "100%", width: "100%", background: "#aadaff" }} attributionControl={false} scrollWheelZoom={false} zoomControl={false}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <FitBounds points={pinPts} />
+            <FitBounds points={pinPts} bottomPad={activeDay >= 0 ? 300 : 40} />
             {pinPts.length > 1 && <Polyline positions={pinPts} pathOptions={{ color: C.p600, weight: 3, dashArray: "7 6" }} />}
             {points.filter((p) => p.coord).map((p, i) => (
               <Marker key={i} position={[p.coord.lat, p.coord.lng]} icon={poiPin({ type: p.type, num: p.num })} zIndexOffset={p.type === "activity" ? 0 : 1000} eventHandlers={(p.type === "activity" || p.type === "stay") ? { click: () => setDetail(p) } : undefined}>
@@ -222,21 +222,17 @@ export default function ItineraryMapScreen({ days, hotels, dest, travelDates, on
         )}
       </div>
 
-      {/* Draggable bottom sheet */}
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: sheetH, zIndex: 950, background: "#fff", borderRadius: "18px 18px 0 0", boxShadow: "0 -6px 24px rgba(0,0,0,0.16)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div onPointerDown={(e) => startDrag(e.clientY)} style={{ padding: "10px 0 8px", flexShrink: 0, cursor: "grab", touchAction: "none" }}>
-          <div style={{ width: 44, height: 5, borderRadius: 3, background: "#D2D5DA", margin: "0 auto" }} />
+      {/* Draggable bottom sheet - hidden on the Full trip tab (map only) */}
+      {activeDay >= 0 && (
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: sheetH, zIndex: 950, background: "#fff", borderRadius: "18px 18px 0 0", boxShadow: "0 -6px 24px rgba(0,0,0,0.16)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div onPointerDown={(e) => startDrag(e.clientY)} style={{ padding: "10px 0 8px", flexShrink: 0, cursor: "grab", touchAction: "none" }}>
+            <div style={{ width: 44, height: 5, borderRadius: 3, background: "#D2D5DA", margin: "0 auto" }} />
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "2px 16px calc(20px + env(safe-area-inset-bottom))" }}>
+            {points.map((p, i) => (<DayRow key={"p" + i} p={p} onOpen={() => setDetail(p)} />))}
+          </div>
         </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "2px 16px calc(20px + env(safe-area-inset-bottom))" }}>
-          {points.map((p, i) => (<DayRow key={"p" + i} p={p} onOpen={() => setDetail(p)} />))}
-          {ideas.length > 0 && (
-            <>
-              <p style={{ margin: "10px 2px 8px", fontSize: 15, fontWeight: 700, color: C.head }}>Ideas for your free time</p>
-              {ideas.map((p, i) => (<IdeaRow key={"i" + i} p={p} onOpen={() => setDetail(p)} />))}
-            </>
-          )}
-        </div>
-      </div>
+      )}
 
       {detail && (detail.type === "activity" || detail.type === "stay"
         ? <PlaceDetail detail={detail} dest={dest} extraImgs={actImgs} onClose={() => setDetail(null)} frameStyle={frameStyle} />
@@ -279,10 +275,13 @@ function DayRow({ p, onOpen }) {
   const title = p.type === "transfer" && p.data ? `${p.data.from} to ${p.data.to}` : p.title;
   const sub = p.type === "stay" ? (p.sub || SUB_LABEL.stay) : (SUB_LABEL[p.type] || p.sub);
   const glyph = (GLYPH[p.type] || "").replace(/width="\d+"/, 'width="20"').replace(/height="\d+"/, 'height="20"');
+  const usePhoto = p.type === "activity" && p.data?.img;
   const Tag = tappable ? "button" : "div";
   return (
     <Tag onClick={tappable ? onOpen : undefined} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", padding: "15px 16px", marginBottom: 12, background: "#fff", border: `1px solid ${C.div}`, borderRadius: 16, cursor: tappable ? "pointer" : "default", fontFamily: "inherit", textAlign: "left", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-      <span style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: COLOR[p.type], display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: glyph }} />
+      {usePhoto
+        ? <span style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: `url(${p.data.img}) center/cover no-repeat` }} />
+        : <span style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: COLOR[p.type], display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: glyph }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 16.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.num ? `${p.num}. ` : ""}{title}</p>
         <p style={{ margin: "3px 0 0", fontSize: 14, color: C.sub }}>{sub}</p>
