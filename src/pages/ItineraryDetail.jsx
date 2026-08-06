@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -18,6 +18,7 @@ import { videosForDest } from "../data/watchData";
 import { getDayScoring, getDayTours, getAllDaysScoring } from "../data/dayScoring";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
+import SpotlightTour from "../components/SpotlightTour";
 import InvitePartnerSection from "../components/InvitePartnerSection";
 import { LeisureCard, LeisureStrip, ExploreIdeas } from "../components/DayWiseExtras";
 import { ActivityDetailScroll } from "./ActivityDetail";
@@ -191,6 +192,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // to the final step), instead of bouncing to the login-gated plan flow.
   const [showTripSheet, setShowTripSheet] = useState(false);
   const [showEditMenu, setShowEditMenu] = useState(false); // "Edit your trip" field picker
+  const [showTour, setShowTour] = useState(false); // guided customisation tour
   const [dayScore, setDayScore] = useState(null); // { metric, scoring, dayLabel, dayIdx } for the score drawer
   const [exploreStart, setExploreStart] = useState(""); // yyyy-mm-dd
   const [explorePax, setExplorePax] = useState(2);
@@ -292,6 +294,26 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Any saved plan can be edited via the wizard — built trips seed from their
   // own data, curated ones seed from the itinerary (Build handles the fallback).
   const wizardEditable = inDeal;
+
+  // Guided customisation tour: auto-run once per person, then replayable from
+  // the "How it works" button. Delay a beat so the targets are laid out.
+  useEffect(() => {
+    let seen = true;
+    try { seen = !!localStorage.getItem("cust_tour_seen"); } catch { /* ignore */ }
+    if (seen) return;
+    const t = setTimeout(() => {
+      setShowTour(true);
+      try { localStorage.setItem("cust_tour_seen", "1"); } catch { /* ignore */ }
+    }, 650);
+    return () => clearTimeout(t);
+  }, []);
+
+  const TOUR_STEPS = [
+    { selector: '[data-tour="edit"]', title: "Change the big things", body: "Tap Edit to change your destination, travel dates, travellers or route." },
+    { selector: '[data-tour="change-day"]', title: "Tune any day", body: "Not loving a day? Tap Change day plan to swap it for another option." },
+    { selector: '[data-tour="change-hotel"]', title: "Switch your stay", body: "Tap Change hotel on any hotel to pick a stay you like better." },
+    { selector: '[data-tour="save"]', title: "Save to lock it in", body: "Save to see your final price and get a PDF. Your consultant sees your version only after you save." },
+  ];
 
   // Overlay frame: fills the viewport on mobile, matches the phone frame on desktop.
   const overlayFrame = isMobile
@@ -752,10 +774,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             </div>
           )}
           <p style={{ fontSize: 12.5, color: C.sub, margin: "3px 0 0", lineHeight: "17px" }}>{it.days.map(d => `${d.city} ${d.n}N`).join("  ·  ")}</p>
+          <button data-tour="howitworks" onClick={() => setShowTour(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, padding: "5px 10px", background: C.p100, border: "none", borderRadius: 999, fontSize: 12, fontWeight: 700, color: C.p600, cursor: "pointer", fontFamily: "inherit" }}>
+            <HelpCircle size={13} color={C.p600} /> How customising works
+          </button>
         </div>
         {wizardEditable && (
           /* Opens the "Edit your trip" field picker */
-          <button onClick={() => setShowEditMenu(true)} style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, border: `1px solid ${C.div}`, borderRadius: 20, padding: "6px 12px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
+          <button data-tour="edit" onClick={() => setShowEditMenu(true)} style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, border: `1px solid ${C.div}`, borderRadius: 20, padding: "6px 12px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
             <Pencil size={13} /> Edit
           </button>
         )}
@@ -983,11 +1008,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                       {hasOptions && (
                         <button
                           data-testid={`change-day-${globalDayIndex}`}
+                          data-tour="change-day"
                           onClick={(e) => { e.stopPropagation(); setChangeDayIndex(globalDayIndex); }}
                           style={{
-                            display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8,
-                            padding: 0, background: "none", border: "none",
-                            fontSize: 12, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
+                            display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10,
+                            padding: "7px 12px", background: C.p100, border: `1px solid ${C.p300}`, borderRadius: 999,
+                            fontSize: 12.5, fontWeight: 700, color: C.p600, cursor: "pointer", fontFamily: "inherit",
                           }}
                           aria-label="Change day plan"
                         >
@@ -1154,8 +1180,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                     )}
                     {editable && (
                       <span
+                        data-tour="change-hotel"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
-                        style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.p600, marginTop: 6 }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: C.p600, marginTop: 8, padding: "7px 12px", background: C.p100, border: `1px solid ${C.p300}`, borderRadius: 999, alignSelf: "flex-start" }}
                       >
                         <ArrowLeftRight size={13} color={C.p600} />
                         Change hotel
@@ -1720,12 +1747,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               </button>
             </>
           ) : hasChanges ? (
-            <button data-testid="create-itinerary" onClick={handleGetFinalPrice} disabled={fetchingPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)", opacity: fetchingPrice ? 0.7 : 1 }}>
-              {fetchingPrice ? "Checking availability…" : "Create Itinerary"}
+            <button data-testid="create-itinerary" data-tour="save" onClick={handleGetFinalPrice} disabled={fetchingPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)", opacity: fetchingPrice ? 0.7 : 1 }}>
+              {fetchingPrice ? "Checking availability…" : "Save Itinerary"}
             </button>
           ) : (
-            <button data-testid="get-final-price" onClick={handleGetFinalPrice} disabled={fetchingPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)", opacity: fetchingPrice ? 0.7 : 1 }}>
-              {fetchingPrice ? "Checking availability…" : "Create Itinerary"}
+            <button data-testid="get-final-price" data-tour="save" onClick={handleGetFinalPrice} disabled={fetchingPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)", opacity: fetchingPrice ? 0.7 : 1 }}>
+              {fetchingPrice ? "Checking availability…" : "Save Itinerary"}
             </button>
           )}
         </div>
@@ -1772,6 +1799,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           onClose={() => setShowMap(false)}
         />
       )}
+
+      {showTour && <SpotlightTour steps={TOUR_STEPS} onClose={() => setShowTour(false)} />}
 
       {/* ═══ Day score metric drawer (from the day panel tiles) ═══ */}
       {/* Wrapped in a fixed viewport frame so the Sheet's inset:0 fills the

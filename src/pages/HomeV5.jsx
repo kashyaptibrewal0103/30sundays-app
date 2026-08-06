@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, Star, ArrowRight, X as XIcon, Heart, IndianRupee, ShieldCheck } from "lucide-react";
-import { C, destData, allItineraries, destinations, reviews, customerPhotos } from "../data";
-import { useDeals } from "../data/deals";
+import { Sparkles, Star, ArrowRight, X as XIcon, Heart, IndianRupee, ShieldCheck, Wand2 } from "lucide-react";
+import { C, destData, destinations, reviews, customerPhotos } from "../data";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
 import HomeBanners from "../components/HomeBanners";
+import CustomiseWalkthrough from "../components/CustomiseWalkthrough";
 import { SIX, getSeasonGroups, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
@@ -219,20 +219,27 @@ function AllSixCountries() {
 }
 
 export default function HomeV5({ userState = "new" }) {
-  const { deals } = useDeals();
-  const isNew = userState === "new";
+  const isLead = userState === "lead"; // customisation education is for leads only
   const groups = useMemo(() => getSeasonGroups(new Date()), []);
   const [hero, setHero] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
+  const [showWalk, setShowWalk] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => setHero(h => (h + 1) % HERO_IMGS.length), 4500);
     return () => clearInterval(t);
   }, []);
 
-  const draftDeal = deals.find(d => (d.versions || []).some(v => v.status === "draft"));
-  const draftVer = draftDeal && [...draftDeal.versions].reverse().find(v => v.status === "draft");
-  const draftNights = draftVer && (allItineraries.find(it => String(it.id) === String(draftVer.itineraryId))?.nights);
+  // Auto-show the customisation walkthrough the first time, for leads only.
+  useEffect(() => {
+    if (!isLead) return;
+    try {
+      if (!localStorage.getItem("cust_walkthrough_seen")) {
+        setShowWalk(true);
+        localStorage.setItem("cust_walkthrough_seen", "1");
+      }
+    } catch { /* private mode: just skip auto-show */ }
+  }, [isLead]);
 
   // "Torn between two?" comparison reels, shown in the Sunday School style.
   const seriesLessons = COMPARE_REELS.map((c) => ({
@@ -281,18 +288,23 @@ export default function HomeV5({ userState = "new" }) {
         </div>
       </div>
 
-      {/* Returning-user resume, slotted just under the hero */}
-      {!isNew && draftVer && (
-        <div style={{ padding: `18px ${PAD}px 0` }}>
-          <Link to={`/itinerary/${draftVer.itineraryId}?dealId=${draftDeal.id}&versionId=${draftVer.id}`} style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", background: C.white, border: `1.5px solid ${C.p300}`, borderRadius: 14, padding: 12 }}>
-            <img src={draftDeal.img} alt="" style={{ width: 50, height: 50, borderRadius: 10, objectFit: "cover" }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: 0 }}>Resume {draftVer.destination}{draftNights ? ` · ${draftNights} nights` : ""}</p>
-              <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{draftVer.title} · in progress</p>
-            </div>
-            <ArrowRight size={18} color={C.p600} />
-          </Link>
-        </div>
+      {/* "Make it yours" education entry (leads only): opens the walkthrough */}
+      {isLead && (
+      <div style={{ padding: `18px ${PAD}px 0` }}>
+        <button
+          onClick={() => setShowWalk(true)}
+          style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", background: `linear-gradient(115deg, ${C.p100} 0%, #FFF3F6 60%, #fff 100%)`, border: `1px solid ${C.p300}`, borderRadius: 14, padding: "13px 14px" }}
+        >
+          <span style={{ width: 42, height: 42, borderRadius: 12, background: C.white, border: `1px solid ${C.p100}`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <Wand2 size={21} color={C.p600} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: C.head }}>You're in control of your trip</span>
+            <span style={{ display: "block", fontSize: 12.5, color: C.sub, marginTop: 2 }}>See how you can customise everything yourself</span>
+          </span>
+          <ArrowRight size={18} color={C.p600} style={{ flexShrink: 0 }} />
+        </button>
+      </div>
       )}
 
       <div id="v5-rest"><LowerSections groups={groups} /></div>
@@ -311,6 +323,7 @@ export default function HomeV5({ userState = "new" }) {
       <div style={{ height: 80 }} />
 
       {showVideo && <FullscreenVideo src={HERO_VIDEO} onClose={() => setShowVideo(false)} />}
+      {showWalk && <CustomiseWalkthrough onClose={() => setShowWalk(false)} />}
     </div>
   );
 }
