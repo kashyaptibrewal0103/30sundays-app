@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { Sparkles, Star, ArrowRight, X as XIcon, Heart, IndianRupee, ShieldCheck, Wand2 } from "lucide-react";
-import { C, destData, destinations, reviews, customerPhotos } from "../data";
+import { Link, useNavigate } from "react-router-dom";
+import { Sparkles, Star, ArrowRight, X as XIcon, Heart, IndianRupee, ShieldCheck, Wand2, Calendar } from "lucide-react";
+import { C, destData, allItineraries, destinations, reviews, customerPhotos } from "../data";
+import { useDeals } from "../data/deals";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
-import HomeBanners from "../components/HomeBanners";
-import CustomiseWalkthrough from "../components/CustomiseWalkthrough";
+import HomeBanners, { BANNERS } from "../components/HomeBanners";
 import { SIX, getSeasonGroups, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
@@ -219,27 +219,50 @@ function AllSixCountries() {
 }
 
 export default function HomeV5({ userState = "new" }) {
+  const navigate = useNavigate();
+  const { deals } = useDeals();
   const isLead = userState === "lead"; // customisation education is for leads only
   const groups = useMemo(() => getSeasonGroups(new Date()), []);
   const [hero, setHero] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
-  const [showWalk, setShowWalk] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => setHero(h => (h + 1) % HERO_IMGS.length), 4500);
     return () => clearInterval(t);
   }, []);
 
-  // Auto-show the customisation walkthrough the first time, for leads only.
-  useEffect(() => {
-    if (!isLead) return;
-    try {
-      if (!localStorage.getItem("cust_walkthrough_seen")) {
-        setShowWalk(true);
-        localStorage.setItem("cust_walkthrough_seen", "1");
-      }
-    } catch { /* private mode: just skip auto-show */ }
-  }, [isLead]);
+  // Customisation education (leads only): a banner + a trip card that both open
+  // the lead's in-progress itinerary and start the guided tour there. Falls back
+  // to the Bali demo itinerary when there's no draft to resume.
+  const draftDeal = deals.find(d => (d.versions || []).some(v => v.status === "draft"));
+  const draftVer = draftDeal && [...draftDeal.versions].reverse().find(v => v.status === "draft");
+  const draftIt = allItineraries.find(it => String(it.id) === String(draftVer?.itineraryId));
+  const tripDest = draftVer?.destination || draftIt?.dest || "Bali";
+  const tripNights = draftIt?.nights || draftVer?.customizations?.travelDates?.nights || 7;
+  const tripImg = draftDeal?.img || destData.Bali?.hero;
+  // Match the date shown on the itinerary header (custom draft = real dates).
+  const tripDates = draftIt?.custom && draftIt.startDate
+    ? (() => {
+        const s = new Date(draftIt.startDate); const e = new Date(s); e.setDate(e.getDate() + (draftIt.nights || 0));
+        const f = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+        return `${f(s)} - ${f(e)}`;
+      })()
+    : "Mar 31 - Apr 6";
+  const tourTarget = draftVer
+    ? `/itinerary/${draftVer.itineraryId}?dealId=${draftDeal.id}&versionId=${draftVer.id}&tour=1`
+    : `/itinerary/3?dealId=demo_draft_bali&versionId=demo_draft_bali_v1&tour=1`;
+  const custBanner = {
+    id: "customise",
+    kicker: "You're in control",
+    title: "Customise your trip, save time",
+    sub: "Change days, hotels and dates yourself.",
+    cta: "See how it works",
+    Icon: Wand2,
+    onClick: () => navigate(tourTarget),
+    bg: "linear-gradient(115deg, #F3ECFF 0%, #E9DEFF 55%, #E2D3FF 100%)",
+    border: "rgba(113,43,218,0.20)", accent: "#712BDA", tile: "#712BDA",
+  };
+  const banners = isLead ? [custBanner, ...BANNERS] : BANNERS;
 
   // "Torn between two?" comparison reels, shown in the Sunday School style.
   const seriesLessons = COMPARE_REELS.map((c) => ({
@@ -252,9 +275,10 @@ export default function HomeV5({ userState = "new" }) {
       {/* Circular destination tabs, above the hero */}
       <DestCircles />
 
-      {/* Marketing banner carousel, between the circles and the hero */}
+      {/* Marketing banner carousel, between the circles and the hero.
+          Leads also get a customisation banner that starts the guided tour. */}
       <div style={{ padding: "2px 0 14px" }}>
-        <HomeBanners />
+        <HomeBanners banners={banners} />
       </div>
 
       {/* ─── Cinematic full-bleed hero ─── */}
@@ -288,23 +312,36 @@ export default function HomeV5({ userState = "new" }) {
         </div>
       </div>
 
-      {/* "Make it yours" education entry (leads only): opens the walkthrough */}
+      {/* Customisation trip card (leads only): shows the trip + starts the tour */}
       {isLead && (
-      <div style={{ padding: `18px ${PAD}px 0` }}>
-        <button
-          onClick={() => setShowWalk(true)}
-          style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", background: `linear-gradient(115deg, ${C.p100} 0%, #FFF3F6 60%, #fff 100%)`, border: `1px solid ${C.p300}`, borderRadius: 14, padding: "13px 14px" }}
-        >
-          <span style={{ width: 42, height: 42, borderRadius: 12, background: C.white, border: `1px solid ${C.p100}`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-            <Wand2 size={21} color={C.p600} />
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: C.head }}>You're in control of your trip</span>
-            <span style={{ display: "block", fontSize: 12.5, color: C.sub, marginTop: 2 }}>See how you can customise everything yourself</span>
-          </span>
-          <ArrowRight size={18} color={C.p600} style={{ flexShrink: 0 }} />
-        </button>
-      </div>
+        <div style={{ padding: `18px ${PAD}px 0` }}>
+          <button
+            onClick={() => navigate(tourTarget)}
+            style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0, border: `1px solid ${C.p300}`, borderRadius: 16, overflow: "hidden", background: `linear-gradient(115deg, #F6F1FF 0%, #FBF9FF 60%, #fff 100%)` }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12 }}>
+              <div style={{ position: "relative", width: 66, height: 66, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
+                <img src={tripImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <span style={{ position: "absolute", top: 4, left: 4, width: 24, height: 24, borderRadius: 8, background: "#712BDA", display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(113,43,218,0.4)" }}>
+                  <Wand2 size={13} color="#fff" />
+                </span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 10.5, fontWeight: 800, letterSpacing: "1.2px", color: "#712BDA", textTransform: "uppercase" }}>You're in control</p>
+                <p style={{ margin: "3px 0 0", fontSize: 15, fontWeight: 800, color: C.head, lineHeight: "20px", letterSpacing: "-0.2px" }}>Customise your {tripDest} trip</p>
+                <p style={{ margin: "3px 0 0", display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.sub }}>
+                  <Calendar size={12} color={C.sub} /> {tripDates} · {tripNights}N
+                </p>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 14px", borderTop: "1px solid rgba(113,43,218,0.12)", background: "rgba(113,43,218,0.05)" }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: C.sub }}>Change days, hotels and dates yourself, save time.</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: "#712BDA", flexShrink: 0 }}>
+                See how <ArrowRight size={14} />
+              </span>
+            </div>
+          </button>
+        </div>
       )}
 
       <div id="v5-rest"><LowerSections groups={groups} /></div>
@@ -323,7 +360,6 @@ export default function HomeV5({ userState = "new" }) {
       <div style={{ height: 80 }} />
 
       {showVideo && <FullscreenVideo src={HERO_VIDEO} onClose={() => setShowVideo(false)} />}
-      {showWalk && <CustomiseWalkthrough onClose={() => setShowWalk(false)} />}
     </div>
   );
 }

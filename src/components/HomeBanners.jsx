@@ -49,7 +49,7 @@ function BannerCard({ b }) {
   const Icon = b.Icon;
   return (
     <div
-      onClick={() => window.open(b.url, "_blank")}
+      onClick={() => (b.onClick ? b.onClick() : window.open(b.url, "_blank"))}
       style={{
         height: 120, boxSizing: "border-box",
         borderRadius: 18, overflow: "hidden", cursor: "pointer",

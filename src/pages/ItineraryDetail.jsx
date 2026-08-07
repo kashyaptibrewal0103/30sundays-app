@@ -295,17 +295,25 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // own data, curated ones seed from the itinerary (Build handles the fallback).
   const wizardEditable = inDeal;
 
-  // Guided customisation tour: auto-run once per person, then replayable from
-  // the "How it works" button. Delay a beat so the targets are laid out.
+  // Guided customisation tour: auto-run once per person, or on demand when
+  // opened with ?tour=1 (from the home banner). Replayable from the "How it
+  // works" button. Delay a beat so the targets are laid out.
   useEffect(() => {
+    const forced = params.get("tour") === "1";
     let seen = true;
     try { seen = !!localStorage.getItem("cust_tour_seen"); } catch { /* ignore */ }
-    if (seen) return;
+    if (!forced && seen) return;
     const t = setTimeout(() => {
       setShowTour(true);
       try { localStorage.setItem("cust_tour_seen", "1"); } catch { /* ignore */ }
+      if (forced) {
+        const next = new URLSearchParams(params);
+        next.delete("tour");
+        setParams(next, { replace: true });
+      }
     }, 650);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const TOUR_STEPS = [
