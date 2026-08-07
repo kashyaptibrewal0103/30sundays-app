@@ -232,14 +232,20 @@ export default function HomeV5({ userState = "new" }) {
   }, []);
 
   // Customisation education (leads only): a banner + a trip card that both open
-  // the lead's in-progress itinerary and start the guided tour there. Falls back
-  // to the Bali demo itinerary when there's no draft to resume.
-  const draftDeal = deals.find(d => (d.versions || []).some(v => v.status === "draft"));
-  const draftVer = draftDeal && [...draftDeal.versions].reverse().find(v => v.status === "draft");
-  const draftIt = allItineraries.find(it => String(it.id) === String(draftVer?.itineraryId));
+  // the lead's in-progress itinerary and start the guided tour there. We only
+  // use a draft whose itinerary is a resolvable base itinerary; a custom/edited
+  // draft has a synthesized id that would 404 the itinerary screen, so those
+  // fall back to the Bali demo, which always resolves.
+  const isSeedItinerary = (itId) => allItineraries.some(it => it.id === Number(itId));
+  const draftDeal = deals.find(d => (d.versions || []).some(v => v.status === "draft" && isSeedItinerary(v.itineraryId)));
+  const draftVer = draftDeal && [...draftDeal.versions].reverse().find(v => v.status === "draft" && isSeedItinerary(v.itineraryId));
+  const tourItinId = draftVer ? draftVer.itineraryId : 3;
+  const tourDealId = draftDeal ? draftDeal.id : "demo_draft_bali";
+  const tourVerId = draftVer ? draftVer.id : "demo_draft_bali_v1";
+  const draftIt = allItineraries.find(it => it.id === Number(tourItinId));
   const tripDest = draftVer?.destination || draftIt?.dest || "Bali";
-  const tripNights = draftIt?.nights || draftVer?.customizations?.travelDates?.nights || 7;
-  const tripImg = draftDeal?.img || destData.Bali?.hero;
+  const tripNights = draftIt?.nights || 7;
+  const tripImg = (draftDeal && draftDeal.img) || draftIt?.img || destData.Bali?.hero;
   // Match the date shown on the itinerary header (custom draft = real dates).
   const tripDates = draftIt?.custom && draftIt.startDate
     ? (() => {
@@ -248,9 +254,7 @@ export default function HomeV5({ userState = "new" }) {
         return `${f(s)} - ${f(e)}`;
       })()
     : "Mar 31 - Apr 6";
-  const tourTarget = draftVer
-    ? `/itinerary/${draftVer.itineraryId}?dealId=${draftDeal.id}&versionId=${draftVer.id}&tour=1`
-    : `/itinerary/3?dealId=demo_draft_bali&versionId=demo_draft_bali_v1&tour=1`;
+  const tourTarget = `/itinerary/${tourItinId}?dealId=${tourDealId}&versionId=${tourVerId}&tour=1`;
   const custBanner = {
     id: "customise",
     kicker: "You're in control",
