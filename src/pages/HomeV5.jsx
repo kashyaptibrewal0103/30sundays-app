@@ -169,22 +169,24 @@ function SeasonCard({ d }) {
   );
 }
 
-function LowerSections({ groups }) {
+function LowerSections({ groups, showUsp = true }) {
   return (
-    <div style={{ paddingTop: 4, background: C.white, position: "relative" }}>
-      {/* Compact proof line */}
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, padding: `0 ${PAD}px`, marginBottom: 28 }}>
-        {[
-          { I: Heart, t: "Couples only" },
-          { I: IndianRupee, t: "Transparent pricing" },
-          { I: ShieldCheck, t: "No tourist traps" },
-        ].map((x, i) => (
-          <span key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <x.I size={13} color={C.p600} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: C.head, letterSpacing: "0.1px", whiteSpace: "nowrap" }}>{x.t}</span>
-          </span>
-        ))}
-      </div>
+    <div style={{ paddingTop: showUsp ? 4 : 24, background: C.white, position: "relative" }}>
+      {/* Compact proof line (hidden for leads, where the customisation card leads instead) */}
+      {showUsp && (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, padding: `0 ${PAD}px`, marginBottom: 28 }}>
+          {[
+            { I: Heart, t: "Couples only" },
+            { I: IndianRupee, t: "Transparent pricing" },
+            { I: ShieldCheck, t: "No tourist traps" },
+          ].map((x, i) => (
+            <span key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <x.I size={13} color={C.p600} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.head, letterSpacing: "0.1px", whiteSpace: "nowrap" }}>{x.t}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {groups.map((g, i) => (
         <div key={i} style={{ marginBottom: 28 }}>
@@ -214,6 +216,41 @@ function AllSixCountries() {
           </Link>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Customisation education card for leads. Sits in the top slot (below the
+// country circles, in place of the marketing banners). Compact by design: the
+// trip (destination + dates), a one-line benefit, and a "See how" action that
+// starts the guided tour.
+function CustomiseHeroCard({ dest, dates, nights, img, onOpen }) {
+  const P = "#712BDA";
+  return (
+    <div style={{ padding: `14px ${PAD}px 4px` }}>
+      <button onClick={onOpen} style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0, border: `1px solid ${C.p300}`, borderRadius: 16, overflow: "hidden", background: "linear-gradient(115deg, #F6F1FF 0%, #FBF9FF 60%, #fff 100%)", boxShadow: "0 6px 20px rgba(113,43,218,0.12)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12 }}>
+          <div style={{ position: "relative", width: 66, height: 66, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
+            <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <span style={{ position: "absolute", top: 4, left: 4, width: 24, height: 24, borderRadius: 8, background: P, display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(113,43,218,0.4)" }}>
+              <Wand2 size={13} color="#fff" />
+            </span>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 10.5, fontWeight: 800, letterSpacing: "1.2px", color: P, textTransform: "uppercase" }}>You're in control</p>
+            <p style={{ margin: "3px 0 0", fontSize: 15, fontWeight: 800, color: C.head, lineHeight: "20px", letterSpacing: "-0.2px" }}>Customise your {dest} trip</p>
+            <p style={{ margin: "3px 0 0", display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.sub }}>
+              <Calendar size={12} color={C.sub} /> {dates} · {nights}N
+            </p>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 14px", borderTop: "1px solid rgba(113,43,218,0.12)", background: "rgba(113,43,218,0.05)" }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.sub }}>Change days, hotels and dates yourself, save time.</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: P, flexShrink: 0 }}>
+            See how <ArrowRight size={14} />
+          </span>
+        </div>
+      </button>
     </div>
   );
 }
@@ -255,18 +292,6 @@ export default function HomeV5({ userState = "new" }) {
       })()
     : "Mar 31 - Apr 6";
   const tourTarget = `/itinerary/${tourItinId}?dealId=${tourDealId}&versionId=${tourVerId}&tour=1`;
-  const custBanner = {
-    id: "customise",
-    kicker: "You're in control",
-    title: "Customise your trip, save time",
-    sub: "Change days, hotels and dates yourself.",
-    cta: "See how it works",
-    Icon: Wand2,
-    onClick: () => navigate(tourTarget),
-    bg: "linear-gradient(115deg, #F3ECFF 0%, #E9DEFF 55%, #E2D3FF 100%)",
-    border: "rgba(113,43,218,0.20)", accent: "#712BDA", tile: "#712BDA",
-  };
-  const banners = isLead ? [custBanner, ...BANNERS] : BANNERS;
 
   // "Torn between two?" comparison reels, shown in the Sunday School style.
   const seriesLessons = COMPARE_REELS.map((c) => ({
@@ -279,13 +304,21 @@ export default function HomeV5({ userState = "new" }) {
       {/* Circular destination tabs, above the hero */}
       <DestCircles />
 
-      {/* Marketing banner carousel, between the circles and the hero.
-          Leads also get a customisation banner that starts the guided tour. */}
-      <div style={{ padding: "2px 0 14px" }}>
-        <HomeBanners banners={banners} />
-      </div>
+      {/* Top slot below the circles. Leads see the customisation card here
+          (the marketing banners are hidden for them); everyone else sees the
+          marketing banner carousel. When a lead is no longer being educated,
+          the banners come back. */}
+      {isLead ? (
+        <CustomiseHeroCard dest={tripDest} dates={tripDates} nights={tripNights} img={tripImg} onOpen={() => navigate(tourTarget)} />
+      ) : (
+        <div style={{ padding: "2px 0 14px" }}>
+          <HomeBanners banners={BANNERS} />
+        </div>
+      )}
 
-      {/* ─── Cinematic full-bleed hero ─── */}
+      {/* ─── Cinematic full-bleed hero ─── (hidden for leads: they already
+          have a trip, so the customisation card is the focus for them) */}
+      {!isLead && (
       <div style={{ position: "relative", height: "50vh", minHeight: 400, overflow: "hidden" }}>
         {HERO_IMGS.map((src, i) => (
           <img key={i} src={src} alt="" style={{
@@ -315,40 +348,9 @@ export default function HomeV5({ userState = "new" }) {
           </div>
         </div>
       </div>
-
-      {/* Customisation trip card (leads only): shows the trip + starts the tour */}
-      {isLead && (
-        <div style={{ padding: `18px ${PAD}px 0` }}>
-          <button
-            onClick={() => navigate(tourTarget)}
-            style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0, border: `1px solid ${C.p300}`, borderRadius: 16, overflow: "hidden", background: `linear-gradient(115deg, #F6F1FF 0%, #FBF9FF 60%, #fff 100%)` }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12 }}>
-              <div style={{ position: "relative", width: 66, height: 66, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
-                <img src={tripImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <span style={{ position: "absolute", top: 4, left: 4, width: 24, height: 24, borderRadius: 8, background: "#712BDA", display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(113,43,218,0.4)" }}>
-                  <Wand2 size={13} color="#fff" />
-                </span>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 10.5, fontWeight: 800, letterSpacing: "1.2px", color: "#712BDA", textTransform: "uppercase" }}>You're in control</p>
-                <p style={{ margin: "3px 0 0", fontSize: 15, fontWeight: 800, color: C.head, lineHeight: "20px", letterSpacing: "-0.2px" }}>Customise your {tripDest} trip</p>
-                <p style={{ margin: "3px 0 0", display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.sub }}>
-                  <Calendar size={12} color={C.sub} /> {tripDates} · {tripNights}N
-                </p>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 14px", borderTop: "1px solid rgba(113,43,218,0.12)", background: "rgba(113,43,218,0.05)" }}>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: C.sub }}>Change days, hotels and dates yourself, save time.</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: "#712BDA", flexShrink: 0 }}>
-                See how <ArrowRight size={14} />
-              </span>
-            </div>
-          </button>
-        </div>
       )}
 
-      <div id="v5-rest"><LowerSections groups={groups} /></div>
+      <div id="v5-rest"><LowerSections groups={groups} showUsp={!isLead} /></div>
 
       {/* Torn between two? in the Sunday School multi-video style */}
       <EduMultiCarousel valueTitle="Torn between [two]?" lessons={seriesLessons} />

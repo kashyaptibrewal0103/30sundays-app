@@ -317,10 +317,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   }, []);
 
   const TOUR_STEPS = [
-    { selector: '[data-tour="edit"]', title: "Change the big things", body: "Tap Edit to change your destination, travel dates, travellers or route." },
-    { selector: '[data-tour="change-day"]', title: "Tune any day", body: "Not loving a day? Tap Change day plan to swap it for another option." },
-    { selector: '[data-tour="change-hotel"]', title: "Switch your stay", body: "Tap Change hotel on any hotel to pick a stay you like better." },
-    { selector: '[data-tour="save"]', title: "Save to lock it in", body: "Save to see your final price and get a PDF. Your consultant sees your version only after you save." },
+    { selector: '[data-tour="edit"]', gesture: "tap", text: "Tap Edit to change your destination, dates, travellers or route." },
+    { selector: '[data-tour="change-day"]', gesture: "tap", text: "Tap Change day plan to swap a day's activities." },
+    { selector: '[data-tour="change-hotel"]', gesture: "tap", text: "Tap Change hotel to pick a different stay." },
+    { selector: '[data-tour="save"]', gesture: "tap", text: "Happy with it? Tap Save Itinerary to lock your price and get a PDF." },
   ];
 
   // Overlay frame: fills the viewport on mobile, matches the phone frame on desktop.
