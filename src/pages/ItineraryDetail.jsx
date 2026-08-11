@@ -193,6 +193,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [showTripSheet, setShowTripSheet] = useState(false);
   const [showEditMenu, setShowEditMenu] = useState(false); // "Edit your trip" field picker
   const [showTour, setShowTour] = useState(false); // guided customisation tour
+  const [hintDismissed, setHintDismissed] = useState(false); // customisation signpost dismiss
   const [dayScore, setDayScore] = useState(null); // { metric, scoring, dayLabel, dayIdx } for the score drawer
   const [exploreStart, setExploreStart] = useState(""); // yyyy-mm-dd
   const [explorePax, setExplorePax] = useState(2);
@@ -722,15 +723,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <button onClick={attemptLeave} style={{ position: "absolute", top: 14, left: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           <ArrowLeft size={18} color="#fff" />
         </button>
-        {inDeal && versionId && (
-          <button onClick={() => dealsCtx.toggleWish(versionId)} aria-label={dealsCtx.isWished(versionId) ? "Remove from wishlist" : "Save to wishlist"} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
-            <Heart size={18} color="#fff" fill={dealsCtx.isWished(versionId) ? "#fff" : "none"} />
+        {wizardEditable && (
+          <button data-tour="howitworks" onClick={() => setShowTour(true)} style={{ position: "absolute", top: 14, right: 14, display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 13px", borderRadius: 999, background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(0,0,0,0.2)" }}>
+            <HelpCircle size={13} color={C.p600} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.p600 }}>How customising works</span>
           </button>
         )}
         {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
         <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
           <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <span>Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
+            {inDeal && versionId && (
+              <button onClick={() => dealsCtx.toggleWish(versionId)} aria-label={dealsCtx.isWished(versionId) ? "Remove from wishlist" : "Save to wishlist"} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", flexShrink: 0, padding: 0 }}>
+                <Heart size={16} color="#fff" fill={dealsCtx.isWished(versionId) ? "#fff" : "none"} />
+              </button>
+            )}
             {/* Version badge only once the itinerary is created (priced) */}
             {quoted && (
               <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4 }}>
@@ -782,17 +789,28 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             </div>
           )}
           <p style={{ fontSize: 12.5, color: C.sub, margin: "3px 0 0", lineHeight: "17px" }}>{it.days.map(d => `${d.city} ${d.n}N`).join("  ·  ")}</p>
-          <button data-tour="howitworks" onClick={() => setShowTour(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, padding: "5px 10px", background: C.p100, border: "none", borderRadius: 999, fontSize: 12, fontWeight: 700, color: C.p600, cursor: "pointer", fontFamily: "inherit" }}>
-            <HelpCircle size={13} color={C.p600} /> How customising works
-          </button>
         </div>
         {wizardEditable && (
           /* Opens the "Edit your trip" field picker */
           <button data-tour="edit" onClick={() => setShowEditMenu(true)} style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, border: `1px solid ${C.div}`, borderRadius: 20, padding: "6px 12px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
-            <Pencil size={13} /> Edit
+            <Pencil size={13} /> Edit trip
           </button>
         )}
       </div>
+
+      {/* Customisation signpost: point to Edit trip (big things) and the
+          inline Change controls on each day and hotel below. */}
+      {wizardEditable && !hintDismissed && (
+        <div style={{ margin: "0 16px 10px", display: "flex", gap: 8, alignItems: "flex-start", background: C.white, border: `1px solid ${C.div}`, borderRadius: 12, padding: "10px 12px" }}>
+          <SlidersHorizontal size={15} color={C.p600} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.head, lineHeight: "17px", fontWeight: 500 }}>
+            Tap <b style={{ color: C.p600 }}>Edit trip</b> to change destination, dates, travellers or route, or go below to <b style={{ color: C.p600 }}>Change day plan</b> or <b style={{ color: C.p600 }}>Change hotel</b>.
+          </span>
+          <button onClick={() => setHintDismissed(true)} aria-label="Dismiss" style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 2, marginTop: -1, fontFamily: "inherit" }}>
+            <XIcon size={16} color={C.sub} />
+          </button>
+        </div>
+      )}
 
       {/* Inline trip-details sheet (explore) — set dates/travellers without login */}
       {showTripSheet && (
@@ -847,6 +865,286 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </div>
         </div>
       )}
+
+      <Divider />
+
+      {/* ═══ 3. Itinerary at a Glance ═══ */}
+      <div style={{ padding: "0 16px" }}>
+        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 16 }}>Itinerary at a glance</p>
+        <div style={{ position: "relative", paddingLeft: 24 }}>
+          <div style={{ position: "absolute", left: 7, top: 8, bottom: 8, width: 1, borderLeft: "1px dashed #D0D5DD" }} />
+          {visibleDays.map((day, i) => {
+            const globalDayIndex = daysWithActivities.indexOf(day);
+            const swapped = selectedDayOptions[globalDayIndex];
+            const displayActivities = swapped
+              ? swapped.activities
+              : day.sub.split(" · ");
+            const hasOptions = dayHasOptions(globalDayIndex);
+            // Whole-card clickable variant for standard day rows; Vietnam keeps its thumbnail strip.
+            const cardVariant = !isVietnam;
+
+            return (
+              <div key={i} style={{ position: "relative", marginBottom: i < visibleDays.length - 1 ? (isVietnam ? 14 : 20) : 0 }}>
+                <div style={{ position: "absolute", left: -20, top: 4, width: 10, height: 10, borderRadius: "50%", background: "#fff", border: `2px solid ${i === 0 ? "#027A48" : C.inact}` }} />
+                <div
+                  {...(cardVariant ? {
+                    "data-testid": `day-details-${globalDayIndex}`,
+                    onClick: () => setDayDetailIndex(globalDayIndex),
+                    role: "button",
+                    "aria-label": `Day ${day.dayNum} details`,
+                  } : {})}
+                  style={cardVariant ? {
+                    cursor: "pointer", borderRadius: 12, border: `1px solid ${C.div}`,
+                    background: C.white, padding: "10px 12px", boxShadow: "0 1px 4px rgba(24,30,76,0.04)",
+                  } : undefined}
+                >
+                  {cardVariant ? (
+                    <>
+                      {/* Condensed tappable day card: title + one activity line, chevron cue, inline change link */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Day {day.dayNum}: {day.city}</p>
+                        <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
+                      </div>
+                      <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        {day.departure
+                          ? "Departure, transfer to the airport"
+                          : day.leisure
+                            ? (day.transfers?.length
+                                ? `Transfer to ${day.transfers[0].to}, then the day is yours`
+                                : "Leisure day, the day is yours")
+                            : `• ${displayActivities.join(", ")}`}
+                      </p>
+                      {hasOptions && (
+                        <button
+                          data-testid={`change-day-${globalDayIndex}`}
+                          data-tour="change-day"
+                          onClick={(e) => { e.stopPropagation(); setChangeDayIndex(globalDayIndex); }}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10,
+                            padding: 0, background: "none", border: "none",
+                            fontSize: 12, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
+                          }}
+                          aria-label="Change day plan"
+                        >
+                          <ArrowLeftRight size={13} color={C.p600} />
+                          Change day plan
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                          <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Day {day.dayNum}: {day.city}</p>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                          <button
+                            data-testid={`day-details-${globalDayIndex}`}
+                            onClick={() => setDayDetailIndex(globalDayIndex)}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                              padding: "4px 10px", background: C.white,
+                              border: `1px solid ${C.div}`, borderRadius: 999,
+                              fontSize: 11, fontWeight: 600, color: C.head, cursor: "pointer",
+                              fontFamily: "inherit", flexShrink: 0, lineHeight: 1,
+                            }}
+                            aria-label="Day details"
+                          >
+                            <FileText size={11} color={C.sub} />
+                            Details
+                          </button>
+                          {hasOptions && (
+                            <button
+                              data-testid={`change-day-${globalDayIndex}`}
+                              onClick={() => setChangeDayIndex(globalDayIndex)}
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 4,
+                                padding: "4px 10px", background: C.white,
+                                border: `1px solid ${C.div}`, borderRadius: 999,
+                                fontSize: 11, fontWeight: 600, color: C.p600, cursor: "pointer",
+                                fontFamily: "inherit", flexShrink: 0, lineHeight: 1,
+                              }}
+                              aria-label="Change day plan"
+                            >
+                              <ArrowLeftRight size={11} color={C.p600} />
+                              Change day
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {isVietnam ? (
+                        <div className="hs" style={{ gap: 10, marginTop: 8, paddingBottom: 2, marginRight: -16 }}>
+                          {displayActivities.map((a, j) => {
+                            const thumb = day.activities[j]?.img || it.img;
+                            return (
+                              <div
+                                key={j}
+                                onClick={() => setShowViewer({ day: globalDayIndex, activity: j })}
+                                style={{ width: 76, minWidth: 76, flexShrink: 0, cursor: "pointer" }}
+                              >
+                                <div style={{ width: 76, height: 76, borderRadius: 10, overflow: "hidden", background: C.div }}>
+                                  <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                </div>
+                                <p style={{ fontSize: 11, color: C.head, fontWeight: 500, margin: "6px 0 0", lineHeight: "13px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                                  {a}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: 12, color: C.sub, lineHeight: "18px", margin: "4px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          • {displayActivities.join(", ")}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {daysWithActivities.length > 3 && (
+          <button onClick={() => setExpanded(!expanded)} style={{
+            display: "flex", alignItems: "center", gap: 4, margin: "14px 0 0", background: "none", border: "none",
+            fontSize: 13, fontWeight: 600, color: C.sub, cursor: "pointer", fontFamily: "inherit",
+          }}>
+            <span style={{ textDecoration: "underline", textUnderlineOffset: 2 }}>{expanded ? "Hide details" : "Read more"}</span> {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+        )}
+        {isVietnam && (
+          <button
+            onClick={() => { setDrawerActiveDay(0); setShowDayWiseDrawer(true); }}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              width: "100%", marginTop: 16, padding: "12px 16px",
+              background: "#fff", border: `1px solid ${C.div}`, borderRadius: 12,
+              fontSize: 13, fontWeight: 600, color: C.head, cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            <Play size={12} color={C.p600} fill={C.p600} />
+            View day-wise itinerary
+            <ChevronRight size={14} color={C.sub} />
+          </button>
+        )}
+      </div>
+
+      <Divider />
+
+      {/* ═══ 4. Hotels ═══ */}
+      <div id="hotels-section">
+        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
+        <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
+          {hotels.map((h, i) => {
+            const selfBooked = selfBookedStays.has(i);
+            const ls = stayState(liveResult, i);
+            const soldOut = ls && ls.status === "sold_out";
+            if (selfBooked) {
+              return (
+                <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
+                  <div style={{ borderRadius: 14, border: `1px dashed ${C.div}`, background: C.bg, padding: "12px", height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>{h.dayRange} · {h.city}</span>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: "4px 0 0" }}>You're booking this stay</p>
+                    <p style={{ fontSize: 12, color: C.sub, margin: 0, lineHeight: "17px", flex: 1 }}>We won't arrange a hotel in {h.city}. It's removed from your total.</p>
+                    {editable && (
+                      <button onClick={() => restoreStay(i)} style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 20, border: `1px solid ${C.div}`, background: C.white, color: C.p600, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                        <Plus size={13} /> Let us book it
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+            return (
+            <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
+              <HotelStayCard
+                image={h.img}
+                imageAlt={h.name}
+                dayLabel={h.dayRange}
+                soldOut={soldOut}
+                topRightBadge={soldOut ? (
+                  <span style={{ background: C.p600, color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 999, letterSpacing: "0.3px", boxShadow: "0 1px 6px rgba(0,0,0,0.25)" }}>Sold out</span>
+                ) : undefined}
+                stars={h.stars}
+                ratingScore={h.rating}
+                name={h.name}
+                roomType={h.type}
+                city={h.city}
+                freeCancellation={h.freeCancellation}
+                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}`}
+                footer={
+                  <>
+                    {ls?.status === "price_up" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#FFF4ED", border: "1px solid #FED7AA", borderRadius: 8, padding: "6px 8px", marginTop: 4 }}>
+                        <AlertTriangle size={13} color="#EA580C" strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 11.5, color: "#C2410C", fontWeight: 700, lineHeight: "15px" }}>
+                          Price rose +₹{ls.delta.toLocaleString("en-IN")}/person since you saved
+                        </span>
+                      </div>
+                    )}
+                    {editable && (
+                      <span
+                        data-tour="change-hotel"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.p600, marginTop: 8, alignSelf: "flex-start" }}
+                      >
+                        <ArrowLeftRight size={13} color={C.p600} />
+                        Change hotel
+                      </span>
+                    )}
+                    {h.inclusions && (
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setInclHotel(h); }}
+                        style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 0", border: "none", background: "none", color: C.p600, fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        <Sparkles size={13} color={C.p600} />
+                        View special inclusions
+                      </button>
+                    )}
+                  </>
+                }
+              />
+            </div>
+            );
+          })}
+        </div>
+
+        {/* Special inclusions live behind a per-hotel CTA on the card (drawer),
+            keeping this area free for the hotel-upgrade banner below. */}
+
+        {/* Sold-out is communicated on the hotel card itself (badge) + toast; no section banner. */}
+
+        {/* Single hotel-upgrade banner (per-card chips removed) */}
+        {upgradeInfo.upgradeCount >= 1 && (
+          <div onClick={() => setShowUpgradeDrawer(true)} style={{
+            margin: "16px 16px 0", background: "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)", border: "1.5px solid #E8D5A3",
+            borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: "50%", background: C.white,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <Sparkles size={16} color="#B8860B" strokeWidth={2.5} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.head, display: "flex", alignItems: "center", gap: 2, lineHeight: "18px" }}>
+                Hotel upgrades available
+              </span>
+              <span style={{ fontSize: 12, color: C.sub, fontWeight: 500, lineHeight: "16px", marginTop: 2, display: "flex", alignItems: "center", gap: 2 }}>
+                Upgrade to 5<Star size={9} fill="#F5A623" stroke="#F5A623" strokeWidth={1.5} /> from <span style={{ color: "#B8860B", fontWeight: 600 }}>+₹{Math.min(...upgradeInfo.upgrades.map(u => u.totalDelta)).toLocaleString("en-IN")}</span>
+              </span>
+            </div>
+            <span style={{ fontSize: 12, color: "#B8860B", fontWeight: 600, whiteSpace: "nowrap" }}>View upgrade</span>
+          </div>
+        )}
+      </div>
+
+      <Divider />
+
+      {/* ═══ Invite partner (co-planner) ═══ */}
+      <InvitePartnerSection destination={it.dest} />
+
+      <Divider />
 
       {/* ═══ 2. Highlights (Vietnam) / See Your Trip (others) ═══ */}
       {isVietnam ? (
@@ -963,403 +1261,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             );
           })()}
         </div>
-      )}
-
-      <Divider />
-
-      {/* ═══ 3. Itinerary at a Glance ═══ */}
-      <div style={{ padding: "0 16px" }}>
-        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 16 }}>Itinerary at a glance</p>
-        <div style={{ position: "relative", paddingLeft: 24 }}>
-          <div style={{ position: "absolute", left: 7, top: 8, bottom: 8, width: 1, borderLeft: "1px dashed #D0D5DD" }} />
-          {visibleDays.map((day, i) => {
-            const globalDayIndex = daysWithActivities.indexOf(day);
-            const swapped = selectedDayOptions[globalDayIndex];
-            const displayActivities = swapped
-              ? swapped.activities
-              : day.sub.split(" · ");
-            const hasOptions = dayHasOptions(globalDayIndex);
-            // Whole-card clickable variant for standard day rows; Vietnam keeps its thumbnail strip.
-            const cardVariant = !isVietnam;
-
-            return (
-              <div key={i} style={{ position: "relative", marginBottom: i < visibleDays.length - 1 ? (isVietnam ? 14 : 20) : 0 }}>
-                <div style={{ position: "absolute", left: -20, top: 4, width: 10, height: 10, borderRadius: "50%", background: "#fff", border: `2px solid ${i === 0 ? "#027A48" : C.inact}` }} />
-                <div
-                  {...(cardVariant ? {
-                    "data-testid": `day-details-${globalDayIndex}`,
-                    onClick: () => setDayDetailIndex(globalDayIndex),
-                    role: "button",
-                    "aria-label": `Day ${day.dayNum} details`,
-                  } : {})}
-                  style={cardVariant ? {
-                    cursor: "pointer", borderRadius: 12, border: `1px solid ${C.div}`,
-                    background: C.white, padding: "10px 12px", boxShadow: "0 1px 4px rgba(24,30,76,0.04)",
-                  } : undefined}
-                >
-                  {cardVariant ? (
-                    <>
-                      {/* Condensed tappable day card: title + one activity line, chevron cue, inline change link */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Day {day.dayNum}: {day.city}</p>
-                        <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
-                      </div>
-                      <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                        {day.departure
-                          ? "Departure, transfer to the airport"
-                          : day.leisure
-                            ? (day.transfers?.length
-                                ? `Transfer to ${day.transfers[0].to}, then the day is yours`
-                                : "Leisure day, the day is yours")
-                            : `• ${displayActivities.join(", ")}`}
-                      </p>
-                      {hasOptions && (
-                        <button
-                          data-testid={`change-day-${globalDayIndex}`}
-                          data-tour="change-day"
-                          onClick={(e) => { e.stopPropagation(); setChangeDayIndex(globalDayIndex); }}
-                          style={{
-                            display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10,
-                            padding: "7px 12px", background: C.p100, border: `1px solid ${C.p300}`, borderRadius: 999,
-                            fontSize: 12.5, fontWeight: 700, color: C.p600, cursor: "pointer", fontFamily: "inherit",
-                          }}
-                          aria-label="Change day plan"
-                        >
-                          <ArrowLeftRight size={13} color={C.p600} />
-                          Change day plan
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                          <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Day {day.dayNum}: {day.city}</p>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                          <button
-                            data-testid={`day-details-${globalDayIndex}`}
-                            onClick={() => setDayDetailIndex(globalDayIndex)}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: 4,
-                              padding: "4px 10px", background: C.white,
-                              border: `1px solid ${C.div}`, borderRadius: 999,
-                              fontSize: 11, fontWeight: 600, color: C.head, cursor: "pointer",
-                              fontFamily: "inherit", flexShrink: 0, lineHeight: 1,
-                            }}
-                            aria-label="Day details"
-                          >
-                            <FileText size={11} color={C.sub} />
-                            Details
-                          </button>
-                          {hasOptions && (
-                            <button
-                              data-testid={`change-day-${globalDayIndex}`}
-                              onClick={() => setChangeDayIndex(globalDayIndex)}
-                              style={{
-                                display: "inline-flex", alignItems: "center", gap: 4,
-                                padding: "4px 10px", background: C.white,
-                                border: `1px solid ${C.div}`, borderRadius: 999,
-                                fontSize: 11, fontWeight: 600, color: C.p600, cursor: "pointer",
-                                fontFamily: "inherit", flexShrink: 0, lineHeight: 1,
-                              }}
-                              aria-label="Change day plan"
-                            >
-                              <ArrowLeftRight size={11} color={C.p600} />
-                              Change day
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      {isVietnam ? (
-                        <div className="hs" style={{ gap: 10, marginTop: 8, paddingBottom: 2, marginRight: -16 }}>
-                          {displayActivities.map((a, j) => {
-                            const thumb = day.activities[j]?.img || it.img;
-                            return (
-                              <div
-                                key={j}
-                                onClick={() => setShowViewer({ day: globalDayIndex, activity: j })}
-                                style={{ width: 76, minWidth: 76, flexShrink: 0, cursor: "pointer" }}
-                              >
-                                <div style={{ width: 76, height: 76, borderRadius: 10, overflow: "hidden", background: C.div }}>
-                                  <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                                </div>
-                                <p style={{ fontSize: 11, color: C.head, fontWeight: 500, margin: "6px 0 0", lineHeight: "13px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                                  {a}
-                                </p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: 12, color: C.sub, lineHeight: "18px", margin: "4px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                          • {displayActivities.join(", ")}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {daysWithActivities.length > 3 && (
-          <button onClick={() => setExpanded(!expanded)} style={{
-            display: "flex", alignItems: "center", gap: 4, margin: "14px 0 0", background: "none", border: "none",
-            fontSize: 13, fontWeight: 600, color: C.sub, cursor: "pointer", fontFamily: "inherit",
-          }}>
-            <span style={{ textDecoration: "underline", textUnderlineOffset: 2 }}>{expanded ? "Hide details" : "Read more"}</span> {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        )}
-        {isVietnam && (
-          <button
-            onClick={() => { setDrawerActiveDay(0); setShowDayWiseDrawer(true); }}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              width: "100%", marginTop: 16, padding: "12px 16px",
-              background: "#fff", border: `1px solid ${C.div}`, borderRadius: 12,
-              fontSize: 13, fontWeight: 600, color: C.head, cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
-            <Play size={12} color={C.p600} fill={C.p600} />
-            View day-wise itinerary
-            <ChevronRight size={14} color={C.sub} />
-          </button>
-        )}
-      </div>
-
-      <Divider />
-
-      {/* ═══ Invite partner (co-planner) ═══ */}
-      <InvitePartnerSection destination={it.dest} />
-
-      <Divider />
-
-      {/* ═══ 4. Hotels ═══ */}
-      <div id="hotels-section">
-        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
-        <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
-          {hotels.map((h, i) => {
-            const selfBooked = selfBookedStays.has(i);
-            const ls = stayState(liveResult, i);
-            const soldOut = ls && ls.status === "sold_out";
-            if (selfBooked) {
-              return (
-                <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
-                  <div style={{ borderRadius: 14, border: `1px dashed ${C.div}`, background: C.bg, padding: "12px", height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>{h.dayRange} · {h.city}</span>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: "4px 0 0" }}>You're booking this stay</p>
-                    <p style={{ fontSize: 12, color: C.sub, margin: 0, lineHeight: "17px", flex: 1 }}>We won't arrange a hotel in {h.city}. It's removed from your total.</p>
-                    {editable && (
-                      <button onClick={() => restoreStay(i)} style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 20, border: `1px solid ${C.div}`, background: C.white, color: C.p600, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                        <Plus size={13} /> Let us book it
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-            return (
-            <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
-              <HotelStayCard
-                image={h.img}
-                imageAlt={h.name}
-                dayLabel={h.dayRange}
-                soldOut={soldOut}
-                topRightBadge={soldOut ? (
-                  <span style={{ background: C.p600, color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 999, letterSpacing: "0.3px", boxShadow: "0 1px 6px rgba(0,0,0,0.25)" }}>Sold out</span>
-                ) : undefined}
-                stars={h.stars}
-                ratingScore={h.rating}
-                name={h.name}
-                roomType={h.type}
-                city={h.city}
-                freeCancellation={h.freeCancellation}
-                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}`}
-                footer={
-                  <>
-                    {ls?.status === "price_up" && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#FFF4ED", border: "1px solid #FED7AA", borderRadius: 8, padding: "6px 8px", marginTop: 4 }}>
-                        <AlertTriangle size={13} color="#EA580C" strokeWidth={2.2} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: 11.5, color: "#C2410C", fontWeight: 700, lineHeight: "15px" }}>
-                          Price rose +₹{ls.delta.toLocaleString("en-IN")}/person since you saved
-                        </span>
-                      </div>
-                    )}
-                    {editable && (
-                      <span
-                        data-tour="change-hotel"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
-                        style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: C.p600, marginTop: 8, padding: "7px 12px", background: C.p100, border: `1px solid ${C.p300}`, borderRadius: 999, alignSelf: "flex-start" }}
-                      >
-                        <ArrowLeftRight size={13} color={C.p600} />
-                        Change hotel
-                      </span>
-                    )}
-                    {h.inclusions && (
-                      <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setInclHotel(h); }}
-                        style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 0", border: "none", background: "none", color: C.p600, fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
-                      >
-                        <Sparkles size={13} color={C.p600} />
-                        View special inclusions
-                      </button>
-                    )}
-                  </>
-                }
-              />
-            </div>
-            );
-          })}
-        </div>
-
-        {/* Special inclusions live behind a per-hotel CTA on the card (drawer),
-            keeping this area free for the hotel-upgrade banner below. */}
-
-        {/* Sold-out is communicated on the hotel card itself (badge) + toast; no section banner. */}
-
-        {/* Single hotel-upgrade banner (per-card chips removed) */}
-        {upgradeInfo.upgradeCount >= 1 && (
-          <div onClick={() => setShowUpgradeDrawer(true)} style={{
-            margin: "16px 16px 0", background: "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)", border: "1.5px solid #E8D5A3",
-            borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
-          }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: "50%", background: C.white,
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>
-              <Sparkles size={16} color="#B8860B" strokeWidth={2.5} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: C.head, display: "flex", alignItems: "center", gap: 2, lineHeight: "18px" }}>
-                Hotel upgrades available
-              </span>
-              <span style={{ fontSize: 12, color: C.sub, fontWeight: 500, lineHeight: "16px", marginTop: 2, display: "flex", alignItems: "center", gap: 2 }}>
-                Upgrade to 5<Star size={9} fill="#F5A623" stroke="#F5A623" strokeWidth={1.5} /> from <span style={{ color: "#B8860B", fontWeight: 600 }}>+₹{Math.min(...upgradeInfo.upgrades.map(u => u.totalDelta)).toLocaleString("en-IN")}</span>
-              </span>
-            </div>
-            <span style={{ fontSize: 12, color: "#B8860B", fontWeight: 600, whiteSpace: "nowrap" }}>View upgrade</span>
-          </div>
-        )}
-      </div>
-
-      {/* ═══ 4b. Pricing & Availability - hidden for now ═══ */}
-      {false && (
-      <div style={{ padding: "0 16px" }}>
-        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Pricing & Availability</p>
-
-        {/* Price status card */}
-        <div style={{
-          borderRadius: 14, overflow: "hidden",
-          border: `1px solid ${travelDates ? C.sBorder : C.div}`,
-          background: travelDates ? C.sBg : C.white,
-        }}>
-          {/* Current price display */}
-          <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                <span style={{ fontSize: 20, fontWeight: 700, color: C.head }}>₹{it.price}</span>
-                <span style={{ fontSize: 12, color: C.sub }}>/person</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                {travelDates ? (
-                  <>
-                    <Zap size={10} color={C.sText} />
-                    <span style={{ fontSize: 11, fontWeight: 600, color: C.sText }}>Live price · {new Date(travelDates.fromDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {travelDates.nights}N · {travelDates.travelers} pax</span>
-                  </>
-                ) : (
-                  <>
-                    <Calendar size={10} color={C.inact} />
-                    <span style={{ fontSize: 11, color: C.inact }}>Estimated price · may vary by dates</span>
-                  </>
-                )}
-              </div>
-            </div>
-            {pricingState === "loading" && (
-              <div style={{ width: 28, height: 28, borderRadius: "50%", border: `2px solid ${C.p300}`, borderTopColor: C.p600, animation: "spin 0.8s linear infinite" }} />
-            )}
-          </div>
-
-          {/* Travel dates banner if set */}
-          {travelDates && (
-            <div style={{ padding: "0 16px 12px", display: "flex", gap: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 500, color: C.sText, background: `${C.sText}10`, padding: "3px 8px", borderRadius: 6 }}>📅 {new Date(travelDates.fromDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · {travelDates.nights}N</span>
-              <span style={{ fontSize: 11, fontWeight: 500, color: C.sText, background: `${C.sText}10`, padding: "3px 8px", borderRadius: 6 }}>👥 {travelDates.travelers} adults</span>
-            </div>
-          )}
-
-          {/* CTA */}
-          {editable && (
-            <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
-              <button onClick={() => setShowPricingSheet(true)} style={{
-                width: "100%", padding: "11px 0", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-                fontSize: 13, fontWeight: 600,
-                background: travelDates ? C.white : C.p100, color: travelDates ? C.p600 : C.p600,
-                border: `1.5px solid ${travelDates ? C.p300 : C.p600}`,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              }}>
-                <Zap size={13} color={C.p600} />
-                {travelDates ? "Update travel details" : "Get real-time pricing"}
-              </button>
-              {!inDeal && (
-                <button data-testid="save-to-plans" onClick={handleSaveToPlans} style={{
-                  width: "100%", padding: "11px 0", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-                  fontSize: 13, fontWeight: 700, background: C.p600, color: "#fff", border: "none",
-                }}>
-                  Save to My Plans
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-      )}
-
-      {/* ═══ 4c. Book your trip / Payment - hidden for now ═══ */}
-      {false && (
-      <>
-      <Divider />
-
-      <div style={{ padding: "0 16px" }}>
-        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Book your trip</p>
-        {(() => {
-          const priceNum = Number(String(it.price).replace(/,/g, "")) || 0;
-          const firstInstallment = Math.round(priceNum * 2 * 0.2);
-          return (
-        <div style={{
-          borderRadius: 12, border: `1px solid ${C.div}`, background: C.white,
-          padding: "12px 14px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 11, color: C.sub, margin: "0 0 2px" }}>First installment</p>
-              <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>
-                ₹{firstInstallment.toLocaleString("en-IN")}
-                <span style={{ fontSize: 11, fontWeight: 400, color: C.sub, marginLeft: 4 }}>to confirm</span>
-              </p>
-            </div>
-            <button onClick={() => alert("Razorpay checkout would open here")} style={{
-              padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer",
-              background: C.p600, color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-              whiteSpace: "nowrap", flexShrink: 0,
-            }}>
-              Pay via Razorpay
-            </button>
-          </div>
-          <Link to={`/itinerary/${it.id}/payment-plan`} style={{
-            marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.div}`, textDecoration: "none",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-          }}>
-            <span style={{ fontSize: 11, color: C.sub }}>4-installment plan</span>
-            <span style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 12, fontWeight: 600, color: C.p600 }}>
-              View payment plan <ChevronRight size={12} />
-            </span>
-          </Link>
-        </div>
-          );
-        })()}
-      </div>
-      </>
       )}
 
       <Divider />
@@ -1518,62 +1419,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
       <Divider />
 
-      {/* ═══ 5·5 Itinerary Scoreboard ═══ */}
-      <ItineraryScoreboard
-        it={it}
-        days={daysWithActivities}
-        selOut={selOut}
-        selRet={selRet}
-        hotelStays={selectedHotels?.[it.id]?.stays}
-      />
-
-      <Divider />
-
-      {/* ═══ 5a. Trip briefings - educational videos for this trip ═══ */}
-      {(() => {
-        const deck = videosForDest(it.dest);
-        if (!deck.length) return null;
-        return (
-          <>
-            <WatchTeaser
-              title={`Want to know the secrets of ${it.dest}?`}
-              subtitle="Local tips, hidden gems, and what most travelers miss"
-              videos={deck}
-              libraryTitle={`The ${it.dest} Edit`}
-              librarySubtitle="Curated by 30 Sundays. Made for couples."
-            />
-            <Divider />
-          </>
-        );
-      })()}
-
-      {/* ═══ 5b. Travel Consultant ═══ */}
-      <div style={{ padding: "0 16px" }}>
-        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Your travel consultant</p>
-        {(() => {
-          const unassigned = Number(it.id) % 3 === 0;
-          const consultant = unassigned ? null : PREBOOKING_CONSULTANTS[Number(it.id) % PREBOOKING_CONSULTANTS.length];
-          return (
-            <ConsultantCard
-              consultant={consultant}
-              role="Your travel consultant"
-              context={`my ${it.dest} trip`}
-              unassigned={unassigned}
-            />
-          );
-        })()}
-      </div>
-
-      <Divider />
-
-      {/* ═══ 6. Journey Map ═══ */}
-      <div style={{ padding: "0 16px" }}>
-        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Journey Map</p>
-        <JourneyMap stops={mapStops} height={220} onExpand={() => setShowMap(true)} />
-      </div>
-
-      <Divider />
-
       {/* ═══ 7. Traveler Stories ═══ */}
       <div style={{ padding: "0 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -1599,6 +1444,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             {i < 2 && <div style={{ height: 1, background: C.div }} />}
           </div>
         ))}
+      </div>
+
+      <Divider />
+
+      {/* ═══ 6. Journey Map ═══ */}
+      <div style={{ padding: "0 16px" }}>
+        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Journey Map</p>
+        <JourneyMap stops={mapStops} height={220} onExpand={() => setShowMap(true)} />
       </div>
 
       <Divider />
