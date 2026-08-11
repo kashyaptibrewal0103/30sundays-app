@@ -220,33 +220,59 @@ function AllSixCountries() {
   );
 }
 
+// A real Bali video file can be dropped in here later (keyed by destination);
+// until then the banner plays a photo reel that reads like a short clip.
+const DEST_VIDEO = {};
+
 // Customisation education card for leads. Sits in the top slot (below the
-// country circles, in place of the marketing banners). Compact by design: the
-// trip (destination + dates), a one-line benefit, and a "See how" action that
-// starts the guided tour.
+// country circles, in place of the marketing banners). A moving destination
+// banner (a real video when available, otherwise a crossfading photo reel)
+// leads, with the trip name + dates over it, then a one-line benefit and a
+// "See how" action that starts the guided tour.
 function CustomiseHeroCard({ dest, dates, nights, img, onOpen }) {
   const P = "#712BDA";
+  const video = DEST_VIDEO[dest];
+  // Build a small reel of destination photos (the trip image + itinerary shots).
+  const reel = useMemo(() => {
+    const shots = allItineraries.filter((it) => it.dest === dest).map((it) => it.img).filter(Boolean);
+    return [...new Set([img, ...shots].filter(Boolean))].slice(0, 5);
+  }, [dest, img]);
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (video || reel.length < 2) return;
+    const t = setInterval(() => setIdx((n) => (n + 1) % reel.length), 2800);
+    return () => clearInterval(t);
+  }, [video, reel.length]);
+
   return (
     <div style={{ padding: `14px ${PAD}px 4px` }}>
-      <button onClick={onOpen} style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0, border: `1px solid ${C.p300}`, borderRadius: 16, overflow: "hidden", background: "linear-gradient(115deg, #F6F1FF 0%, #FBF9FF 60%, #fff 100%)", boxShadow: "0 6px 20px rgba(113,43,218,0.12)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12 }}>
-          <div style={{ position: "relative", width: 66, height: 66, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
-            <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            <span style={{ position: "absolute", top: 4, left: 4, width: 24, height: 24, borderRadius: 8, background: P, display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(113,43,218,0.4)" }}>
-              <Wand2 size={13} color="#fff" />
-            </span>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 10.5, fontWeight: 800, letterSpacing: "1.2px", color: P, textTransform: "uppercase" }}>You're in control</p>
-            <p style={{ margin: "3px 0 0", fontSize: 15, fontWeight: 800, color: C.head, lineHeight: "20px", letterSpacing: "-0.2px" }}>Customise your {dest} trip</p>
-            <p style={{ margin: "3px 0 0", display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.sub }}>
-              <Calendar size={12} color={C.sub} /> {dates} · {nights}N
+      <button onClick={onOpen} style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0, border: `1px solid ${C.p300}`, borderRadius: 18, overflow: "hidden", background: C.white, boxShadow: "0 8px 24px rgba(113,43,218,0.16)" }}>
+        {/* Moving banner with the trip name + dates over it */}
+        <div style={{ position: "relative", height: 150, overflow: "hidden", background: "#1A0B33" }}>
+          {reel.map((src, n) => (
+            <img key={n} src={src} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: n === idx ? 1 : 0, transition: "opacity 1s ease" }} />
+          ))}
+          {video && (
+            <video src={video} autoPlay muted loop playsInline onError={(e) => { e.currentTarget.style.display = "none"; }}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+          )}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(43,12,90,0.28) 0%, rgba(43,12,90,0) 34%, rgba(20,6,44,0.82) 100%)" }} />
+          {/* Kicker pill */}
+          <span style={{ position: "absolute", top: 12, left: 12, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.95)", color: P, fontSize: 10, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", padding: "5px 10px", borderRadius: 999, boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}>
+            <Wand2 size={12} color={P} /> You're in control
+          </span>
+          {/* Title + dates */}
+          <div style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
+            <p style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: "-0.3px", lineHeight: "23px", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>Customise your {dest} trip</p>
+            <p style={{ margin: "5px 0 0", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: "rgba(255,255,255,0.95)", textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
+              <Calendar size={12} color="#fff" /> {dates} · {nights}N
             </p>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 14px", borderTop: "1px solid rgba(113,43,218,0.12)", background: "rgba(113,43,218,0.05)" }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.sub }}>Change days, hotels and dates yourself, save time.</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: P, flexShrink: 0 }}>
+        {/* Benefit + CTA */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "12px 14px", background: "rgba(113,43,218,0.05)" }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.sub, lineHeight: "16px" }}>Change days, hotels and dates yourself, save time.</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 800, color: P, flexShrink: 0 }}>
             See how <ArrowRight size={14} />
           </span>
         </div>
