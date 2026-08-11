@@ -724,9 +724,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           <ArrowLeft size={18} color="#fff" />
         </button>
         {wizardEditable && (
-          <button data-tour="howitworks" onClick={() => setShowTour(true)} style={{ position: "absolute", top: 14, right: 14, display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 13px", borderRadius: 999, background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(0,0,0,0.2)" }}>
-            <HelpCircle size={13} color={C.p600} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.p600 }}>How customising works</span>
+          <button data-tour="howitworks" onClick={() => setShowTour(true)} style={{ position: "absolute", top: 14, right: 14, display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20, background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.2)", backdropFilter: "blur(8px)", cursor: "pointer", fontFamily: "inherit" }}>
+            <HelpCircle size={12} color="#fff" />
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>How customising works</span>
           </button>
         )}
         {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
@@ -802,9 +802,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           inline Change controls on each day and hotel below. */}
       {wizardEditable && !hintDismissed && (
         <div style={{ margin: "0 16px 10px", display: "flex", gap: 8, alignItems: "flex-start", background: C.white, border: `1px solid ${C.div}`, borderRadius: 12, padding: "10px 12px" }}>
-          <SlidersHorizontal size={15} color={C.p600} style={{ flexShrink: 0, marginTop: 1 }} />
+          <SlidersHorizontal size={15} color={C.sub} style={{ flexShrink: 0, marginTop: 1 }} />
           <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.head, lineHeight: "17px", fontWeight: 500 }}>
-            Tap <b style={{ color: C.p600 }}>Edit trip</b> to change destination, dates, travellers or route, or go below to <b style={{ color: C.p600 }}>Change day plan</b> or <b style={{ color: C.p600 }}>Change hotel</b>.
+            Tap <b style={{ color: C.head }}>Edit trip</b> to change destination, dates, travellers or route, or go below to <b style={{ color: C.head }}>Change day plan</b> or <b style={{ color: C.head }}>Change hotel</b>.
           </span>
           <button onClick={() => setHintDismissed(true)} aria-label="Dismiss" style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 2, marginTop: -1, fontFamily: "inherit" }}>
             <XIcon size={16} color={C.sub} />
@@ -863,6 +863,123 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ═══ 2. Highlights (Vietnam) / See Your Trip (others) ═══ */}
+      {isVietnam ? (
+        <div style={{ padding: "16px 0 0" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "0 16px", marginBottom: 10 }}>
+            <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>Trip highlights</p>
+            <span style={{ fontSize: 11, color: C.sub }}>{highlights.length} experiences</span>
+          </div>
+          <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
+            {highlights.map((h, i) => (
+              <div
+                key={i}
+                onClick={() => setShowViewer({ day: h.dayIndex, activity: h.activityIndex })}
+                style={{
+                  width: 200, minWidth: 200, height: 280, borderRadius: 16, overflow: "hidden",
+                  position: "relative", flexShrink: 0, cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
+                }}
+              >
+                <img
+                  src={h.img}
+                  alt={h.name}
+                  className={`ken-burns${i % 3 === 1 ? " ken-burns-2" : i % 3 === 2 ? " ken-burns-3" : ""}`}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+                {/* gradient */}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 30%, rgba(0,0,0,0.85))" }} />
+                {/* title */}
+                <p style={{ position: "absolute", bottom: 12, left: 12, right: 12, fontSize: 14, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "18px" }}>
+                  {h.name}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: "16px 0 0" }}>
+          <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>Watch your trip in videos</p>
+          {/* Tabs: Highlights + Day pills */}
+          <div className="hs" style={{ gap: 6, paddingLeft: 16, paddingRight: 16, marginBottom: 10 }}>
+            <button onClick={() => setActiveDay(-1)} style={{
+              padding: "8px 14px", borderRadius: 10, minWidth: 90, cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+              background: activeDay === -1 ? C.p600 : "#F5F5F5",
+              border: activeDay === -1 ? "none" : `1px solid ${C.div}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === -1 ? "#fff" : C.head, margin: 0 }}>Highlights</p>
+            </button>
+            {daysWithActivities.map((day, i) => (
+              <button key={i} onClick={() => setActiveDay(i)} style={{
+                padding: "8px 14px", borderRadius: 10, minWidth: 80, cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+                background: activeDay === i ? C.p600 : "#F5F5F5",
+                border: activeDay === i ? "none" : `1px solid ${C.div}`,
+                textAlign: "left",
+              }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === i ? "#fff" : C.head, margin: 0 }}>Day {day.dayNum}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
+                  <MapPin size={10} color={activeDay === i ? "rgba(255,255,255,0.7)" : C.sub} />
+                  <span style={{ fontSize: 11, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{day.city}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+          {/* Highlights → bare carousel. A day → a tinted panel that bonds the
+              day's score one-liner with its videos (tap the score for the full
+              breakdown). The active pink tab sits right above this tint. */}
+          {activeDay === -1 ? (
+            <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
+              {highlights.map((h, i) => (
+                <div key={i} onClick={() => setShowViewer({ day: h.dayIndex, activity: h.activityIndex })} style={{
+                  width: 190, minWidth: 190, height: 330, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
+                }}>
+                  <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 45%, rgba(0,0,0,0.85))" }} />
+                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.25)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Play size={18} color="#fff" fill="#fff" />
+                  </div>
+                  <p style={{ position: "absolute", bottom: 12, left: 12, right: 12, fontSize: 13, fontWeight: 600, color: "#fff", margin: 0 }}>{h.name}</p>
+                </div>
+              ))}
+            </div>
+          ) : (daysWithActivities[activeDay]?.leisure && !daysWithActivities[activeDay]?.transfers?.length) ? (
+            <>
+              <LeisureCard hasTransfer={false} ctaLabel="Explore Tours" onChangePlan={() => setChangeDayIndex(activeDay)} />
+              <ExploreIdeas ideas={daysWithActivities[activeDay].ideas} />
+            </>
+          ) : (() => {
+            const day = daysWithActivities[activeDay];
+            const sc = getDayScoring(day, activeDay, daysWithActivities);
+            return (
+              <div>
+                {/* Videos */}
+                <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
+                  {day?.activities.map((act, i) => (
+                    <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
+                      width: 190, minWidth: 190, height: 330, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
+                    }}>
+                      <img src={act.img} alt={act.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 45%, rgba(0,0,0,0.8))" }} />
+                      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.25)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Play size={18} color="#fff" fill="#fff" />
+                      </div>
+                      <p style={{ position: "absolute", bottom: 12, left: 12, right: 12, fontSize: 13, fontWeight: 600, color: "#fff", margin: 0 }}>{act.name}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Divider, a small title, then the day score tiles (tap → drawer) */}
+                <div style={{ height: 1, background: C.div, margin: "14px 16px 0" }} />
+                <p style={{ margin: "12px 16px 2px", fontSize: 12.5, fontWeight: 800, color: C.head, letterSpacing: "-0.1px" }}>Day {day.dayNum} scores</p>
+                <div style={{ padding: "0 16px" }}>
+                  <DayScoreRow scoring={sc} onOpen={(metric) => setDayScore({ metric, scoring: sc, dayLabel: `Day ${day.dayNum} · ${day.city}`, dayIdx: activeDay })} bg="transparent" borderColor="transparent" divider={C.div} />
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1143,125 +1260,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
       {/* ═══ Invite partner (co-planner) ═══ */}
       <InvitePartnerSection destination={it.dest} />
-
-      <Divider />
-
-      {/* ═══ 2. Highlights (Vietnam) / See Your Trip (others) ═══ */}
-      {isVietnam ? (
-        <div style={{ padding: "16px 0 0" }}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "0 16px", marginBottom: 10 }}>
-            <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>Trip highlights</p>
-            <span style={{ fontSize: 11, color: C.sub }}>{highlights.length} experiences</span>
-          </div>
-          <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
-            {highlights.map((h, i) => (
-              <div
-                key={i}
-                onClick={() => setShowViewer({ day: h.dayIndex, activity: h.activityIndex })}
-                style={{
-                  width: 200, minWidth: 200, height: 280, borderRadius: 16, overflow: "hidden",
-                  position: "relative", flexShrink: 0, cursor: "pointer",
-                  boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
-                }}
-              >
-                <img
-                  src={h.img}
-                  alt={h.name}
-                  className={`ken-burns${i % 3 === 1 ? " ken-burns-2" : i % 3 === 2 ? " ken-burns-3" : ""}`}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                />
-                {/* gradient */}
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 30%, rgba(0,0,0,0.85))" }} />
-                {/* title */}
-                <p style={{ position: "absolute", bottom: 12, left: 12, right: 12, fontSize: 14, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "18px" }}>
-                  {h.name}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div style={{ padding: "16px 0 0" }}>
-          <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>Watch your trip in videos</p>
-          {/* Tabs: Highlights + Day pills */}
-          <div className="hs" style={{ gap: 6, paddingLeft: 16, paddingRight: 16, marginBottom: 10 }}>
-            <button onClick={() => setActiveDay(-1)} style={{
-              padding: "8px 14px", borderRadius: 10, minWidth: 90, cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
-              background: activeDay === -1 ? C.p600 : "#F5F5F5",
-              border: activeDay === -1 ? "none" : `1px solid ${C.div}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === -1 ? "#fff" : C.head, margin: 0 }}>Highlights</p>
-            </button>
-            {daysWithActivities.map((day, i) => (
-              <button key={i} onClick={() => setActiveDay(i)} style={{
-                padding: "8px 14px", borderRadius: 10, minWidth: 80, cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
-                background: activeDay === i ? C.p600 : "#F5F5F5",
-                border: activeDay === i ? "none" : `1px solid ${C.div}`,
-                textAlign: "left",
-              }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === i ? "#fff" : C.head, margin: 0 }}>Day {day.dayNum}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
-                  <MapPin size={10} color={activeDay === i ? "rgba(255,255,255,0.7)" : C.sub} />
-                  <span style={{ fontSize: 11, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{day.city}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-          {/* Highlights → bare carousel. A day → a tinted panel that bonds the
-              day's score one-liner with its videos (tap the score for the full
-              breakdown). The active pink tab sits right above this tint. */}
-          {activeDay === -1 ? (
-            <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
-              {highlights.map((h, i) => (
-                <div key={i} onClick={() => setShowViewer({ day: h.dayIndex, activity: h.activityIndex })} style={{
-                  width: 190, minWidth: 190, height: 330, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
-                }}>
-                  <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 45%, rgba(0,0,0,0.85))" }} />
-                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.25)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Play size={18} color="#fff" fill="#fff" />
-                  </div>
-                  <p style={{ position: "absolute", bottom: 12, left: 12, right: 12, fontSize: 13, fontWeight: 600, color: "#fff", margin: 0 }}>{h.name}</p>
-                </div>
-              ))}
-            </div>
-          ) : (daysWithActivities[activeDay]?.leisure && !daysWithActivities[activeDay]?.transfers?.length) ? (
-            <>
-              <LeisureCard hasTransfer={false} ctaLabel="Explore Tours" onChangePlan={() => setChangeDayIndex(activeDay)} />
-              <ExploreIdeas ideas={daysWithActivities[activeDay].ideas} />
-            </>
-          ) : (() => {
-            const day = daysWithActivities[activeDay];
-            const sc = getDayScoring(day, activeDay, daysWithActivities);
-            return (
-              <div>
-                {/* Videos */}
-                <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
-                  {day?.activities.map((act, i) => (
-                    <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
-                      width: 190, minWidth: 190, height: 330, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
-                    }}>
-                      <img src={act.img} alt={act.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 45%, rgba(0,0,0,0.8))" }} />
-                      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.25)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Play size={18} color="#fff" fill="#fff" />
-                      </div>
-                      <p style={{ position: "absolute", bottom: 12, left: 12, right: 12, fontSize: 13, fontWeight: 600, color: "#fff", margin: 0 }}>{act.name}</p>
-                    </div>
-                  ))}
-                </div>
-                {/* Divider, a small title, then the day score tiles (tap → drawer) */}
-                <div style={{ height: 1, background: C.div, margin: "14px 16px 0" }} />
-                <p style={{ margin: "12px 16px 2px", fontSize: 12.5, fontWeight: 800, color: C.head, letterSpacing: "-0.1px" }}>Day {day.dayNum} scores</p>
-                <div style={{ padding: "0 16px" }}>
-                  <DayScoreRow scoring={sc} onOpen={(metric) => setDayScore({ metric, scoring: sc, dayLabel: `Day ${day.dayNum} · ${day.city}`, dayIdx: activeDay })} bg="transparent" borderColor="transparent" divider={C.div} />
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
 
       <Divider />
 
