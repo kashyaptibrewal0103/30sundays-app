@@ -801,10 +801,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {/* Customisation signpost: point to Edit trip (big things) and the
           inline Change controls on each day and hotel below. */}
       {wizardEditable && !hintDismissed && (
-        <div style={{ margin: "0 16px 10px", display: "flex", gap: 8, alignItems: "flex-start", background: C.white, border: `1px solid ${C.div}`, borderRadius: 12, padding: "10px 12px" }}>
-          <SlidersHorizontal size={15} color={C.sub} style={{ flexShrink: 0, marginTop: 1 }} />
+        <div style={{ margin: "0 16px 10px", display: "flex", gap: 8, alignItems: "flex-start", background: "#FFF8E1", border: "1px solid #FCEBB6", borderRadius: 12, padding: "10px 12px" }}>
           <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.head, lineHeight: "17px", fontWeight: 500 }}>
-            Tap <b style={{ color: C.head }}>Edit trip</b> to change destination, dates, travellers or route, or go below to <b style={{ color: C.head }}>Change day plan</b> or <b style={{ color: C.head }}>Change hotel</b>.
+            Scroll down to <b style={{ color: C.head }}>Change day plan</b> or <b style={{ color: C.head }}>Change hotel</b>.
           </span>
           <button onClick={() => setHintDismissed(true)} aria-label="Dismiss" style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 2, marginTop: -1, fontFamily: "inherit" }}>
             <XIcon size={16} color={C.sub} />
