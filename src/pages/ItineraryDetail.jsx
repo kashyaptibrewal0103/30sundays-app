@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle, ArrowDownUp } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -16,6 +16,7 @@ import DayScoringModal from "../components/DayScoringModal";
 import { getDayScore } from "../data/dayScoring";
 import { videosForDest } from "../data/watchData";
 import { getDayScoring, getDayTours, getAllDaysScoring } from "../data/dayScoring";
+import { getTourRating, RATING_META } from "../data/tourRatings";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
@@ -1021,15 +1022,46 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                         <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Day {day.dayNum}: {day.city}</p>
                         <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
                       </div>
-                      <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                        {day.departure
+                      {(() => {
+                        const simpleText = day.departure
                           ? "Departure, transfer to the airport"
                           : day.leisure
-                            ? (day.transfers?.length
-                                ? `Transfer to ${day.transfers[0].to}, then the day is yours`
-                                : "Leisure day, the day is yours")
-                            : `• ${displayActivities.join(", ")}`}
-                      </p>
+                            ? (day.transfers?.length ? `Transfer to ${day.transfers[0].to}, then the day is yours` : "Leisure day, the day is yours")
+                            : null;
+                        const G = RATING_META.loved.color;
+                        // Day-level loved rating: aggregate across the day's rated tours
+                        // (skip for leisure/departure days and custom-swapped plans).
+                        let agg = null;
+                        if (!simpleText && !swapped) {
+                          const rated = getDayTours(day, globalDayIndex, daysWithActivities)
+                            .map((tour) => {
+                              const realItems = tour.items.filter((x) => x.actIdx != null && !x.onTap);
+                              return realItems.length ? getTourRating(tour.heading + "|" + realItems.map((x) => x.name).join("~")) : null;
+                            })
+                            .filter(Boolean);
+                          if (rated.length) {
+                            const c = rated.reduce((s, r) => s + r.count, 0);
+                            const lv = rated.reduce((s, r) => s + r.loved, 0);
+                            agg = { pct: Math.round((lv / c) * 100), count: c };
+                          }
+                        }
+                        return (
+                          <>
+                            <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                              {simpleText || `• ${displayActivities.join(", ")}`}
+                            </p>
+                            {agg && (
+                              <div style={{ marginTop: 8 }}>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", background: "#EAF5EF", borderRadius: 20 }}>
+                                  <Heart size={11} color={G} fill={G} />
+                                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "#1E6B47" }}>{agg.pct}% loved</span>
+                                  <span style={{ fontSize: 11.5, fontWeight: 600, color: "#4A5578" }}>({agg.count})</span>
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                       {hasOptions && (
                         <button
                           data-testid={`change-day-${globalDayIndex}`}
@@ -2781,6 +2813,7 @@ function ActivityDetailSheet({ detail, onClose }) {
 function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canChangeDay, onChangeDay, onPhotoOpen, onClose }) {
   const [activeMetric, setActiveMetric] = useState(null);
   const [transferDetail, setTransferDetail] = useState(null);
+  const [reviewTour, setReviewTour] = useState(null);
   const day = days[dayIndex];
 
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
@@ -2873,7 +2906,7 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
         {isDeparture ? (
           <div style={{ padding: "12px 20px 8px" }}>
             {transferBlocks.map((tb, ti) => (
-              <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} />
+              <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} onOpenReviews={setReviewTour} />
             ))}
           </div>
         ) : isFullLeisure ? (
@@ -2885,7 +2918,7 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
           <>
             <div style={{ padding: "12px 20px 0" }}>
               {transferBlocks.map((tb, ti) => (
-                <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} />
+                <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} onOpenReviews={setReviewTour} />
               ))}
             </div>
             <LeisureStrip />
@@ -2894,10 +2927,10 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
         ) : (
           <div style={{ padding: "12px 20px 8px" }}>
             {transferBlocks.map((tb, ti) => (
-              <TourBlock key={`tr-${ti}`} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} />
+              <TourBlock key={`tr-${ti}`} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} onOpenReviews={setReviewTour} />
             ))}
             {(hasTransfers ? toursNoIntro : tours).map((tour, ti) => (
-              <TourBlock key={ti} tour={tour} itineraryId={itineraryId} dayIdx={dayIndex} />
+              <TourBlock key={ti} tour={tour} itineraryId={itineraryId} dayIdx={dayIndex} onOpenReviews={setReviewTour} />
             ))}
           </div>
         )}
@@ -2947,6 +2980,11 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
       {/* Transfer detail sheet */}
       {transferDetail && (
         <TransferDetailSheet transfer={transferDetail} onClose={() => setTransferDetail(null)} />
+      )}
+
+      {/* Tour reviews sheet */}
+      {reviewTour && (
+        <TourReviewsSheet item={reviewTour} onClose={() => setReviewTour(null)} />
       )}
     </div>
   );
@@ -3001,11 +3039,33 @@ function TransferDetailSheet({ transfer: t, onClose }) {
 }
 
 // One tour group: heading + dashed-line timeline of items (intro text + activity cards).
-function TourBlock({ tour, itineraryId, dayIdx }) {
+function TourBlock({ tour, itineraryId, dayIdx, onOpenReviews }) {
   const navigate = useNavigate();
+  // Ratings are per tour: show a single summary for tours with real activities
+  // (skip transfer-only blocks, whose items are tap-to-open transfers).
+  const realItems = tour.items.filter((it) => it.actIdx != null && !it.onTap);
+  const tourKey = realItems.length ? tour.heading + "|" + realItems.map((it) => it.name).join("~") : null;
+  const rating = tourKey ? getTourRating(tourKey) : null;
   return (
     <div style={{ marginBottom: 16, border: "1px solid #E0E2EB", borderRadius: 8, padding: 8 }}>
-      <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 500, color: "#181E4C" }}>{tour.heading}</h4>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, margin: "0 0 8px" }}>
+        <h4 style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#181E4C", flex: 1, minWidth: 0 }}>{tour.heading}</h4>
+        {rating && (
+          <button
+            onClick={() => onOpenReviews && onOpenReviews({
+              title: tour.heading,
+              subtitle: realItems.map((it) => it.name).join(", "),
+              ratingKey: tourKey,
+            })}
+            style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+          >
+            <Heart size={12} color={RATING_META.loved.color} fill={RATING_META.loved.color} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#181E4C" }}>{rating.lovedPct}% loved it</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#4A5578" }}>({rating.count})</span>
+            <ChevronRight size={13} color="#98A2B3" />
+          </button>
+        )}
+      </div>
       <div style={{ position: "relative", paddingLeft: 16 }}>
         {/* Dashed timeline */}
         <div style={{ position: "absolute", left: 3, top: 12, bottom: 12, width: 0, borderLeft: "1px dashed #4EAC7E" }} />
@@ -3054,6 +3114,122 @@ function TourBlock({ tour, itineraryId, dayIdx }) {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Bottom sheet with all reviews for a tour, opened from the tour rating line.
+function TourReviewsSheet({ item, onClose }) {
+  const [filter, setFilter] = useState("all");   // all | loved | liked | not
+  const [sort, setSort] = useState("newest");     // newest | oldest
+  const r = getTourRating(item.ratingKey);
+  if (!r) return null;
+  const bars = [
+    { key: "loved", pct: Math.round((r.loved / r.count) * 100), n: r.loved },
+    { key: "liked", pct: Math.round((r.liked / r.count) * 100), n: r.liked },
+    { key: "not", pct: Math.round((r.notForMe / r.count) * 100), n: r.notForMe },
+  ];
+  const counts = r.reviews.reduce((m, rev) => ({ ...m, [rev.rating]: (m[rev.rating] || 0) + 1 }), {});
+  const chips = [
+    { key: "all", label: "All", n: r.reviews.length, color: C.head },
+    { key: "loved", label: "Loved it", n: counts.loved || 0, color: RATING_META.loved.color },
+    { key: "liked", label: "Liked it", n: counts.liked || 0, color: RATING_META.liked.color },
+    { key: "not", label: "Not for me", n: counts.not || 0, color: RATING_META.not.color },
+  ];
+  const shown = r.reviews
+    .filter((rev) => filter === "all" || rev.rating === filter)
+    .sort((a, b) => (sort === "newest" ? a.daysAgo - b.daysAgo : b.daysAgo - a.daysAgo));
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 210, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", animation: "fadeInBg 0.2s ease-out" }} />
+      <div style={{ position: "relative", background: C.white, borderRadius: "16px 16px 0 0", maxHeight: "88%", overflowY: "auto", animation: "sheetSlideUp 0.25s ease-out", paddingBottom: "calc(20px + env(safe-area-inset-bottom))" }}>
+        {/* Header */}
+        <div style={{ position: "sticky", top: 0, background: C.white, padding: "16px 20px 12px", borderBottom: `1px solid ${C.div}`, zIndex: 2 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: C.sub, textTransform: "uppercase" }}>Traveller ratings</p>
+              <h3 style={{ margin: "3px 0 0", fontSize: 17, fontWeight: 700, color: C.head, lineHeight: 1.3 }}>{item.title}</h3>
+              {item.subtitle && <p style={{ margin: "2px 0 0", fontSize: 12, color: C.sub, lineHeight: 1.35 }}>{item.subtitle}</p>}
+            </div>
+            <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <XIcon size={16} color={C.sub} />
+            </button>
+          </div>
+        </div>
+
+        {/* Summary: headline % loved + breakdown bars */}
+        <div style={{ padding: "16px 20px 8px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
+            <Heart size={20} color={RATING_META.loved.color} fill={RATING_META.loved.color} />
+            <span style={{ fontSize: 26, fontWeight: 800, color: C.head, lineHeight: 1 }}>{r.lovedPct}%</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>loved it</span>
+            <span style={{ fontSize: 12.5, color: C.sub, marginLeft: "auto" }}>{r.count} ratings</span>
+          </div>
+          {bars.map((b) => (
+            <div key={b.key} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <span style={{ width: 78, flexShrink: 0, fontSize: 12, fontWeight: 600, color: RATING_META[b.key].color }}>{RATING_META[b.key].label}</span>
+              <div style={{ flex: 1, height: 8, borderRadius: 5, background: "#F0F1F5", overflow: "hidden" }}>
+                <div style={{ width: `${b.pct}%`, height: "100%", background: RATING_META[b.key].color, borderRadius: 5 }} />
+              </div>
+              <span style={{ width: 58, flexShrink: 0, textAlign: "right", fontSize: 12, color: C.sub, fontVariantNumeric: "tabular-nums" }}>{b.pct}% &middot; {b.n}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Filter chips + sort */}
+        <div style={{ padding: "8px 20px 0" }}>
+          <div className="hide-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+            {chips.map((c) => {
+              const on = filter === c.key;
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => setFilter(c.key)}
+                  style={{
+                    flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
+                    fontSize: 12.5, fontWeight: 600,
+                    background: on ? c.color : C.white,
+                    color: on ? "#fff" : C.head,
+                    border: `1px solid ${on ? c.color : C.div}`,
+                  }}
+                >
+                  {c.label}
+                  <span style={{ fontSize: 11, fontWeight: 700, color: on ? "rgba(255,255,255,0.85)" : C.sub }}>{c.n}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: C.head }}>{shown.length} review{shown.length === 1 ? "" : "s"}</span>
+            <button
+              onClick={() => setSort((s) => (s === "newest" ? "oldest" : "newest"))}
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 8, background: C.white, border: `1px solid ${C.div}`, cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, color: C.head }}
+            >
+              <ArrowDownUp size={13} color={C.sub} />
+              {sort === "newest" ? "Newest first" : "Oldest first"}
+            </button>
+          </div>
+        </div>
+
+        {/* Reviews list */}
+        <div style={{ padding: "6px 20px 8px" }}>
+          {shown.length === 0 ? (
+            <p style={{ margin: "16px 0", fontSize: 13, color: C.sub, textAlign: "center" }}>No reviews in this filter yet.</p>
+          ) : shown.map((rev, i) => {
+            const meta = RATING_META[rev.rating];
+            return (
+              <div key={i} style={{ padding: "12px 0", borderBottom: i < shown.length - 1 ? `1px solid ${C.div}` : "none" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 600, color: C.head }}>{rev.name}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: meta.color, background: `${meta.color}1A`, borderRadius: 20, padding: "2px 8px" }}>{meta.label}</span>
+                  <span style={{ fontSize: 11, color: C.sub, marginLeft: "auto" }}>{rev.when}</span>
+                </div>
+                <p style={{ margin: 0, fontSize: 13, color: C.sub, lineHeight: 1.5 }}>{rev.text}</p>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

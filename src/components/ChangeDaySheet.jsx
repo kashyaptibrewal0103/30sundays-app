@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { X as XIcon, Play, SlidersHorizontal, Check } from "lucide-react";
+import { X as XIcon, Play, SlidersHorizontal, Check, Heart } from "lucide-react";
 import { C } from "../data";
+import { getTourRating, RATING_META } from "../data/tourRatings";
 
 const paceLabels = { relaxed: "Relaxed", balanced: "Balanced", active: "Active" };
 const crowdLabels = { low: "Low", moderate: "Moderate", high: "High" };
@@ -18,6 +19,9 @@ function Metric({ label, value }) {
 // One portrait plan card (2-up grid). Tap = choose; play = preview.
 function PlanCard({ opt, onSelect, onPreview }) {
   const delta = opt.priceDelta;
+  // Day rating for this plan option (shown as a badge on the image).
+  const G = RATING_META.loved.color;
+  const r = getTourRating(opt.id || opt.activities.join("~"));
   return (
     <div
       data-testid={`plan-card-${opt.id}`}
@@ -55,6 +59,15 @@ function PlanCard({ opt, onSelect, onPreview }) {
             color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 8,
           }}>
             {delta > 0 ? "+" : "−"}₹{Math.abs(delta).toLocaleString("en-IN")}
+          </div>
+        )}
+
+        {/* Day rating badge overlaid on the image (top-left): % loved + (ratings) */}
+        {r && (
+          <div style={{ position: "absolute", left: 8, top: 8, display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", borderRadius: 20, padding: "3px 8px" }}>
+            <Heart size={11} color={G} fill={G} />
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#1E6B47" }}>{r.lovedPct}%</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#4A5578" }}>({r.count})</span>
           </div>
         )}
       </div>
