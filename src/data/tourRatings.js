@@ -45,6 +45,17 @@ function hashStr(s) {
 
 const pick = (arr, seed) => arr[seed % arr.length];
 
+// A crisp two-line read on the feedback, driven by the rating mix.
+function buildSummary(lovedPct, likedPct, notPct) {
+  const lead = lovedPct >= 85
+    ? "Couples loved this one. The guide, the views and the easy pace come up again and again."
+    : "Most couples enjoyed this. They liked the guide, the scenery and how relaxed it felt.";
+  const caveat = (likedPct + notPct) >= 24
+    ? "A few felt it got busy around midday, or wanted a little more free time."
+    : "The odd couple found it a touch touristy, but that was rare.";
+  return `${lead} ${caveat}`;
+}
+
 function whenLabel(daysAgo) {
   if (daysAgo <= 1) return "yesterday";
   if (daysAgo < 7) return `${daysAgo} days ago`;
@@ -75,6 +86,8 @@ export function getTourRating(key, opts = {}) {
   const liked = Math.max(0, count - loved - notForMe);
   const lovedPctDisplay = Math.round((loved / count) * 100);
 
+  const summary = buildSummary(lovedPctDisplay, likedPct, notPct);
+
   const reviews = SAMPLE_PLAN.map((kind, i) => {
     const seed = hashStr(key + "#r" + i);
     const daysAgo = 1 + (hashStr(key + "#d" + i) % 90);
@@ -87,7 +100,7 @@ export function getTourRating(key, opts = {}) {
     };
   });
 
-  return { count, loved, liked, notForMe, lovedPct: lovedPctDisplay, likedPct, notPct, reviews, title: opts.title, subtitle: opts.subtitle };
+  return { count, loved, liked, notForMe, lovedPct: lovedPctDisplay, likedPct, notPct, summary, reviews, title: opts.title, subtitle: opts.subtitle };
 }
 
 export const RATING_META = {

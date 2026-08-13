@@ -1029,37 +1029,36 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                             ? (day.transfers?.length ? `Transfer to ${day.transfers[0].to}, then the day is yours` : "Leisure day, the day is yours")
                             : null;
                         const G = RATING_META.loved.color;
-                        // Day-level loved rating: aggregate across the day's rated tours
-                        // (skip for leisure/departure days and custom-swapped plans).
-                        let agg = null;
-                        if (!simpleText && !swapped) {
-                          const rated = getDayTours(day, globalDayIndex, daysWithActivities)
-                            .map((tour) => {
-                              const realItems = tour.items.filter((x) => x.actIdx != null && !x.onTap);
-                              return realItems.length ? getTourRating(tour.heading + "|" + realItems.map((x) => x.name).join("~")) : null;
-                            })
-                            .filter(Boolean);
-                          if (rated.length) {
-                            const c = rated.reduce((s, r) => s + r.count, 0);
-                            const lv = rated.reduce((s, r) => s + r.loved, 0);
-                            agg = { pct: Math.round((lv / c) * 100), count: c };
-                          }
-                        }
-                        return (
-                          <>
+                        if (simpleText || swapped) {
+                          return (
                             <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                               {simpleText || `• ${displayActivities.join(", ")}`}
                             </p>
-                            {agg && (
-                              <div style={{ marginTop: 8 }}>
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", background: "#EAF5EF", borderRadius: 20 }}>
-                                  <Heart size={11} color={G} fill={G} />
-                                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "#1E6B47" }}>{agg.pct}% loved</span>
-                                  <span style={{ fontSize: 11.5, fontWeight: 600, color: "#4A5578" }}>({agg.count})</span>
-                                </span>
+                          );
+                        }
+                        // Each tour on its own line, with a crisp right-aligned
+                        // "% loved (raters)" figure. Leisure/departure/custom days above.
+                        const tours = getDayTours(day, globalDayIndex, daysWithActivities)
+                          .map((tour) => {
+                            const realItems = tour.items.filter((x) => x.actIdx != null && !x.onTap);
+                            return realItems.length ? { label: realItems.map((x) => x.name).join(", "), rating: getTourRating(tour.heading + "|" + realItems.map((x) => x.name).join("~")) } : null;
+                          })
+                          .filter(Boolean);
+                        return (
+                          <div style={{ margin: "5px 0 0" }}>
+                            {tours.map((ln, li) => (
+                              <div key={li} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: li === 0 ? 0 : 5, justifyContent: "space-between" }}>
+                                <span style={{ minWidth: 0, flexShrink: 1, fontSize: 12, color: C.sub, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ln.label}</span>
+                                {ln.rating && (
+                                  <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                    <Heart size={11} color={G} fill={G} />
+                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: "#1E6B47" }}>{ln.rating.lovedPct}%</span>
+                                    <span style={{ fontSize: 11.5, fontWeight: 600, color: "#98A2B3" }}>({ln.rating.count})</span>
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </>
+                            ))}
+                          </div>
                         );
                       })()}
                       {hasOptions && (
@@ -3177,8 +3176,16 @@ function TourReviewsSheet({ item, onClose }) {
           ))}
         </div>
 
+        {/* In short: two-line read on the feedback */}
+        {r.summary && (
+          <div style={{ margin: "4px 20px 0", padding: "10px 12px", background: "#F7F8FA", borderRadius: 10 }}>
+            <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4, color: C.sub, textTransform: "uppercase" }}>In short</p>
+            <p style={{ margin: "3px 0 0", fontSize: 13, color: C.head, lineHeight: 1.5 }}>{r.summary}</p>
+          </div>
+        )}
+
         {/* Filter chips + sort */}
-        <div style={{ padding: "8px 20px 0" }}>
+        <div style={{ padding: "12px 20px 0" }}>
           <div className="hide-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
             {chips.map((c) => {
               const on = filter === c.key;
