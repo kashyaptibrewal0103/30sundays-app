@@ -1489,17 +1489,22 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 12px" }}>Cost breakdown</p>
         <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden" }}>
           {[
-            { label: "Flights", value: costSplit.flights, hide: costSplit.flights <= 0 },
+            { label: "Flights", value: costSplit.flights, hide: costSplit.flights <= 0, note: "This flight price may be outdated. Contact your travel consultant for the latest fares." },
             { label: "Hotels", value: costSplit.hotels },
             { label: "Activities", value: costSplit.activities },
             { label: "Taxes (incl. TCS)", value: costSplit.gst + costSplit.tcs },
             { label: "Discount", value: -costSplit.discount, hide: costSplit.discount <= 0, accent: true },
           ].filter(r => !r.hide).map((r, i) => (
-            <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.div}` }}>
-              <span style={{ fontSize: 13.5, color: C.sub }}>{r.label}</span>
-              <span style={{ fontSize: 13.5, fontWeight: 600, color: r.accent ? "#027A48" : C.head }}>
-                {r.value < 0 ? "− " : ""}₹{Math.abs(r.value).toLocaleString("en-IN")}
-              </span>
+            <div key={r.label} style={{ padding: "12px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.div}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 13.5, color: C.sub }}>{r.label}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: r.accent ? "#027A48" : C.head }}>
+                  {r.value < 0 ? "− " : ""}₹{Math.abs(r.value).toLocaleString("en-IN")}
+                </span>
+              </div>
+              {r.note && (
+                <p style={{ margin: "5px 0 0", fontSize: 11, color: C.inact, lineHeight: "15px", maxWidth: "90%" }}>{r.note}</p>
+              )}
             </div>
           ))}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 14px", borderTop: `1px solid ${C.div}`, background: C.p50 || "#FFF1F4" }}>
