@@ -8,6 +8,8 @@ import { Camera, Volume2, VolumeX, FileText, ChevronLeft } from "lucide-react";
 import ChangeDaySheet from "../components/ChangeDaySheet";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
+import TravelConsultantSection from "../components/TravelConsultantSection";
+import { getConsultant } from "../data/consultants";
 import JourneyMap from "../components/JourneyMap";
 import ItineraryMapScreen from "../components/ItineraryMapScreen";
 import WatchTeaser from "../components/WatchTeaser";
@@ -141,6 +143,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [params, setParams] = useSearchParams();
   const dealId = params.get("dealId");
   const versionId = params.get("versionId");
+  // Which consultant version the card shows. ?consultant=v1|v2 overrides the
+  // deal's own assignment so both versions are reviewable in one build;
+  // ?consultant=none demos the unassigned state (section renders nothing).
+  const consultant = getConsultant(params.get("consultant"));
+  const setConsultantVersion = (v) => {
+    const next = new URLSearchParams(params);
+    next.set("consultant", v);
+    setParams(next, { replace: true });
+  };
   const dealsCtx = useDeals();
   // Seed itineraries resolve from static data; trips built from scratch resolve
   // from the deal that stores their synthesized itinerary.
@@ -1444,6 +1455,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </div>
         );
       })()}
+
+      <Divider />
+
+      {/* ═══ 6.5 Your travel consultant ═══ */}
+      <TravelConsultantSection
+        consultant={consultant}
+        onVersionChange={setConsultantVersion}
+      />
 
       <Divider />
 
