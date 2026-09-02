@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { X as XIcon, Play, SlidersHorizontal, Check, Heart } from "lucide-react";
+import { X as XIcon, Play, SlidersHorizontal, Check } from "lucide-react";
 import { C } from "../data";
-import { getTourRating, RATING_META } from "../data/tourRatings";
+import { getDayRating } from "../data/dayRatings";
+import { DayRatingPill } from "./DayRating";
 
 const paceLabels = { relaxed: "Relaxed", balanced: "Balanced", active: "Active" };
 const crowdLabels = { low: "Low", moderate: "Moderate", high: "High" };
@@ -17,11 +18,13 @@ function Metric({ label, value }) {
 }
 
 // One portrait plan card (2-up grid). Tap = choose; play = preview.
-function PlanCard({ opt, onSelect, onPreview }) {
+function PlanCard({ opt, onSelect, onPreview, forceTier, wording, pillStyle }) {
   const delta = opt.priceDelta;
-  // Day rating for this plan option (shown as a badge on the image).
-  const G = RATING_META.loved.color;
-  const r = getTourRating(opt.id || opt.activities.join("~"));
+  // Each alternative is a whole day, so its badge is a day rating. Same rule as
+  // the day cards: number only, and weakly-rated options show no badge rather
+  // than a number that reads as a fail on a card we are recommending.
+  const key = opt.id || opt.activities.join("~");
+  const r = getDayRating(key, [key], { forceTier, wording });
   return (
     <div
       data-testid={`plan-card-${opt.id}`}
@@ -62,14 +65,10 @@ function PlanCard({ opt, onSelect, onPreview }) {
           </div>
         )}
 
-        {/* Day rating badge overlaid on the image (top-left): % loved + (ratings) */}
-        {r && (
-          <div style={{ position: "absolute", left: 8, top: 8, display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", borderRadius: 20, padding: "3px 8px" }}>
-            <Heart size={11} color={G} fill={G} />
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#1E6B47" }}>{r.lovedPct}%</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#4A5578" }}>({r.count})</span>
-          </div>
-        )}
+        {/* Day rating badge overlaid on the image (top-left) */}
+        <div style={{ position: "absolute", left: 8, top: 8 }}>
+          <DayRatingPill rating={r} overlay style={pillStyle} />
+        </div>
       </div>
 
       {/* Text */}
@@ -113,7 +112,7 @@ function PlanCard({ opt, onSelect, onPreview }) {
   );
 }
 
-export default function ChangeDaySheet({ dayData, combinations = [], onSelect, onPreview, onClose }) {
+export default function ChangeDaySheet({ dayData, combinations = [], onSelect, onPreview, onClose, forceTier, wording, pillStyle }) {
   const [closing, setClosing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showMore, setShowMore] = useState(false);
@@ -229,9 +228,9 @@ export default function ChangeDaySheet({ dayData, combinations = [], onSelect, o
             <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Our picks</p>
             {(currentOpt || shownAlts.length) ? (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                {currentOpt && <PlanCard key={currentOpt.id} opt={currentOpt} onSelect={onSelect} onPreview={onPreview} />}
+                {currentOpt && <PlanCard key={currentOpt.id} opt={currentOpt} onSelect={onSelect} onPreview={onPreview} forceTier={forceTier} wording={wording} pillStyle={pillStyle} />}
                 {shownAlts.map((opt, i) => (
-                  <PlanCard key={`${opt.id}-${i}`} opt={opt} onSelect={onSelect} onPreview={onPreview} />
+                  <PlanCard key={`${opt.id}-${i}`} opt={opt} onSelect={onSelect} onPreview={onPreview} wording={wording} pillStyle={pillStyle} />
                 ))}
               </div>
             ) : (

@@ -45,14 +45,21 @@ function hashStr(s) {
 
 const pick = (arr, seed) => arr[seed % arr.length];
 
-// A crisp two-line read on the feedback, driven by the rating mix.
-function buildSummary(lovedPct, likedPct, notPct) {
-  const lead = lovedPct >= 85
-    ? "Couples loved this one. The guide, the views and the easy pace come up again and again."
-    : "Most couples enjoyed this. They liked the guide, the scenery and how relaxed it felt.";
-  const caveat = (likedPct + notPct) >= 24
-    ? "A few felt it got busy around midday, or wanted a little more free time."
-    : "The odd couple found it a touch touristy, but that was rare.";
+// A crisp two-line read on the feedback, driven by the rating mix. The lower
+// bands matter: a middling day summarised in glowing language reads as spin,
+// and the summary is the one place with room to say what actually split people.
+export function buildSummary(lovedPct, likedPct, notPct) {
+  let lead;
+  if (lovedPct >= 85) lead = "Couples loved this one. The guide, the views and the easy pace come up again and again.";
+  else if (lovedPct >= 65) lead = "Most couples enjoyed this. They liked the guide, the scenery and how relaxed it felt.";
+  else if (lovedPct >= 45) lead = "Reactions are split. Plenty of couples enjoyed it, and a fair few felt it wasn't for them.";
+  else lead = "This one divides couples. Some had a good time; many said it didn't suit them.";
+
+  let caveat;
+  if (notPct >= 20) caveat = "The usual reasons: too much time in transit, crowds, or not enough to do.";
+  else if ((likedPct + notPct) >= 24) caveat = "A few felt it got busy around midday, or wanted a little more free time.";
+  else caveat = "The odd couple found it a touch touristy, but that was rare.";
+
   return `${lead} ${caveat}`;
 }
 
@@ -68,6 +75,35 @@ function whenLabel(daysAgo) {
 // Sample of reviews shown in the sheet. Weighted toward "loved" but always
 // carries a few "liked" and "not for me" so the filter chips are meaningful.
 const SAMPLE_PLAN = ["loved", "loved", "loved", "loved", "loved", "loved", "liked", "liked", "not", "not"];
+
+// A review list whose loved/liked/not mix reflects the given percentages, so
+// the sheet's filter chips agree with the bars above them. Any share that is
+// non-zero gets at least one review, otherwise a chip would filter to nothing.
+export function buildReviewSample(key, mix, n = 10) {
+  let nLoved = Math.round((n * (mix.loved || 0)) / 100);
+  let nNot = Math.round((n * (mix.not || 0)) / 100);
+  if ((mix.not || 0) > 0 && nNot === 0) { nNot = 1; nLoved = Math.max(0, nLoved - 1); }
+  let nLiked = Math.max(0, n - nLoved - nNot);
+  if ((mix.liked || 0) > 0 && nLiked === 0) { nLiked = 1; nLoved = Math.max(0, nLoved - 1); }
+
+  const plan = [
+    ...Array(nLoved).fill("loved"),
+    ...Array(nLiked).fill("liked"),
+    ...Array(nNot).fill("not"),
+  ];
+
+  return plan.map((kind, i) => {
+    const seed = hashStr(key + "#r" + i);
+    const daysAgo = 1 + (hashStr(key + "#d" + i) % 90);
+    return {
+      name: pick(REVIEWER_NAMES, seed),
+      rating: kind,
+      text: pick(TEXTS[kind], seed >> 3),
+      daysAgo,
+      when: whenLabel(daysAgo),
+    };
+  });
+}
 
 export function getTourRating(key, opts = {}) {
   if (!key) return null;

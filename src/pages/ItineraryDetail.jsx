@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle, ArrowDownUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -19,6 +19,8 @@ import { getDayScore } from "../data/dayScoring";
 import { videosForDest } from "../data/watchData";
 import { getDayScoring, getDayTours, getAllDaysScoring } from "../data/dayScoring";
 import { getTourRating, RATING_META } from "../data/tourRatings";
+import { getDayRating, tourKeysForDay } from "../data/dayRatings";
+import { DayRatingPill, DayRatingRow } from "../components/DayRating";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
@@ -383,6 +385,41 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
   const d = destData[it.dest];
   const daysWithActivities = getDayActivities(it);
+  // Ratings moved from tour level to day level. One rating per day, summed from
+  // that day's tours and weighted by how many people rated each.
+  //
+  // ?dayratings=spread walks days through strong / fair / mixed so the low-tier
+  // designs are reviewable — the mock generator only ever emits 74-95% loved,
+  // which makes them otherwise unreachable. ?dayratings=mixed forces them all low.
+  const ratingDemo = params.get("dayratings");
+  const demoTierFor = (dayIdx) => {
+    if (ratingDemo === "spread") return ["good", "low"][dayIdx % 2];
+    if (["good", "low"].includes(ratingDemo)) return ratingDemo;
+    return undefined;   // default: the prototype spread already covers both
+  };
+  // Wording set, colour scheme and compact style are all swappable from the URL
+  // so the options can be compared on a real screen rather than on paper.
+  //   ?daywording=plain|couples|repeat   ?daycolor=single|twoTone|ink
+  //   ?daystyle=pct|word|dot|chip
+  const ratingWording = params.get("daywording") || undefined;
+  const pillStyle = params.get("daystyle") || "pct";
+  const dayRatingFor = (day, dayIdx) => {
+    const keys = tourKeysForDay(getDayTours(day, dayIdx, daysWithActivities));
+    if (!keys.length) return null;
+    return getDayRating(`day${dayIdx}|${keys.join("~")}`, keys, {
+      forceTier: demoTierFor(dayIdx), wording: ratingWording,
+    });
+  };
+  const dayReviewItem = (day, dayIdx) => {
+    const tours = getDayTours(day, dayIdx, daysWithActivities);
+    const rating = dayRatingFor(day, dayIdx);
+    if (!rating) return null;
+    return {
+      title: `Day ${day.dayNum} · ${day.city}`,
+      subtitle: tours.flatMap((t) => (t.items || []).filter((x) => x.actIdx != null && !x.onTap).map((x) => x.name)).join(", "),
+      rating,
+    };
+  };
   const baseHotels = getHotels(it);
   // Unified itinerary design across all destinations: every dest now uses the
   // "Watch your trip unfold" tabs + tappable day cards (previously Vietnam had a
@@ -1031,7 +1068,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                       {/* Condensed tappable day card: title + one activity line, chevron cue, inline change link */}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                         <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Day {day.dayNum}: {day.city}</p>
-                        <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                          <DayRatingPill
+                            rating={dayRatingFor(day, globalDayIndex)}
+                            style={pillStyle}
+                          />
+                          <ChevronRight size={18} color={C.sub} />
+                        </div>
                       </div>
                       {(() => {
                         const simpleText = day.departure
@@ -1039,7 +1082,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                           : day.leisure
                             ? (day.transfers?.length ? `Transfer to ${day.transfers[0].to}, then the day is yours` : "Leisure day, the day is yours")
                             : null;
-                        const G = RATING_META.loved.color;
                         if (simpleText || swapped) {
                           return (
                             <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
@@ -1047,26 +1089,20 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                             </p>
                           );
                         }
-                        // Each tour on its own line, with a crisp right-aligned
-                        // "% loved (raters)" figure. Leisure/departure/custom days above.
+                        // The day's tours as bullet points. The rating is no longer
+                        // per tour — it sits once on the day, up in the card header.
                         const tours = getDayTours(day, globalDayIndex, daysWithActivities)
                           .map((tour) => {
                             const realItems = tour.items.filter((x) => x.actIdx != null && !x.onTap);
-                            return realItems.length ? { label: realItems.map((x) => x.name).join(", "), rating: getTourRating(tour.heading + "|" + realItems.map((x) => x.name).join("~")) } : null;
+                            return realItems.length ? realItems.map((x) => x.name).join(", ") : null;
                           })
                           .filter(Boolean);
                         return (
                           <div style={{ margin: "5px 0 0" }}>
-                            {tours.map((ln, li) => (
-                              <div key={li} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: li === 0 ? 0 : 5, justifyContent: "space-between" }}>
-                                <span style={{ minWidth: 0, flexShrink: 1, fontSize: 12, color: C.sub, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ln.label}</span>
-                                {ln.rating && (
-                                  <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                    <Heart size={11} color={G} fill={G} />
-                                    <span style={{ fontSize: 11.5, fontWeight: 700, color: "#1E6B47" }}>{ln.rating.lovedPct}%</span>
-                                    <span style={{ fontSize: 11.5, fontWeight: 600, color: "#98A2B3" }}>({ln.rating.count})</span>
-                                  </span>
-                                )}
+                            {tours.map((label, li) => (
+                              <div key={li} style={{ display: "flex", gap: 6, marginTop: li === 0 ? 0 : 4 }}>
+                                <span style={{ flexShrink: 0, color: C.inact, fontSize: 12, lineHeight: "18px" }}>&bull;</span>
+                                <span style={{ minWidth: 0, fontSize: 12, color: C.sub, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
                               </div>
                             ))}
                           </div>
@@ -1697,6 +1733,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           itineraryId={it.id}
           canChangeDay={dayHasOptions(dayDetailIndex)}
           onChangeDay={(i) => { setDayDetailIndex(null); setChangeDayIndex(i); }}
+          dayRatingFor={dayRatingFor}
+          dayReviewItem={dayReviewItem}
           onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
           onClose={() => setDayDetailIndex(null)}
         />
@@ -1802,6 +1840,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           onSelect={(option) => handleChangeDaySelect(changeDayIndex, option)}
           onPreview={(option) => setPreviewDay({ dayIndex: changeDayIndex, option })}
           onClose={() => setChangeDayIndex(null)}
+          forceTier={demoTierFor(changeDayIndex)}
+          wording={ratingWording}
+          pillStyle={pillStyle}
         />
       )}
 
@@ -2833,7 +2874,7 @@ function ActivityDetailSheet({ detail, onClose }) {
 }
 
 // ═══ Day Detail - full-screen page with prev/next day switcher ═══
-function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canChangeDay, onChangeDay, onPhotoOpen, onClose }) {
+function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canChangeDay, onChangeDay, onPhotoOpen, onClose, dayRatingFor, dayReviewItem }) {
   const [activeMetric, setActiveMetric] = useState(null);
   const [transferDetail, setTransferDetail] = useState(null);
   const [reviewTour, setReviewTour] = useState(null);
@@ -2913,6 +2954,16 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
           <div style={{ padding: "8px 20px 14px" }}>
             <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#181E4C", lineHeight: 1.25 }}>{heroTitle}</h2>
           </div>
+          {/* Traveller rating sits above the day-pace card, and is the only
+              way into the loved / liked / not-for-me breakdown. */}
+          {(() => {
+            const dr = dayRatingFor ? dayRatingFor(day, dayIndex) : null;
+            return dr ? (
+              <div style={{ padding: "0 20px 14px" }}>
+                <DayRatingRow rating={dr} onOpen={() => setReviewTour(dayReviewItem(day, dayIndex))} />
+              </div>
+            ) : null;
+          })()}
           {showScoring && (
             <div style={{ padding: "0 16px" }}>
               <div style={{ borderRadius: 16, overflow: "hidden", background: "#fff", border: "1px solid #FFE0E7", boxShadow: "0 2px 10px rgba(253,1,79,0.06)" }}>
@@ -2929,7 +2980,7 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
         {isDeparture ? (
           <div style={{ padding: "12px 20px 8px" }}>
             {transferBlocks.map((tb, ti) => (
-              <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} onOpenReviews={setReviewTour} />
+              <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} />
             ))}
           </div>
         ) : isFullLeisure ? (
@@ -2941,7 +2992,7 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
           <>
             <div style={{ padding: "12px 20px 0" }}>
               {transferBlocks.map((tb, ti) => (
-                <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} onOpenReviews={setReviewTour} />
+                <TourBlock key={ti} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} />
               ))}
             </div>
             <LeisureStrip />
@@ -2950,10 +3001,10 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
         ) : (
           <div style={{ padding: "12px 20px 8px" }}>
             {transferBlocks.map((tb, ti) => (
-              <TourBlock key={`tr-${ti}`} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} onOpenReviews={setReviewTour} />
+              <TourBlock key={`tr-${ti}`} tour={tb} itineraryId={itineraryId} dayIdx={dayIndex} />
             ))}
             {(hasTransfers ? toursNoIntro : tours).map((tour, ti) => (
-              <TourBlock key={ti} tour={tour} itineraryId={itineraryId} dayIdx={dayIndex} onOpenReviews={setReviewTour} />
+              <TourBlock key={ti} tour={tour} itineraryId={itineraryId} dayIdx={dayIndex} />
             ))}
           </div>
         )}
@@ -3062,32 +3113,14 @@ function TransferDetailSheet({ transfer: t, onClose }) {
 }
 
 // One tour group: heading + dashed-line timeline of items (intro text + activity cards).
-function TourBlock({ tour, itineraryId, dayIdx, onOpenReviews }) {
+function TourBlock({ tour, itineraryId, dayIdx }) {
   const navigate = useNavigate();
-  // Ratings are per tour: show a single summary for tours with real activities
-  // (skip transfer-only blocks, whose items are tap-to-open transfers).
-  const realItems = tour.items.filter((it) => it.actIdx != null && !it.onTap);
-  const tourKey = realItems.length ? tour.heading + "|" + realItems.map((it) => it.name).join("~") : null;
-  const rating = tourKey ? getTourRating(tourKey) : null;
+  // No rating here any more — a day is rated once, on the "Your day will cover"
+  // row above, not once per tour.
   return (
     <div style={{ marginBottom: 16, border: "1px solid #E0E2EB", borderRadius: 8, padding: 8 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, margin: "0 0 8px" }}>
         <h4 style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#181E4C", flex: 1, minWidth: 0 }}>{tour.heading}</h4>
-        {rating && (
-          <button
-            onClick={() => onOpenReviews && onOpenReviews({
-              title: tour.heading,
-              subtitle: realItems.map((it) => it.name).join(", "),
-              ratingKey: tourKey,
-            })}
-            style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
-          >
-            <Heart size={12} color={RATING_META.loved.color} fill={RATING_META.loved.color} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#181E4C" }}>{rating.lovedPct}% loved it</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#4A5578" }}>({rating.count})</span>
-            <ChevronRight size={13} color="#98A2B3" />
-          </button>
-        )}
       </div>
       <div style={{ position: "relative", paddingLeft: 16 }}>
         {/* Dashed timeline */}
@@ -3146,8 +3179,10 @@ function TourBlock({ tour, itineraryId, dayIdx, onOpenReviews }) {
 function TourReviewsSheet({ item, onClose }) {
   const [filter, setFilter] = useState("all");   // all | loved | liked | not
   const [sort, setSort] = useState("newest");     // newest | oldest
-  const r = getTourRating(item.ratingKey);
+  // Day-level callers pass the aggregated rating in; tour-level callers pass a key.
+  const r = item.rating || getTourRating(item.ratingKey);
   if (!r) return null;
+  const headColor = r.color || RATING_META.loved.color;
   const bars = [
     { key: "loved", pct: Math.round((r.loved / r.count) * 100), n: r.loved },
     { key: "liked", pct: Math.round((r.liked / r.count) * 100), n: r.liked },
@@ -3164,9 +3199,13 @@ function TourReviewsSheet({ item, onClose }) {
     .filter((rev) => filter === "all" || rev.rating === filter)
     .sort((a, b) => (sort === "newest" ? a.daysAgo - b.daysAgo : b.daysAgo - a.daysAgo));
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 210, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+    // Viewport-fixed, like the other bottom drawers. It is opened both from the
+    // day details overlay and from a day card on the main scroll, and an
+    // absolutely-positioned sheet resolves against the long scrolling content
+    // in the second case, which drops it ~2000px down the page.
+    <div style={{ position: "fixed", inset: 0, zIndex: 260, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", animation: "fadeInBg 0.2s ease-out" }} />
-      <div style={{ position: "relative", background: C.white, borderRadius: "16px 16px 0 0", maxHeight: "88%", overflowY: "auto", animation: "sheetSlideUp 0.25s ease-out", paddingBottom: "calc(20px + env(safe-area-inset-bottom))" }}>
+      <div style={{ position: "relative", background: C.white, borderRadius: "16px 16px 0 0", maxWidth: 420, margin: "0 auto", width: "100%", boxSizing: "border-box", maxHeight: "88%", overflowY: "auto", animation: "sheetSlideUp 0.25s ease-out", paddingBottom: "calc(20px + env(safe-area-inset-bottom))" }}>
         {/* Header */}
         <div style={{ position: "sticky", top: 0, background: C.white, padding: "16px 20px 12px", borderBottom: `1px solid ${C.div}`, zIndex: 2 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
@@ -3184,11 +3223,18 @@ function TourReviewsSheet({ item, onClose }) {
         {/* Summary: headline % loved + breakdown bars */}
         <div style={{ padding: "16px 20px 8px" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
-            <Heart size={20} color={RATING_META.loved.color} fill={RATING_META.loved.color} />
-            <span style={{ fontSize: 26, fontWeight: 800, color: C.head, lineHeight: 1 }}>{r.lovedPct}%</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>loved it</span>
+            <ThumbsUp size={20} color={headColor} fill={headColor} strokeWidth={0} />
+            <span style={{ fontSize: 26, fontWeight: 800, color: C.head, lineHeight: 1 }}>{r.enjoyedPct != null ? r.enjoyedPct : r.lovedPct}%</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>{r.enjoyedPct != null ? "enjoyed it" : "loved it"}</span>
             <span style={{ fontSize: 12.5, color: C.sub, marginLeft: "auto" }}>{r.count} ratings</span>
           </div>
+          {/* This is the one screen that shows what the figure is made of, and
+              the only place the rating count appears. */}
+          {r.enjoyedPct != null && (
+            <p style={{ margin: "-6px 0 12px", fontSize: 12.5, color: C.sub }}>
+              {r.lovedPct}% loved it, {r.likedPct}% liked it
+            </p>
+          )}
           {bars.map((b) => (
             <div key={b.key} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
               <span style={{ width: 78, flexShrink: 0, fontSize: 12, fontWeight: 600, color: RATING_META[b.key].color }}>{RATING_META[b.key].label}</span>
