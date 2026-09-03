@@ -1,7 +1,9 @@
 // Activity detail data generator - stubs Google Places shape from minimal input.
 // Used by ActivityDetail page for both booked customer and planning user.
 
-const CDN = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com";
+// The old digitalocean bucket 404s on every path; the same files are served
+// from the current CDN.
+const CDN = "https://cdn.30sundays.club/app_content";
 
 const FALLBACK_IMAGES = [
   `${CDN}/thailand/pileh_lagoon_439.jpg`,

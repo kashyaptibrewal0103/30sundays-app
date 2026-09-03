@@ -3176,7 +3176,8 @@ function TourBlock({ tour, itineraryId, dayIdx }) {
 }
 
 // Bottom sheet with all reviews for a tour, opened from the tour rating line.
-function TourReviewsSheet({ item, onClose }) {
+// Exported so the day-detail lab opens the same sheet rather than a copy of it.
+export function TourReviewsSheet({ item, onClose }) {
   const [filter, setFilter] = useState("all");   // all | loved | liked | not
   const [sort, setSort] = useState("newest");     // newest | oldest
   // Day-level callers pass the aggregated rating in; tour-level callers pass a key.

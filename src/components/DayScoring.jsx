@@ -284,7 +284,8 @@ function TimelineRow({ event, isFirst, isLast }) {
 }
 
 // Merged Activity + Travel modal: total summary + chronological timeline.
-function DurationBody({ data, scoring, dayLabel }) {
+// Exported so the day-detail screen can show this inline, not only in a sheet.
+export function DurationBody({ data, scoring, dayLabel }) {
   const timeline = buildTimeline(scoring);
 
   return (

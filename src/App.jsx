@@ -28,6 +28,8 @@ import LogoAnim from "./pages/LogoAnim";
 import MediaLab from "./pages/MediaLab";
 import RouteCardLab from "./pages/RouteCardLab";
 import TransferLab from "./pages/TransferLab";
+import DayDetailLab from "./pages/DayDetailLab";
+import DayDetailImmersive from "./pages/DayDetailImmersive";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -77,7 +79,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -127,6 +129,9 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/route-lab" element={<RouteCardLab />} />
         <Route path="/offline" element={<Offline />} />
         <Route path="/transfer-lab" element={<TransferLab />} />
+        <Route path="/day-lab" element={<DayDetailLab />} />
+        <Route path="/day-media" element={<DayDetailImmersive />} />
+        <Route path="/day-media/:variant" element={<DayDetailImmersive />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
