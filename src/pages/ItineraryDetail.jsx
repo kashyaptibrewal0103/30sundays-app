@@ -21,6 +21,8 @@ import { getDayScoring, getDayTours, getAllDaysScoring } from "../data/dayScorin
 import { getTourRating, RATING_META } from "../data/tourRatings";
 import { getDayRating, tourKeysForDay } from "../data/dayRatings";
 import { DayRatingPill, DayRatingRow } from "../components/DayRating";
+import GlanceDayCard from "../components/GlanceDayCard";
+import { getDayNote } from "../data/dayNotes";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
@@ -158,7 +160,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Seed itineraries resolve from static data; trips built from scratch resolve
   // from the deal that stores their synthesized itinerary.
   const it = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId);
-  const [expanded, setExpanded] = useState(false);
   const [activeDay, setActiveDay] = useState(-1); // -1 = Highlights tab
   const [showViewer, setShowViewer] = useState(null); // { day, activity }
   const [flightsMenuOpen, setFlightsMenuOpen] = useState(false);
@@ -599,7 +600,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   };
 
   const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
-  const visibleDays = expanded ? daysWithActivities : daysWithActivities.slice(0, 3);
 
   // ─── Change Day handlers ───
   const showToast = (message, undoData) => {
@@ -1036,176 +1036,61 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {/* ═══ 3. Itinerary at a Glance ═══ */}
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 16 }}>Itinerary at a glance</p>
-        <div style={{ position: "relative", paddingLeft: 24 }}>
-          <div style={{ position: "absolute", left: 7, top: 8, bottom: 8, width: 1, borderLeft: "1px dashed #D0D5DD" }} />
-          {visibleDays.map((day, i) => {
-            const globalDayIndex = daysWithActivities.indexOf(day);
-            const swapped = selectedDayOptions[globalDayIndex];
-            const displayActivities = swapped
-              ? swapped.activities
-              : day.sub.split(" · ");
-            const hasOptions = dayHasOptions(globalDayIndex);
-            // Whole-card clickable variant for standard day rows; Vietnam keeps its thumbnail strip.
-            const cardVariant = !isVietnam;
+        {/* Every day shows upfront now. The poster-left card carries the day's
+            video count, pace, rating and any heads-up note, so there is nothing
+            left to hide behind a "Read more". */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {daysWithActivities.map((day, i) => {
+            const swapped = selectedDayOptions[i];
+            // A free day and a departure day carry no tours, so nothing that
+            // describes a tour applies to them: no pace, no rating, no video
+            // count, and none of the activities the stay happens to list.
+            const free = !swapped && (day.leisure || day.departure);
+            const scoring = free ? null : getDayScoring(day, i, daysWithActivities);
+            const acts = swapped ? swapped.activities : (day.activities || []);
+
+            // "Watch your trip in videos" above treats one video per activity,
+            // so the card counts the same thing rather than inventing a number.
+            const videoCount = free ? 0 : acts.length;
+            const poster = day.activities?.[0]?.img || day.transfers?.[0]?.img || it.img;
+
+            // Tour names, one line each.
+            let lines;
+            if (free) {
+              lines = [day.departure
+                ? "Checkout, then transfer to the airport"
+                : day.transfers?.length
+                  ? `Transfer to ${day.transfers[0].to}, then the day is yours`
+                  : "Leisure day, the day is yours"];
+            } else if (swapped) {
+              lines = [swapped.activities.join(", ")];
+            } else {
+              lines = getDayTours(day, i, daysWithActivities)
+                .map((t) => t.items.filter((x) => x.actIdx != null && !x.onTap).map((x) => x.name).join(", "))
+                .filter(Boolean);
+            }
 
             return (
-              <div key={i} style={{ position: "relative", marginBottom: i < visibleDays.length - 1 ? (isVietnam ? 14 : 20) : 0 }}>
-                <div style={{ position: "absolute", left: -20, top: 4, width: 10, height: 10, borderRadius: "50%", background: "#fff", border: `2px solid ${i === 0 ? "#027A48" : C.inact}` }} />
-                <div
-                  {...(cardVariant ? {
-                    "data-testid": `day-details-${globalDayIndex}`,
-                    onClick: () => setDayDetailIndex(globalDayIndex),
-                    role: "button",
-                    "aria-label": `Day ${day.dayNum} details`,
-                  } : {})}
-                  style={cardVariant ? {
-                    cursor: "pointer", borderRadius: 12, border: `1px solid ${C.div}`,
-                    background: C.white, padding: "10px 12px", boxShadow: "0 1px 4px rgba(24,30,76,0.04)",
-                  } : undefined}
-                >
-                  {cardVariant ? (
-                    <>
-                      {/* Condensed tappable day card: title + one activity line, chevron cue, inline change link */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Day {day.dayNum}: {day.city}</p>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                          <DayRatingPill
-                            rating={dayRatingFor(day, globalDayIndex)}
-                            style={pillStyle}
-                          />
-                          <ChevronRight size={18} color={C.sub} />
-                        </div>
-                      </div>
-                      {(() => {
-                        const simpleText = day.departure
-                          ? "Departure, transfer to the airport"
-                          : day.leisure
-                            ? (day.transfers?.length ? `Transfer to ${day.transfers[0].to}, then the day is yours` : "Leisure day, the day is yours")
-                            : null;
-                        if (simpleText || swapped) {
-                          return (
-                            <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                              {simpleText || `• ${displayActivities.join(", ")}`}
-                            </p>
-                          );
-                        }
-                        // The day's tours as bullet points. The rating is no longer
-                        // per tour — it sits once on the day, up in the card header.
-                        const tours = getDayTours(day, globalDayIndex, daysWithActivities)
-                          .map((tour) => {
-                            const realItems = tour.items.filter((x) => x.actIdx != null && !x.onTap);
-                            return realItems.length ? realItems.map((x) => x.name).join(", ") : null;
-                          })
-                          .filter(Boolean);
-                        return (
-                          <div style={{ margin: "5px 0 0" }}>
-                            {tours.map((label, li) => (
-                              <div key={li} style={{ display: "flex", gap: 6, marginTop: li === 0 ? 0 : 4 }}>
-                                <span style={{ flexShrink: 0, color: C.inact, fontSize: 12, lineHeight: "18px" }}>&bull;</span>
-                                <span style={{ minWidth: 0, fontSize: 12, color: C.sub, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                      {hasOptions && (
-                        <button
-                          data-testid={`change-day-${globalDayIndex}`}
-                          data-tour="change-day"
-                          onClick={(e) => { e.stopPropagation(); setChangeDayIndex(globalDayIndex); }}
-                          style={{
-                            display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10,
-                            padding: 0, background: "none", border: "none",
-                            fontSize: 12, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
-                          }}
-                          aria-label="Change day plan"
-                        >
-                          <ArrowLeftRight size={13} color={C.p600} />
-                          Change day plan
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                          <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Day {day.dayNum}: {day.city}</p>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                          <button
-                            data-testid={`day-details-${globalDayIndex}`}
-                            onClick={() => setDayDetailIndex(globalDayIndex)}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: 4,
-                              padding: "4px 10px", background: C.white,
-                              border: `1px solid ${C.div}`, borderRadius: 999,
-                              fontSize: 11, fontWeight: 600, color: C.head, cursor: "pointer",
-                              fontFamily: "inherit", flexShrink: 0, lineHeight: 1,
-                            }}
-                            aria-label="Day details"
-                          >
-                            <FileText size={11} color={C.sub} />
-                            Details
-                          </button>
-                          {hasOptions && (
-                            <button
-                              data-testid={`change-day-${globalDayIndex}`}
-                              onClick={() => setChangeDayIndex(globalDayIndex)}
-                              style={{
-                                display: "inline-flex", alignItems: "center", gap: 4,
-                                padding: "4px 10px", background: C.white,
-                                border: `1px solid ${C.div}`, borderRadius: 999,
-                                fontSize: 11, fontWeight: 600, color: C.p600, cursor: "pointer",
-                                fontFamily: "inherit", flexShrink: 0, lineHeight: 1,
-                              }}
-                              aria-label="Change day plan"
-                            >
-                              <ArrowLeftRight size={11} color={C.p600} />
-                              Change day
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      {isVietnam ? (
-                        <div className="hs" style={{ gap: 10, marginTop: 8, paddingBottom: 2, marginRight: -16 }}>
-                          {displayActivities.map((a, j) => {
-                            const thumb = day.activities[j]?.img || it.img;
-                            return (
-                              <div
-                                key={j}
-                                onClick={() => setShowViewer({ day: globalDayIndex, activity: j })}
-                                style={{ width: 76, minWidth: 76, flexShrink: 0, cursor: "pointer" }}
-                              >
-                                <div style={{ width: 76, height: 76, borderRadius: 10, overflow: "hidden", background: C.div }}>
-                                  <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                                </div>
-                                <p style={{ fontSize: 11, color: C.head, fontWeight: 500, margin: "6px 0 0", lineHeight: "13px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                                  {a}
-                                </p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: 12, color: C.sub, lineHeight: "18px", margin: "4px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                          • {displayActivities.join(", ")}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+              <GlanceDayCard
+                key={i}
+                testId={`day-details-${i}`}
+                changeTestId={`change-day-${i}`}
+                dayNum={day.dayNum}
+                city={day.city}
+                lines={lines}
+                poster={poster}
+                videoCount={videoCount}
+                pace={scoring?.pace.label}
+                paceLevel={scoring?.pace.level}
+                rating={free ? null : dayRatingFor(day, i)}
+                note={free ? null : getDayNote({ activities: acts })}
+                canChange={dayHasOptions(i)}
+                onOpen={() => setDayDetailIndex(i)}
+                onChange={() => setChangeDayIndex(i)}
+              />
             );
           })}
         </div>
-        {daysWithActivities.length > 3 && (
-          <button onClick={() => setExpanded(!expanded)} style={{
-            display: "flex", alignItems: "center", gap: 4, margin: "14px 0 0", background: "none", border: "none",
-            fontSize: 13, fontWeight: 600, color: C.sub, cursor: "pointer", fontFamily: "inherit",
-          }}>
-            <span style={{ textDecoration: "underline", textUnderlineOffset: 2 }}>{expanded ? "Hide details" : "Read more"}</span> {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        )}
         {isVietnam && (
           <button
             onClick={() => { setDrawerActiveDay(0); setShowDayWiseDrawer(true); }}

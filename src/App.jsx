@@ -30,6 +30,7 @@ import RouteCardLab from "./pages/RouteCardLab";
 import TransferLab from "./pages/TransferLab";
 import DayDetailLab from "./pages/DayDetailLab";
 import DayDetailImmersive from "./pages/DayDetailImmersive";
+import GlanceCardLab from "./pages/GlanceCardLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -79,7 +80,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -89,9 +90,14 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
     );
   }
 
+  // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
+  // show only the screen, no demo-state switcher.
+  // Design labs hide it too, so the cards can be judged without it on top of them.
+  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab";
+
   return (
     <PhoneFrame>
-      <UserToggle userState={userState} setUserState={setUserState} />
+      {!shareLink && <UserToggle userState={userState} setUserState={setUserState} />}
       <Routes>
         <Route path="/" element={<HomeV5 userState={userState} />} />
         <Route path="/landing-clone" element={<HomeV5Clone userState={userState} />} />
@@ -132,6 +138,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/day-lab" element={<DayDetailLab />} />
         <Route path="/day-media" element={<DayDetailImmersive />} />
         <Route path="/day-media/:variant" element={<DayDetailImmersive />} />
+        <Route path="/glance-lab" element={<GlanceCardLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
