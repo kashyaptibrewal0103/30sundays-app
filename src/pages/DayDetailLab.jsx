@@ -240,9 +240,9 @@ function MetaRow({ tour, size = 12.5 }) {
   );
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px" }}>
-      <Item icon={Clock}>{tour.duration}</Item>
+      {tour.duration && <Item icon={Clock}>{tour.duration}</Item>}
       {tour.time && <Item icon={Timer}>{timeLabel} {tour.time}</Item>}
-      <Item icon={Car}>{tour.transfer}</Item>
+      {tour.transfer && <Item icon={Car}>{tour.transfer}</Item>}
     </div>
   );
 }
@@ -343,12 +343,14 @@ function ReadMore({ open, onClick }) {
 export function ExpandedStack({ tour, onActivity }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <p style={{ margin: 0, fontSize: 13.5, color: HEAD, lineHeight: "21px" }}>{tour.overview}</p>
-      <div>
-        <Label>{tour.activities.length ? "This experience will cover" : "This transfer will cover"}</Label>
-        <div style={{ height: 8 }} />
-        <Covers items={tour.covers} />
-      </div>
+      {tour.overview && <p style={{ margin: 0, fontSize: 13.5, color: HEAD, lineHeight: "21px" }}>{tour.overview}</p>}
+      {tour.covers?.length > 0 && (
+        <div>
+          <Label>{tour.activities.length ? "This experience will cover" : "This transfer will cover"}</Label>
+          <div style={{ height: 8 }} />
+          <Covers items={tour.covers} />
+        </div>
+      )}
       {tour.activities.length > 0 && (
         <div>
           <Label>{tour.activities.length > 1 ? `${tour.activities.length} places you will visit` : "Where you are going"}</Label>
@@ -356,17 +358,21 @@ export function ExpandedStack({ tour, onActivity }) {
           <ActivityList activities={tour.activities} onOpen={onActivity} />
         </div>
       )}
-      <div>
-        <Label>Inclusions</Label>
-        <div style={{ height: 8 }} />
-        <CheckList items={tour.inclusions} kind="in" />
-      </div>
-      <div>
-        <Label>Exclusions</Label>
-        <div style={{ height: 8 }} />
-        <CheckList items={tour.exclusions} kind="ex" />
-      </div>
-      <NoteBox items={tour.important} />
+      {tour.inclusions?.length > 0 && (
+        <div>
+          <Label>Inclusions</Label>
+          <div style={{ height: 8 }} />
+          <CheckList items={tour.inclusions} kind="in" />
+        </div>
+      )}
+      {tour.exclusions?.length > 0 && (
+        <div>
+          <Label>Exclusions</Label>
+          <div style={{ height: 8 }} />
+          <CheckList items={tour.exclusions} kind="ex" />
+        </div>
+      )}
+      {tour.important?.length > 0 && <NoteBox items={tour.important} />}
     </div>
   );
 }

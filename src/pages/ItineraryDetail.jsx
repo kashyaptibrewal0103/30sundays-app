@@ -30,6 +30,8 @@ import SpotlightTour from "../components/SpotlightTour";
 import InvitePartnerSection from "../components/InvitePartnerSection";
 import { LeisureCard, LeisureStrip, ExploreIdeas } from "../components/DayWiseExtras";
 import { ActivityDetailScroll } from "./ActivityDetail";
+import { DayMediaDetail } from "./DayDetailImmersive";
+import { toMediaDays } from "../data/dayMediaShape";
 import { buildActivityDetail } from "../data/activityData";
 import { getMauritiusHotel } from "../data/mauritiusData";
 import { generateHotelsForCity, getStayInfo } from "../data/hotelData";
@@ -584,6 +586,36 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     }),
   };
 
+  // What a day carries decides what can be said about it. A free day and a
+  // departure day hold no tours, so nothing that describes a tour applies:
+  // no rating, and the day is scored as the transfer it actually is rather
+  // than off the stay's activity list. Used by the glance cards and the day
+  // detail, so the two cannot drift apart.
+  const dayIsFree = (day, i) => !selectedDayOptions[i] && (day.leisure || day.departure);
+  const scoringForDay = (day, i) => {
+    const isFirst = i === 0;
+    const isLast = i === daysWithActivities.length - 1;
+    const hasTransfer = !!day.transfers?.length || isFirst || isLast;
+    if (!dayIsFree(day, i)) return getDayScoring(day, i, daysWithActivities);
+    return hasTransfer ? getDayScoring({ ...day, activities: [] }, i, daysWithActivities) : null;
+  };
+  const ratingForDay = (day, i) => (dayIsFree(day, i) ? null : dayRatingFor(day, i));
+
+  // The day detail screen takes days in its own shape. Built here so the day
+  // deck can swipe across the whole trip without rebuilding on every swipe.
+  const mediaDays = useMemo(() => toMediaDays(daysWithActivities, it.dest, {
+    dateFor: (day, i) => {
+      const start = it.custom && it.startDate ? new Date(it.startDate) : null;
+      // No travel dates chosen yet, so the day carries no date at all rather
+      // than a made-up one.
+      if (!start) return "";
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    },
+    scoringFor: (day, i) => scoringForDay(day, i),
+  }), [daysWithActivities, it.dest, it.custom, it.startDate]);
+
   const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
 
   // ─── Change Day handlers ───
@@ -918,17 +950,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             //              and nothing to swap
             //   neither  → a free day: no pace, no rating, but you can still
             //              add tours to it
-            const free = !swapped && (day.leisure || day.departure);
+            const free = dayIsFree(day, i);
             const isFirst = i === 0;
             const isLast = i === daysWithActivities.length - 1;
             const hasTransfer = !!day.transfers?.length || isFirst || isLast;
             const acts = swapped ? swapped.activities : (day.activities || []);
-
-            // Scoring a free day off the stay's activity list would score tours
-            // that do not happen on it, so the day is scored as what it is.
-            const scoring = free
-              ? (hasTransfer ? getDayScoring({ ...day, activities: [] }, i, daysWithActivities) : null)
-              : getDayScoring(day, i, daysWithActivities);
+            const scoring = scoringForDay(day, i);
 
             // One video per activity, the same count the day detail screen shows.
             const videoCount = free ? 0 : acts.length;
@@ -965,7 +992,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 videoCount={videoCount}
                 pace={scoring?.pace.label}
                 paceLevel={scoring?.pace.level}
-                rating={free ? null : dayRatingFor(day, i)}
+                rating={ratingForDay(day, i)}
                 note={note}
                 // A transfer day has nothing to swap. A free day does: the
                 // alternatives are tours you can add to it.
@@ -1493,21 +1520,23 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         />
       )}
 
-      {/* ═══ Day Detail (full-screen, from "Details" pill) ═══ */}
+      {/* ═══ Day Detail: the media-hero screen, full screen over everything ═══ */}
       {dayDetailIndex !== null && (
-        <DayDetailScreen
-          days={daysWithActivities}
-          dayIndex={dayDetailIndex}
-          setDayIndex={setDayDetailIndex}
-          dest={it.dest}
-          itineraryId={it.id}
-          canChangeDay={dayHasOptions(dayDetailIndex)}
-          onChangeDay={(i) => { setDayDetailIndex(null); setChangeDayIndex(i); }}
-          dayRatingFor={dayRatingFor}
-          dayReviewItem={dayReviewItem}
-          onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
-          onClose={() => setDayDetailIndex(null)}
-        />
+        <div style={{ ...overlayFrame, zIndex: 120, background: "#0E1020" }}>
+          <DayMediaDetail
+            days={mediaDays}
+            index={dayDetailIndex}
+            setIndex={setDayDetailIndex}
+            scoringFor={(_day, i) => scoringForDay(daysWithActivities[i], i)}
+            ratingFor={(_day, i) => ratingForDay(daysWithActivities[i], i)}
+            photos={it.dest && customerPhotos[it.dest] ? customerPhotos[it.dest] : []}
+            tripDays={daysWithActivities.length}
+            onClose={() => setDayDetailIndex(null)}
+            onChangeDay={dayHasOptions(dayDetailIndex)
+              ? () => { const i = dayDetailIndex; setDayDetailIndex(null); setChangeDayIndex(i); }
+              : null}
+          />
+        </div>
       )}
 
       {/* ═══ Itinerary Map (full-screen, from the Journey Map preview) ═══ */}

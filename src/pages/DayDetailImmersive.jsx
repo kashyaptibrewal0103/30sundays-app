@@ -219,14 +219,14 @@ function MediaControls({ day, variant, muted, onMute, onGallery }) {
 
 // ─── Gallery, opened from View gallery ────────────────────────────────────
 
-function GalleryScreen({ day, initialTab = "activity", onClose }) {
+function GalleryScreen({ day, photos = STORIES, initialTab = "activity", onClose }) {
   const [tab, setTab] = useState(initialTab);
   const activityMedia = useMemo(() => {
     const fromTours = day.tours.flatMap((t) => t.activities.map((a) => a.img));
     const { video, images } = day.media;
-    return [...new Set([...(video ? [video.poster] : []), ...images, ...fromTours])];
+    return [...new Set([...(video ? [video.poster] : []), ...images, ...fromTours])].filter(Boolean);
   }, [day]);
-  const customerMedia = useMemo(() => [...STORIES, ...STORIES.slice(0, 4)], []);
+  const customerMedia = useMemo(() => (photos.length ? photos : STORIES), [photos]);
   const items = tab === "activity" ? activityMedia : customerMedia;
 
   const tabBtn = (on) => ({
@@ -365,7 +365,7 @@ function PaceCard({ scoring, onOpen }) {
 
 // Only the video variant carries this. The collage variant already puts
 // customer photos behind View gallery.
-function TravellerMoments({ onOpen }) {
+function TravellerMoments({ onOpen, photos = STORIES }) {
   return (
     <div style={{ padding: "18px 0 0" }}>
       <div style={{ padding: "0 20px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
@@ -383,7 +383,7 @@ function TravellerMoments({ onOpen }) {
         </button>
       </div>
       <div className="hide-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 20px 4px" }}>
-        {STORIES.map((src, i) => (
+        {(photos.length ? photos : STORIES).map((src, i) => (
           <button key={i} onClick={onOpen} style={{
             width: 108, minWidth: 108, height: 138, flexShrink: 0, padding: 0,
             border: "none", borderRadius: 12, overflow: "hidden", background: SOFT,
@@ -470,11 +470,12 @@ function CustomerReviews({ rating, tours }) {
 }
 
 // A nominal week-long trip// A nominal week-long trip, so the bar can say where this day sits in it.
-const TRIP_DAYS = 7;
+
 
 // District's bottom bar: a floating dark pill with the context on the left and
 // the action as a white pill on the right.
-function DayActionBar({ day }) {
+function DayActionBar({ day, tripDays, onChangeDay }) {
+  const shortDate = (day.date || "").replace(/,? \d{4}$/, "");
   return (
     <div style={{ padding: "0 16px calc(18px + env(safe-area-inset-bottom))" }}>
       <div style={{
@@ -482,18 +483,30 @@ function DayActionBar({ day }) {
         background: HEAD, borderRadius: 999, padding: "8px 8px 8px 20px",
         boxShadow: "0 12px 30px -10px rgba(16,24,40,0.55)",
       }}>
+        {/* Without travel dates there is only the day number to show, so it
+            takes the strong line rather than sitting above an empty one. */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 10.5, fontWeight: 600, color: "rgba(255,255,255,0.6)", lineHeight: 1.3 }}>
-            Day {day.dayNum} of {TRIP_DAYS}
-          </p>
-          <p style={{ margin: "1px 0 0", fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {day.date.replace(/,? \d{4}$/, "")}
-          </p>
+          {shortDate ? (
+            <>
+              <p style={{ margin: 0, fontSize: 10.5, fontWeight: 600, color: "rgba(255,255,255,0.6)", lineHeight: 1.3 }}>
+                Day {day.dayNum}{tripDays ? ` of ${tripDays}` : ""}
+              </p>
+              <p style={{ margin: "1px 0 0", fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {shortDate}
+              </p>
+            </>
+          ) : (
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Day {day.dayNum}{tripDays ? ` of ${tripDays}` : ""}
+            </p>
+          )}
         </div>
-        <button style={{
+        <button onClick={onChangeDay || undefined} style={{
           flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7,
           background: "#fff", border: "none", borderRadius: 999, padding: "12px 16px",
-          fontSize: 14, fontWeight: 700, color: HEAD, cursor: "pointer", fontFamily: "inherit",
+          fontSize: 14, fontWeight: 700, color: HEAD,
+          cursor: onChangeDay ? "pointer" : "default", opacity: onChangeDay ? 1 : 0.55,
+          fontFamily: "inherit",
         }}>
           <RefreshCw size={14} color={HEAD} />
           Change this day
@@ -506,8 +519,9 @@ function DayActionBar({ day }) {
 // ─── One day card: media, the sheet over it, and the day's own CTA ─────────
 
 function DayCard({
-  day, shapeIdx, width, restWidth, radius, mediaH, variant, showMoments, active, muted, onMute,
-  onGallery, onProgress, onPrev, onNext, hasPrev, hasNext, p,
+  day, shapeIdx, scoring, rating, photos, tripDays, width, restWidth, radius, mediaH,
+  variant, showMoments, active, muted, onMute, onGallery, onProgress,
+  onPrev, onNext, hasPrev, hasNext, p, onClose, onChangeDay, onActivityOpen,
 }) {
   const [metric, setMetric] = useState(null);
   const [activity, setActivity] = useState(null);
@@ -519,12 +533,7 @@ function DayCard({
     return day.tours.map((_, i) => i === (first === -1 ? 0 : first));
   });
 
-  const scoring = useMemo(() => getDayScoring(SCORING_DAYS[shapeIdx + 1], shapeIdx + 1, SCORING_DAYS), [shapeIdx]);
   const ratedTours = day.tours.filter((t) => t.activities.length);
-  const rating = useMemo(() => {
-    const keys = ratedTours.map((t) => t.name);
-    return keys.length ? getDayRating(`day${shapeIdx}|${keys.join("~")}`, keys) : null;
-  }, [shapeIdx, day]);
   const scrollTo = (ref) => {
     const box = scroller.current, el = ref.current;
     if (!box || !el) return;
@@ -570,17 +579,23 @@ function DayCard({
 
           <div style={{ padding: "6px 20px 0" }}>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: HEAD, lineHeight: 1.25 }}>{day.title}</h2>
-            <p style={{ margin: "3px 0 0", fontSize: 12.5, color: SUB }}>{day.date}</p>
+            {day.date && <p style={{ margin: "3px 0 0", fontSize: 12.5, color: SUB }}>{day.date}</p>}
           </div>
 
-          <div style={{ padding: "12px 20px 0", display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {rating && <DayRatingRow rating={rating} onOpen={toReviews} />}
-            <DurationChip hours={scoring.duration.totalHrs} onTap={toDuration} />
-          </div>
+          {/* A free day has neither a rating nor a duration, so the chip row
+              goes rather than leaving a gap under the title. */}
+          {(rating || scoring) && (
+            <div style={{ padding: "12px 20px 0", display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {rating && <DayRatingRow rating={rating} onOpen={toReviews} />}
+              {scoring && <DurationChip hours={scoring.duration.totalHrs} onTap={toDuration} />}
+            </div>
+          )}
 
-          <div style={{ padding: "14px 16px 0" }}>
-            <PaceCard scoring={scoring} onOpen={setMetric} />
-          </div>
+          {scoring && (
+            <div style={{ padding: "14px 16px 0" }}>
+              <PaceCard scoring={scoring} onOpen={setMetric} />
+            </div>
+          )}
 
           <div style={{ padding: "18px 20px 0" }}>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 500, color: HEAD }}>Your day will cover:</h3>
@@ -594,25 +609,29 @@ function DayCard({
                 total={day.tours.length}
                 open={open[i]}
                 onToggle={() => setOpen((o) => o.map((v, j) => (j === i ? !v : v)))}
-                onActivity={setActivity}
+                onActivity={onActivityOpen || setActivity}
               />
             ))}
           </div>
 
-          <div style={{ height: 6, background: "#F5F5F5", marginTop: 18 }} />
-          <div ref={duration} style={{ padding: "18px 20px 0" }}>
-            <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 500, color: HEAD }}>Day duration</h3>
-            <DurationBody
-              data={scoring.duration}
-              scoring={scoring}
-              dayLabel={`Day ${day.dayNum} · ${day.city}`}
-            />
-          </div>
+          {scoring && (
+            <>
+              <div style={{ height: 6, background: "#F5F5F5", marginTop: 18 }} />
+              <div ref={duration} style={{ padding: "18px 20px 0" }}>
+                <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 500, color: HEAD }}>Day duration</h3>
+                <DurationBody
+                  data={scoring.duration}
+                  scoring={scoring}
+                  dayLabel={`Day ${day.dayNum} · ${day.city}`}
+                />
+              </div>
+            </>
+          )}
 
           {showMoments && (
             <>
               <div style={{ height: 6, background: "#F5F5F5", marginTop: 18 }} />
-              <TravellerMoments onOpen={() => onGallery("customer")} />
+              <TravellerMoments onOpen={() => onGallery("customer")} photos={photos} />
             </>
           )}
 
@@ -646,7 +665,7 @@ function DayCard({
           display: "flex", alignItems: "center", gap: 8,
           opacity: chromeFade, pointerEvents: p > 0.5 ? "none" : "auto",
         }}>
-          <RoundBtn><ArrowLeft size={17} color="#fff" /></RoundBtn>
+          <RoundBtn onClick={onClose}><ArrowLeft size={17} color="#fff" /></RoundBtn>
           <div style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
             <DaySwitch day={day} onPrev={onPrev} onNext={onNext} hasPrev={hasPrev} hasNext={hasNext} />
           </div>
@@ -662,7 +681,7 @@ function DayCard({
           borderBottom: `1px solid ${LINE}`, padding: "8px 12px",
           display: "flex", alignItems: "center", gap: 8,
         }}>
-          <button style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${LINE}`, background: "#fff", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${LINE}`, background: "#fff", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
             <ArrowLeft size={17} color={HEAD} />
           </button>
           <div style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
@@ -674,10 +693,10 @@ function DayCard({
 
       {/* 6 · the day's action bar, part of the card the way District's is */}
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6 }}>
-        <DayActionBar day={day} />
+        <DayActionBar day={day} tripDays={tripDays} onChangeDay={onChangeDay} />
       </div>
 
-      {active && metric && (
+      {active && metric && scoring && (
         <DayScoreModal metric={metric} scoring={scoring} dayLabel={`Day ${day.dayNum} · ${day.city}`} onClose={() => setMetric(null)} />
       )}
       {active && activity && (
@@ -689,11 +708,13 @@ function DayCard({
 
 // ─── The deck ─────────────────────────────────────────────────────────────
 
-function DayPager({ variant, card, moments, onGallery }) {
-  const [idx, setIdx] = useState(0);
+function DayPager({
+  days, idx, setIdx, variant, card, moments, onGallery,
+  scoringFor, ratingFor, photos, tripDays, onClose, onChangeDay, onActivityOpen,
+}) {
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const [prog, setProg] = useState(() => SHAPES.map(() => 0));
+  const [prog, setProg] = useState(() => days.map(() => 0));
   const [muted, setMuted] = useState(true);
   const [W, setW] = useState(390);
   const [H, setH] = useState(760);
@@ -728,7 +749,7 @@ function DayPager({ variant, card, moments, onGallery }) {
   // The active card grows to the full screen as the sheet takes over.
   const grow = card ? Math.min(1, p * 3) : 0;
 
-  const go = (i) => setIdx(Math.max(0, Math.min(SHAPES.length - 1, i)));
+  const go = (i) => setIdx(Math.max(0, Math.min(days.length - 1, i)));
   const setOffset = (v) => { offset.current = v; setDx(v); };
   const onProgress = useCallback((i, v) => {
     setProg((a) => (Math.abs(a[i] - v) > 0.01 ? a.map((x, j) => (j === i ? v : x)) : a));
@@ -773,7 +794,7 @@ function DayPager({ variant, card, moments, onGallery }) {
       return;
     }
 
-    const atEnd = (ddx > 0 && idx === 0) || (ddx < 0 && idx === SHAPES.length - 1);
+    const atEnd = (ddx > 0 && idx === 0) || (ddx < 0 && idx === days.length - 1);
     setOffset(atEnd ? ddx * 0.28 : ddx);
   };
 
@@ -814,11 +835,18 @@ function DayPager({ variant, card, moments, onGallery }) {
         transform: `translate3d(${deckX}px, 0, 0)`,
         transition: dragging ? "none" : ease,
       }}>
-        {SHAPES.map((d, i) => (
+        {days.map((d, i) => (
           <DayCard
-            key={d.key}
+            key={d.key ?? i}
             day={d}
             shapeIdx={i}
+            scoring={scoringFor(d, i)}
+            rating={ratingFor(d, i)}
+            photos={photos}
+            tripDays={tripDays}
+            onClose={onClose}
+            onChangeDay={onChangeDay}
+            onActivityOpen={onActivityOpen}
             width={i === idx ? restW + M * 2 * grow : restW}
             restWidth={restW}
             radius={card ? (i === idx ? CARD_R * (1 - grow) : CARD_R) : 0}
@@ -834,10 +862,52 @@ function DayPager({ variant, card, moments, onGallery }) {
             onPrev={() => go(i - 1)}
             onNext={() => go(i + 1)}
             hasPrev={i > 0}
-            hasNext={i < SHAPES.length - 1}
+            hasNext={i < days.length - 1}
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── The screen, for real itinerary data ──────────────────────────────────
+
+/**
+ * The V1 day detail: a media hero in a card deck, with the day's details on a
+ * sheet that rises over it. Swipe or use the arrows to change day.
+ *
+ * Takes days already in the shape this screen needs. Real itinerary days are
+ * mapped into it by toMediaDays in src/data/dayMediaShape.js.
+ */
+export function DayMediaDetail({
+  days, index, setIndex, variant = "video", card = true, moments = true,
+  scoringFor, ratingFor, photos = [], tripDays, onClose, onChangeDay, onActivityOpen,
+}) {
+  const [gallery, setGallery] = useState(null);
+  if (!days?.length) return null;
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: "#0E1020", position: "relative", overflow: "hidden" }}>
+      <style>{`@keyframes dayKenBurns { from { transform: scale(1) translate(0,0); } to { transform: scale(1.09) translate(-1.5%, -1%); } }`}</style>
+      <DayPager
+        days={days}
+        idx={index}
+        setIdx={setIndex}
+        variant={variant}
+        card={card}
+        moments={moments}
+        scoringFor={scoringFor}
+        ratingFor={ratingFor}
+        photos={photos}
+        tripDays={tripDays}
+        onClose={onClose}
+        onChangeDay={onChangeDay}
+        onActivityOpen={onActivityOpen}
+        onGallery={setGallery}
+      />
+      {gallery && (
+        <GalleryScreen day={gallery.day} photos={photos} initialTab={gallery.tab} onClose={() => setGallery(null)} />
+      )}
     </div>
   );
 }
@@ -851,6 +921,12 @@ const VARIANTS = [
   { key: "collage", label: "V2 Media collage", card: false, moments: false },
 ];
 
+// The lab's own scoring and ratings, off the sample week in DayDetailLab.
+const labScoring = (_day, i) => getDayScoring(SCORING_DAYS[i + 1], i + 1, SCORING_DAYS);
+const labRating = (day, i) => {
+  const keys = day.tours.filter((t) => t.activities.length).map((t) => t.name);
+  return keys.length ? getDayRating(`day${i}|${keys.join("~")}`, keys) : null;
+};
 
 // /day-media          the lab, with the variant switcher on top
 // /day-media/v1        the day-video variant on its own, no lab chrome
@@ -862,7 +938,7 @@ export default function DayDetailImmersive() {
   const params = useParams();
   const pinned = ROUTE_VARIANT[params.variant];
   const [v, setV] = useState(pinned ?? 0);
-  const [gallery, setGallery] = useState(null);
+  const [idx, setIdx] = useState(0);
 
   const tabBtn = (on) => ({
     flex: 1, minWidth: 0, padding: "7px 4px", borderRadius: 8, border: "none",
@@ -874,8 +950,6 @@ export default function DayDetailImmersive() {
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: "#0E1020", position: "relative", overflow: "hidden" }}>
-      <style>{`@keyframes dayKenBurns { from { transform: scale(1) translate(0,0); } to { transform: scale(1.09) translate(-1.5%, -1%); } }`}</style>
-
       {/* Lab chrome. A pinned route is the screen on its own, for sharing. */}
       {pinned === undefined && (
         <div style={{ flexShrink: 0, background: "#101828", padding: "8px 10px 9px" }}>
@@ -894,17 +968,19 @@ export default function DayDetailImmersive() {
         </div>
       )}
 
-      <DayPager
+      <DayMediaDetail
         key={VARIANTS[v].key}
+        days={SHAPES}
+        index={idx}
+        setIndex={setIdx}
         variant={VARIANTS[v].key}
         card={VARIANTS[v].card}
         moments={VARIANTS[v].moments}
-        onGallery={setGallery}
+        scoringFor={labScoring}
+        ratingFor={labRating}
+        tripDays={7}
+        onClose={() => navigate(-1)}
       />
-
-      {gallery && (
-        <GalleryScreen day={gallery.day} initialTab={gallery.tab} onClose={() => setGallery(null)} />
-      )}
     </div>
   );
 }
