@@ -312,6 +312,89 @@ export function estimatePerPerson(dest, nights) {
 }
 
 // ─── the synthesis ───
+
+const TRANSFER_CAR_IMG = "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=320&h=320&q=80&auto=format&fit=crop";
+
+// ─── Day shape for a built trip ───
+//
+// A synthesized trip used to schedule the same three tours on every day of a
+// stay, including the day you land and the day you fly home. That is not a plan
+// anybody would send a couple. This lays the week out the way it really runs:
+//
+//   day 1         land, transfer in, and the rest of the day is yours
+//   longest stay  one free day, since three nights in one city does not mean
+//                 three days of tours
+//   last day      checkout and the transfer to the airport
+//   new city      gets its inter-city transfer on the day you arrive
+//
+// Keyed by day number, matching the hand-written dayMeta on the seed trips.
+function buildDayMeta(dest, route, nights) {
+  const meta = {};
+  // The screen lays a trip out as one day per night, so the last night is also
+  // the day you fly home.
+  const lastDay = nights;
+  const airport = `${destData[dest]?.name || dest} airport`;
+  const hotel = (city) => `${city} Grand Resort`;
+  const ideasFor = (city) => topActivities(city, 3).map((t, i) => ({
+    title: t, caption: `In and around ${city}`, photo: areaImg(dest, city, i),
+  }));
+
+  // Day 1: land and transfer to the first hotel.
+  meta[1] = {
+    leisure: true,
+    transfers: [{
+      from: airport, to: hotel(route[0]?.city), vehicle: "car", sharing: "Private",
+      duration: "1.5 hrs", name: "Airport private transfer", img: TRANSFER_CAR_IMG,
+      desc: `Private car. Land and get taken straight to your ${route[0]?.city} hotel.`,
+    }],
+    ideas: ideasFor(route[0]?.city),
+  };
+
+  // Inter-city transfers, and the day each stay begins on.
+  const stayStart = [];
+  let dayNum = 1;
+  route.forEach((stop, si) => {
+    stayStart.push(dayNum);
+    if (si > 0) {
+      meta[dayNum] = {
+        ...(meta[dayNum] || {}),
+        transfers: [{
+          from: hotel(route[si - 1].city), to: hotel(stop.city), vehicle: "van", sharing: "Shared",
+          duration: "2 hrs", name: `Transfer to ${stop.city}`, img: TRANSFER_CAR_IMG,
+          desc: `Shared van. The drive across from ${route[si - 1].city} to ${stop.city}.`,
+        }],
+      };
+    }
+    dayNum += stop.n;
+  });
+
+  // One free day, in the longest stay. Three nights in a city does not mean
+  // three days of tours, but a week with three empty days is not a trip either,
+  // so this stays at one.
+  let longest = -1;
+  route.forEach((stop, si) => {
+    if (stop.n >= 3 && (longest === -1 || stop.n > route[longest].n)) longest = si;
+  });
+  if (longest !== -1) {
+    const freeDay = stayStart[longest] + 1;
+    if (freeDay > 1 && freeDay < lastDay && !meta[freeDay]) {
+      meta[freeDay] = { leisure: true, ideas: ideasFor(route[longest].city) };
+    }
+  }
+
+  // Last day: checkout and fly home.
+  meta[lastDay] = {
+    departure: true,
+    transfers: [{
+      from: hotel(route[route.length - 1]?.city), to: airport, vehicle: "car", sharing: "Private",
+      duration: "1 hr", name: "Departure transfer", img: TRANSFER_CAR_IMG,
+      desc: "Private car. We pick you up in time for your flight home.",
+    }],
+  };
+
+  return meta;
+}
+
 let buildSeq = 0;
 // Build a complete itinerary object the existing itinerary screen renders as-is.
 export function synthesizeItinerary({ dest, nights, route, picksByCity, vibes, startDate, party, id: idOverride }) {
@@ -346,5 +429,6 @@ export function synthesizeItinerary({ dest, nights, route, picksByCity, vibes, s
     travellers,
     partySize: party || { couples: 1, adults: 0, kids: 0 },
     startDate: startDate || null,
+    dayMeta: buildDayMeta(dest, route, nights),
   };
 }
