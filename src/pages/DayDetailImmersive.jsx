@@ -36,8 +36,14 @@ const LINE = "#E0E2EB";
 const SOFT = "#F0F1F5";
 const PINK = "#FD014F";
 
-const MEDIA_RATIO = 1.3;  // media is portrait: 1.3x the card's width
-const MEDIA_MAX_VH = 0.6; // ... but never more than this much of the screen
+// How tall the media runs, per variant.
+//   video    portrait, the way a trailer fills a phone
+//   collage  a band across the top, so the day's own detail starts on the
+//            first screen and it reads as a normal screen with a header image
+const MEDIA_SIZE = {
+  video:   { ratio: 1.3, maxVh: 0.6 },
+  collage: { ratio: 0.7, maxVh: 0.34 },
+};
 const PARALLAX = 0.42;    // how far the media travels per pixel scrolled
 const SHEET_LIFT = 18;    // how far the sheet overlaps the media
 const DECK_MPC = 0.045;   // card margin each side, 4.5% of the screen
@@ -790,7 +796,8 @@ function DayPager({
   const gap = card ? DECK_GAP : 0;
   const restW = Math.max(160, W - M * 2);
   const step = restW + gap;
-  const mediaH = Math.min(Math.round(restW * MEDIA_RATIO), Math.round(H * MEDIA_MAX_VH));
+  const size = MEDIA_SIZE[variant] || MEDIA_SIZE.video;
+  const mediaH = Math.min(Math.round(restW * size.ratio), Math.round(H * size.maxVh));
   const p = prog[idx];
   // The active card grows to the full screen as the sheet takes over.
   const grow = card ? Math.min(1, p * 3) : 0;
@@ -966,7 +973,7 @@ const VARIANTS = [
   // V1 is a card deck. V2 runs full screen, where the collage has the whole
   // width to scroll across.
   { key: "video", label: "V1 Day video", card: true, moments: true },
-  { key: "collage", label: "V2 Media collage", card: false, moments: false },
+  { key: "collage", label: "V2 Media collage", card: false, moments: true },
 ];
 
 // The lab's own scoring and ratings, off the sample week in DayDetailLab.
@@ -1028,6 +1035,9 @@ export default function DayDetailImmersive() {
         ratingFor={labRating}
         tripDays={7}
         onClose={() => navigate(-1)}
+        // The lab has no swap sheet to open, but the CTA is part of what is
+        // being reviewed here, so it renders live rather than dimmed.
+        onChangeDay={() => {}}
       />
     </div>
   );
