@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronU
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
+import { buildDayMeta } from "../data/buildData";
 import { Camera, Volume2, VolumeX, FileText, ChevronLeft } from "lucide-react";
 import ChangeDaySheet from "../components/ChangeDaySheet";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
@@ -159,7 +160,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const dealsCtx = useDeals();
   // Seed itineraries resolve from static data; trips built from scratch resolve
   // from the deal that stores their synthesized itinerary.
-  const it = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId);
+  const rawIt = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId);
+  // Trips built before the Build flow laid out arrival, free and departure days
+  // are still saved without one, so give them the same shape on the way in
+  // rather than leaving those plans looking like tours run on the fly-home day.
+  const it = useMemo(() => {
+    if (!rawIt || !rawIt.custom || rawIt.dayMeta || !rawIt.route?.length) return rawIt;
+    return { ...rawIt, dayMeta: buildDayMeta(rawIt.dest, rawIt.route, rawIt.nights) };
+  }, [rawIt]);
   const [showViewer, setShowViewer] = useState(null); // { day, activity }
   const [flightsMenuOpen, setFlightsMenuOpen] = useState(false);
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open

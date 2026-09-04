@@ -328,7 +328,7 @@ const TRANSFER_CAR_IMG = "https://images.unsplash.com/photo-1503376780353-7e6692
 //   new city      gets its inter-city transfer on the day you arrive
 //
 // Keyed by day number, matching the hand-written dayMeta on the seed trips.
-function buildDayMeta(dest, route, nights) {
+export function buildDayMeta(dest, route, nights) {
   const meta = {};
   // The screen lays a trip out as one day per night, so the last night is also
   // the day you fly home.
