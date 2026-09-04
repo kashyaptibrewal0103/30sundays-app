@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ArrowLeft, Search, X as XIcon, SlidersHorizontal, ArrowDownUp, Check,
-  Clock, Car, MapPin, Layers, Play, Heart, Zap, Gauge, Flame, Moon, ChevronRight,
+  Clock, Car, MapPin, Layers, Play, Heart, Zap, Gauge, Flame, Moon, ChevronRight, Sparkles,
 } from "lucide-react";
 import { C } from "../data";
 import { DayRatingPill } from "../components/DayRating";
@@ -20,8 +20,9 @@ import { DURATIONS, TRANSFERS, PACES, RATING_BANDS } from "../data/dayOptionShap
 // difference from the day you already have.
 
 const PACE_ICON = { Relaxed: Moon, Balanced: Heart, Active: Zap, "Fast-paced": Flame };
-// Two directions, on the bar. Sorting is not a filter, so it does not appear
-// in the filter sheet as well.
+// Sorting lives on the bar, not in the filter sheet. Recommended is one of the
+// three controls rather than only the starting state: once you have sorted by
+// price there has to be a way back to the order we put them in.
 const SORTS = [
   { key: "asc", label: "Sort Asc" },
   { key: "desc", label: "Sort Desc" },
@@ -242,7 +243,7 @@ export default function ChangeDayScreen({
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [f, setF] = useState({ duration: [], transfer: [], pace: [], rating: [], sort: "asc" });
+  const [f, setF] = useState({ duration: [], transfer: [], pace: [], rating: [], sort: "recommended" });
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -260,11 +261,15 @@ export default function ChangeDayScreen({
       }
       return true;
     });
-    list = [...list].sort((a, b) => (f.sort === "desc" ? b.priceDelta - a.priceDelta : a.priceDelta - b.priceDelta));
+    if (f.sort === "asc") list = [...list].sort((a, b) => a.priceDelta - b.priceDelta);
+    else if (f.sort === "desc") list = [...list].sort((a, b) => b.priceDelta - a.priceDelta);
+    // Recommended: best reviewed first.
+    else list = [...list].sort((a, b) => (b.rating?.enjoyedPct || 0) - (a.rating?.enjoyedPct || 0));
     return list;
   }, [options, query, f]);
 
   const activeCount = f.duration.length + f.transfer.length + f.pace.length + f.rating.length;
+  const sorted = f.sort === "asc" || f.sort === "desc";
   const sortLabel = SORTS.find((s) => s.key === f.sort)?.label || "Sort Asc";
 
   // Escape closes, the way a full screen should.
@@ -322,7 +327,7 @@ export default function ChangeDayScreen({
       </div>
 
       {/* List */}
-      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(96px + env(safe-area-inset-bottom))" }}>
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(132px + env(safe-area-inset-bottom))" }}>
         {shown.length === 0 ? (
           <div style={{ textAlign: "center", padding: "48px 20px" }}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.head }}>Nothing matches those filters</p>
@@ -340,50 +345,69 @@ export default function ChangeDayScreen({
           </div>
         )}
 
-        {onLeisureDay && shown.length > 0 && (
-          <button onClick={onLeisureDay} style={{
-            display: "block", width: "100%", marginTop: 16, padding: "13px 0", borderRadius: 12,
-            border: `1px dashed ${C.icon}`, background: C.white, cursor: "pointer", fontFamily: "inherit",
-            fontSize: 13, color: C.sub,
-          }}>
-            Prefer a free day? <span style={{ color: C.p600, fontWeight: 700 }}>Make it a leisure day</span>
-          </button>
-        )}
       </div>
 
-      {/* Sort and filters bar */}
+      {/* Recommended · sort · filters. Three controls, so a price sort is
+          always reversible back to the order we put them in. */}
       <div style={{
         position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 5,
-        padding: "10px 12px calc(12px + env(safe-area-inset-bottom))",
-        background: C.head, display: "flex", gap: 8,
+        background: C.head,
       }}>
-        <button
-          data-testid="cycle-sort"
-          onClick={() => setF((x) => ({ ...x, sort: SORTS[(SORTS.findIndex((s) => s.key === x.sort) + 1) % SORTS.length].key }))}
-          style={{
-            flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "11px 8px", borderRadius: 999, border: "none", background: "rgba(255,255,255,0.14)",
-            fontSize: 12.5, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit",
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-          }}
-        >
-          <ArrowDownUp size={14} color="#fff" />
-          {sortLabel}
-        </button>
-        <button
-          data-testid="open-filters"
-          onClick={() => setShowFilters(true)}
-          style={{
-            flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "11px 8px", borderRadius: 999, border: "none",
-            background: activeCount ? C.p600 : "#fff",
-            fontSize: 12.5, fontWeight: 700, color: activeCount ? "#fff" : C.head,
-            cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
-        >
-          <SlidersHorizontal size={14} color={activeCount ? "#fff" : C.head} />
-          Filters{activeCount ? ` · ${activeCount}` : ""}
-        </button>
+        {/* Sticky, and deliberately quiet. At the foot of a twelve-card list
+            nobody ever scrolled far enough to find it. */}
+        {onLeisureDay && (
+          <button onClick={onLeisureDay} style={{
+            display: "block", width: "100%", padding: "9px 16px", background: "rgba(255,255,255,0.07)",
+            border: "none", borderBottom: "1px solid rgba(255,255,255,0.1)", cursor: "pointer",
+            fontFamily: "inherit", fontSize: 12, color: "rgba(255,255,255,0.68)", textAlign: "center",
+          }}>
+            Prefer a free day? <span style={{ color: "#fff", fontWeight: 700 }}>Make it a leisure day</span>
+          </button>
+        )}
+        <div style={{ display: "flex", gap: 7, padding: "9px 11px calc(11px + env(safe-area-inset-bottom))" }}>
+          <button
+            data-testid="sort-recommended"
+            onClick={() => setF((x) => ({ ...x, sort: "recommended" }))}
+            style={{
+              flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+              padding: "11px 6px", borderRadius: 999, border: "none",
+              background: !sorted ? "#fff" : "rgba(255,255,255,0.14)",
+              fontSize: 12, fontWeight: 700, color: !sorted ? C.head : "#fff",
+              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+            }}
+          >
+            <Sparkles size={13} color={!sorted ? C.head : "#fff"} />
+            Recommended
+          </button>
+          <button
+            data-testid="cycle-sort"
+            onClick={() => setF((x) => ({ ...x, sort: x.sort === "asc" ? "desc" : "asc" }))}
+            style={{
+              flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+              padding: "11px 6px", borderRadius: 999, border: "none",
+              background: sorted ? "#fff" : "rgba(255,255,255,0.14)",
+              fontSize: 12, fontWeight: 700, color: sorted ? C.head : "#fff",
+              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+            }}
+          >
+            <ArrowDownUp size={13} color={sorted ? C.head : "#fff"} />
+            {sorted ? sortLabel : "Sort"}
+          </button>
+          <button
+            data-testid="open-filters"
+            onClick={() => setShowFilters(true)}
+            style={{
+              flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+              padding: "11px 6px", borderRadius: 999, border: "none",
+              background: activeCount ? C.p600 : "rgba(255,255,255,0.14)",
+              fontSize: 12, fontWeight: 700, color: "#fff",
+              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+            }}
+          >
+            <SlidersHorizontal size={13} color="#fff" />
+            Filters{activeCount ? ` · ${activeCount}` : ""}
+          </button>
+        </div>
       </div>
 
       {showFilters && (
