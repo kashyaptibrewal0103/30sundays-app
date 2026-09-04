@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { MapPin, Briefcase, Languages, Users, Phone, MessageCircle } from "lucide-react";
+import { MapPin, Briefcase, Languages, Users, Phone } from "lucide-react";
 import { C } from "../data";
+import { BRAND, BRAND_TINT, BRAND_SUB, FONT } from "../data/brand";
+import WhatsAppIcon from "./WhatsAppIcon";
 import { consultantVersion, teamLeadFor, formatCount } from "../data/consultants";
+
+// This section is styled to the brand board rather than the app's default
+// tokens: Poppins, and the five named brand colours. The rest of the app is
+// still on Figtree, so the font is set here on the section wrapper.
 
 const firstName = (name) => (name || "").trim().split(/\s+/)[0] || "";
 
@@ -18,16 +24,21 @@ function StatBlock({ icon: Icon, value, caption, first }) {
     <div style={{
       flex: 1, minWidth: 0, display: "flex", flexDirection: "column",
       alignItems: "center", gap: 6, padding: "0 6px", textAlign: "center",
-      borderLeft: first ? "none" : `1px solid ${C.div}`,
+      borderLeft: first ? "none" : `1px solid ${BRAND.coastalMist}`,
     }}>
       <div style={{
-        width: 34, height: 34, borderRadius: "50%", background: C.p100,
+        width: 34, height: 34, borderRadius: "50%", background: BRAND.coastalMist,
         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       }}>
-        <Icon size={17} color={C.p600} strokeWidth={1.9} />
+        <Icon size={17} color={BRAND.lagoonBliss} strokeWidth={1.9} />
       </div>
-      <span style={{ fontSize: 14, fontWeight: 700, color: C.head, lineHeight: "17px" }}>{value}</span>
-      <span style={{ fontSize: 11, color: C.sub, lineHeight: "14px" }}>{caption}</span>
+      {/* Values run to one or two lines depending on the block, so the value
+          area is held at two lines and the three captions stay on one baseline. */}
+      <span style={{
+        fontSize: 13.5, fontWeight: 600, color: BRAND.tropicalForest,
+        lineHeight: "17px", minHeight: 34, display: "flex", alignItems: "center",
+      }}>{value}</span>
+      <span style={{ fontSize: 11, color: BRAND_SUB, lineHeight: "14px" }}>{caption}</span>
     </div>
   );
 }
@@ -35,9 +46,9 @@ function StatBlock({ icon: Icon, value, caption, first }) {
 function ProofLine({ children }) {
   return (
     <p style={{
-      margin: 0, border: `1px solid ${C.sBorder}`, background: C.sBg,
+      margin: 0, border: `1px solid ${BRAND.lagoonBliss}33`, background: BRAND_TINT.lagoonBliss,
       borderRadius: 12, padding: "11px 12px",
-      fontSize: 13, lineHeight: "19px", color: C.sText,
+      fontSize: 13, lineHeight: "19px", color: BRAND.tropicalForest,
     }}>
       {children}
     </p>
@@ -61,7 +72,7 @@ function TeamLeadSheet({ lead, onClose }) {
       <div style={{
         position: "relative", background: C.white, borderRadius: "20px 20px 0 0",
         maxWidth: 420, margin: "0 auto", width: "100%", boxSizing: "border-box",
-        padding: "10px 18px 26px",
+        padding: "10px 18px 26px", fontFamily: FONT.primary,
         animation: closing ? "sheetSlideDown 0.22s ease-out forwards" : "sheetSlideUp 0.25s ease-out",
       }}>
         <div style={{ width: 44, height: 4, borderRadius: 2, background: C.icon, margin: "0 auto 14px" }} />
@@ -70,19 +81,19 @@ function TeamLeadSheet({ lead, onClose }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 16 }}>
           <div style={{ position: "relative", marginBottom: 9 }}>
             <div style={{
-              width: 68, height: 68, borderRadius: "50%", background: C.p100,
+              width: 68, height: 68, borderRadius: "50%", background: BRAND.coastalMist,
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: C.p600, fontSize: 21, fontWeight: 700,
+              color: BRAND.tropicalForest, fontSize: 21, fontWeight: 600,
             }}>
               {initials(lead.name)}
             </div>
             <span style={{
               position: "absolute", right: 2, top: 4, width: 13, height: 13,
-              borderRadius: "50%", background: "#25D366", border: `2.5px solid ${C.white}`,
+              borderRadius: "50%", background: BRAND.lagoonBliss, border: `2.5px solid ${C.white}`,
             }} />
           </div>
-          <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: C.head }}>{lead.name}</p>
-          <p style={{ margin: "2px 0 0", fontSize: 14, color: C.sub }}>{lead.role}</p>
+          <p style={{ margin: 0, fontSize: 20, fontWeight: 600, color: BRAND.tropicalForest, letterSpacing: "-0.3px" }}>{lead.name}</p>
+          <p style={{ margin: "2px 0 0", fontSize: 14, color: BRAND_SUB }}>{lead.role}</p>
         </div>
 
         {/* Three blocks — what a team lead is judged on */}
@@ -101,8 +112,8 @@ function TeamLeadSheet({ lead, onClose }) {
           href={`tel:${lead.phone}`}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
-            padding: "14px 20px", borderRadius: 999, background: C.p600,
-            color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none",
+            padding: "14px 20px", borderRadius: 999, background: BRAND.sunsetFuchsia,
+            color: "#fff", fontSize: 15, fontWeight: 600, textDecoration: "none",
           }}
         >
           <Phone size={17} color="#fff" />
@@ -166,31 +177,31 @@ export default function TravelConsultantSection({ consultant, onVersionChange })
   const waMsg = encodeURIComponent(`Hi ${fname}, this is regarding my trip.`);
 
   return (
-    <div style={{ padding: "0 16px" }}>
+    <div style={{ padding: "0 16px", fontFamily: FONT.primary }}>
       {onVersionChange && <VersionToggle version={version} onChange={onVersionChange} />}
 
-      <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 12px" }}>
+      <p style={{ fontSize: 17, fontWeight: 600, color: BRAND.tropicalForest, margin: "0 0 12px", letterSpacing: "-0.2px" }}>
         Your travel consultant
       </p>
 
       <div style={{
-        border: `1px solid ${C.div}`, borderRadius: 14, padding: "15px 14px",
-        display: "flex", flexDirection: "column", gap: 15,
+        border: `1px solid ${BRAND.coastalMist}`, borderRadius: 14, padding: "15px 14px",
+        display: "flex", flexDirection: "column", gap: 15, background: C.white,
       }}>
         {/* Name + contact actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{
-            width: 52, height: 52, borderRadius: "50%", background: C.p100,
+            width: 52, height: 52, borderRadius: "50%", background: BRAND.coastalMist,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: C.p600, fontSize: 17, fontWeight: 700, flexShrink: 0,
+            color: BRAND.tropicalForest, fontSize: 17, fontWeight: 600, flexShrink: 0,
           }}>
             {initials(consultant.name)}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.head }}>{consultant.name}</p>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: BRAND.tropicalForest, letterSpacing: "-0.2px" }}>{consultant.name}</p>
             {/* Version 2 only: borrow the team lead's record right under the name. */}
             {isNew && lead && (
-              <p style={{ margin: "2px 0 0", fontSize: 12.5, color: C.sub, lineHeight: "17px" }}>
+              <p style={{ margin: "2px 0 0", fontSize: 12.5, color: BRAND_SUB, lineHeight: "17px" }}>
                 His team lead has planned {formatCount(lead.tripsPlanned)}+ trips
               </p>
             )}
@@ -204,13 +215,13 @@ export default function TravelConsultantSection({ consultant, onVersionChange })
               aria-label={`Chat with ${fname} on WhatsApp`}
               style={{ width: 36, height: 36, borderRadius: "50%", background: "#25D366", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
-              <MessageCircle size={17} color="#fff" fill="#fff" />
+              <WhatsAppIcon size={19} />
             </a>
             <a
               data-testid="consultant-call"
               href={`tel:${consultant.phone}`}
               aria-label={`Call ${fname}`}
-              style={{ width: 36, height: 36, borderRadius: "50%", background: C.p600, display: "flex", alignItems: "center", justifyContent: "center" }}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: BRAND.sunsetFuchsia, display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <Phone size={17} color="#fff" />
             </a>
@@ -229,15 +240,15 @@ export default function TravelConsultantSection({ consultant, onVersionChange })
         <ProofLine>{consultant.bio}</ProofLine>
 
         {lead && (
-          <p style={{ margin: 0, textAlign: "center", fontSize: 13, color: C.sub }}>
+          <p style={{ margin: 0, textAlign: "center", fontSize: 13, color: BRAND_SUB }}>
             Can't reach {fname}?{" "}
             <button
               data-testid="open-team-lead"
               onClick={() => setSheetOpen(true)}
               style={{
                 border: "none", background: "none", padding: 0, cursor: "pointer",
-                fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: C.p600,
-                borderBottom: `1.5px solid ${C.p300}`,
+                fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: BRAND.sunsetFuchsia,
+                borderBottom: `1.5px solid ${BRAND.sunsetFuchsia}66`,
               }}
             >
               Talk to his team lead

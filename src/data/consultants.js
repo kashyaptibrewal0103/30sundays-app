@@ -32,7 +32,7 @@ export const consultantProfiles = {
     tripsPlanned: 2000,
     languages: ["English", "Hindi"],
     leadId: "aarav",
-    bio: "Rohit has been planning couple trips for 3 years — 2,000 Bali itineraries, and he still books the villas himself.",
+    bio: "Rohit has been planning couple trips for 3 years, 2,000 Bali itineraries, and he still books the villas himself.",
   },
   v2: {
     id: "rohit-new",
@@ -42,7 +42,7 @@ export const consultantProfiles = {
     tripsPlanned: 42,
     languages: ["English", "Hindi"],
     leadId: "aarav",
-    bio: "Rohit has been planning couple trips to Bali for 2 years — and he still books the villas himself.",
+    bio: "Rohit has been planning couple trips to Bali for 2 years, and he still books the villas himself.",
   },
 };
 
