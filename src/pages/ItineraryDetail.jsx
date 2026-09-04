@@ -900,21 +900,32 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             video count, pace, rating and any heads-up note, so there is nothing
             left to hide behind a "Read more". */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {daysWithActivities.map((day, i) => {
+          {/* A note earns its place once. Repeating the same warning on three
+              days running is noise, and it teaches people to skip the band. */}
+          {(() => { const notesShown = new Set(); return daysWithActivities.map((day, i) => {
             const swapped = selectedDayOptions[i];
-            // A free day and a departure day carry no tours, so nothing that
-            // describes a tour applies to them: no pace, no rating, no video
-            // count, and none of the activities the stay happens to list.
+            // What a day carries decides what the card can say about it.
+            //   tours    → pace, rating, videos, and alternatives to swap to
+            //   transfer → a pace (the drive shapes the day) but nothing rated
+            //              and nothing to swap
+            //   neither  → a free day: no pace, no rating, but you can still
+            //              add tours to it
             const free = !swapped && (day.leisure || day.departure);
-            const scoring = free ? null : getDayScoring(day, i, daysWithActivities);
+            const isFirst = i === 0;
+            const isLast = i === daysWithActivities.length - 1;
+            const hasTransfer = !!day.transfers?.length || isFirst || isLast;
             const acts = swapped ? swapped.activities : (day.activities || []);
 
-            // "Watch your trip in videos" above treats one video per activity,
-            // so the card counts the same thing rather than inventing a number.
+            // Scoring a free day off the stay's activity list would score tours
+            // that do not happen on it, so the day is scored as what it is.
+            const scoring = free
+              ? (hasTransfer ? getDayScoring({ ...day, activities: [] }, i, daysWithActivities) : null)
+              : getDayScoring(day, i, daysWithActivities);
+
+            // One video per activity, the same count the day detail screen shows.
             const videoCount = free ? 0 : acts.length;
             const poster = day.activities?.[0]?.img || day.transfers?.[0]?.img || it.img;
 
-            // Tour names, one line each.
             let lines;
             if (free) {
               lines = [day.departure
@@ -930,6 +941,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 .filter(Boolean);
             }
 
+            const candidate = getDayNote(free ? { city: day.city } : { activities: acts });
+            const note = candidate && !notesShown.has(candidate) ? candidate : null;
+            if (note) notesShown.add(note);
+
             return (
               <GlanceDayCard
                 key={i}
@@ -943,13 +958,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 pace={scoring?.pace.label}
                 paceLevel={scoring?.pace.level}
                 rating={free ? null : dayRatingFor(day, i)}
-                note={free ? null : getDayNote({ activities: acts })}
-                canChange={dayHasOptions(i)}
+                note={note}
+                // A transfer day has nothing to swap. A free day does: the
+                // alternatives are tours you can add to it.
+                canChange={dayHasOptions(i) && !(free && hasTransfer)}
                 onOpen={() => setDayDetailIndex(i)}
                 onChange={() => setChangeDayIndex(i)}
               />
             );
-          })}
+          }); })()}
         </div>
         {isVietnam && (
           <button

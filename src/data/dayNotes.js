@@ -10,7 +10,8 @@
 // this keyword list stands in.
 //
 // One note per day. If several match, the first rule wins, so the rules are
-// ordered with the ones people most need to hear at the top.
+// ordered with the ones people most need to hear at the top. A day with no
+// activities falls back to a fact about the place it is spent in.
 
 const RULES = [
   { match: /monkey/i,
@@ -33,14 +34,33 @@ const RULES = [
     note: "Cash only at most stalls, and haggling is expected." },
 ];
 
-// Returns one note for the day, or null when nothing applies. Departure and
-// arrival days stay clean: a transfer needs no warning.
+// Where you are staying carries its own facts, and they hold on a free day
+// just as much as a tour day. Used when the day has no activities to match on.
+const PLACE_RULES = [
+  { match: /ubud|sidemen|munduk/i,
+    note: "It is about 90 minutes up from the airport, and traffic through Denpasar can double that." },
+  { match: /kintamani|batur/i,
+    note: "You are up at altitude. Evenings get cold, so keep a layer out of your suitcase." },
+  { match: /seminyak|canggu|kuta|sanur|nusa dua|lovina/i,
+    note: "The rip current runs strong on this coast. Swim between the flags." },
+  { match: /nusa penida|lembongan|amed|pemuteran/i,
+    note: "Roads are rough and phone signal drops out. Download your maps before you set off." },
+];
+
+// Returns one note for the day, or null when nothing applies. A day with tours
+// is matched on what it does; a free or transfer day on where it is.
 export function getDayNote(day) {
-  if (!day || day.departure) return null;
+  if (!day) return null;
   const names = (day.activities || [])
     .map((a) => (typeof a === "string" ? a : a?.name || ""))
     .join(" | ");
-  if (!names.trim()) return null;
-  const hit = RULES.find((r) => r.match.test(names));
-  return hit ? hit.note : null;
+  if (names.trim()) {
+    const hit = RULES.find((r) => r.match.test(names));
+    if (hit) return hit.note;
+  }
+  if (day.city) {
+    const place = PLACE_RULES.find((r) => r.match.test(day.city));
+    if (place) return place.note;
+  }
+  return null;
 }
