@@ -100,6 +100,13 @@ export default function GlanceDayCard({
             <ChevronRight size={17} color={C.sub} style={{ flexShrink: 0, marginTop: -1 }} />
           </div>
 
+          {(rating || pace) && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <DayRatingPill rating={rating} style="outline" showCount />
+              {pace && <PaceChip pace={pace} level={paceLevel} />}
+            </div>
+          )}
+
           <div>
             {lines.map((l, i) => (
               <div key={i} style={{ display: "flex", gap: 6, marginTop: i === 0 ? 0 : 3 }}>
@@ -112,11 +119,7 @@ export default function GlanceDayCard({
             ))}
           </div>
 
-          {/* Pace and rating are both quality signals, so they sit together and
-              leave the header row free for the full day and city line. */}
           <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            {pace && <PaceChip pace={pace} level={paceLevel} />}
-            <DayRatingPill rating={rating} />
             {canChange && (
               <button
                 data-testid={changeTestId}

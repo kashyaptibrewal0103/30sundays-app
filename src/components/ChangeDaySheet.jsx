@@ -67,7 +67,7 @@ function PlanCard({ opt, onSelect, onPreview, forceTier, wording, pillStyle }) {
 
         {/* Day rating badge overlaid on the image (top-left) */}
         <div style={{ position: "absolute", left: 8, top: 8 }}>
-          <DayRatingPill rating={r} overlay style={pillStyle} />
+          <DayRatingPill rating={r} overlay style={pillStyle} showCount />
         </div>
       </div>
 

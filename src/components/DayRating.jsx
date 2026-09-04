@@ -13,10 +13,13 @@ import { TIER } from "../data/dayRatings";
 //
 // style: "pct" (icon + figure) · "word" (icon + figure + verb)
 //        "dot" (colour dot + figure) · "chip" (filled, colour carries the tier)
-export function DayRatingPill({ rating, overlay = false, style = "pct" }) {
+//        "outline" (hairline chip, matches the pace chip it sits next to)
+// showCount appends the number of ratings, e.g. "84% (281)".
+export function DayRatingPill({ rating, overlay = false, style = "pct", showCount = false }) {
   if (!rating || !rating.tier.showPct) return null;
   const col = rating.color;
   const filled = style === "chip";
+  const outline = style === "outline";
   const figureColor = filled ? "#fff" : col;
 
   return (
@@ -26,10 +29,13 @@ export function DayRatingPill({ rating, overlay = false, style = "pct" }) {
       style={{
         display: "inline-flex", alignItems: "center", flexShrink: 0,
         gap: style === "dot" ? 5 : 4, borderRadius: 20,
-        padding: filled ? "3px 9px" : overlay ? "3px 8px" : 0,
-        background: filled ? col : overlay ? "rgba(255,255,255,0.92)" : "none",
-        backdropFilter: overlay && !filled ? "blur(6px)" : undefined,
-        WebkitBackdropFilter: overlay && !filled ? "blur(6px)" : undefined,
+        padding: filled || outline ? "3px 9px" : overlay ? "3px 8px" : 0,
+        background: filled ? col : outline ? C.white : overlay ? "rgba(255,255,255,0.92)" : "none",
+        // Outline matches the pace chip beside it: white fill, the tier colour
+        // carried by a hairline border and the text rather than a solid block.
+        border: outline ? `1px solid ${col}44` : undefined,
+        backdropFilter: overlay && !filled && !outline ? "blur(6px)" : undefined,
+        WebkitBackdropFilter: overlay && !filled && !outline ? "blur(6px)" : undefined,
       }}
     >
       {style === "dot" ? (
@@ -37,8 +43,11 @@ export function DayRatingPill({ rating, overlay = false, style = "pct" }) {
       ) : (
         <ThumbsUp size={11} color={figureColor} fill={figureColor} strokeWidth={0} />
       )}
-      <span style={{ fontSize: 11.5, fontWeight: 800, color: figureColor, fontVariantNumeric: "tabular-nums" }}>
+      <span style={{ fontSize: 11.5, fontWeight: outline ? 700 : 800, color: figureColor, fontVariantNumeric: "tabular-nums" }}>
         {rating.enjoyedPct}%
+        {/* The count is what turns a percentage into evidence: 84% off 281
+            ratings and 84% off 6 are not the same claim. */}
+        {showCount && rating.count ? ` (${rating.count})` : ""}
       </span>
       {style === "word" && (
         <span style={{ fontSize: 11.5, fontWeight: 600, color: filled ? "rgba(255,255,255,0.85)" : C.sub }}>
