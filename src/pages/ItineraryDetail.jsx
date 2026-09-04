@@ -415,6 +415,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   //   ?daywording=plain|couples|repeat   ?daycolor=single|twoTone|ink
   //   ?daystyle=pct|word|dot|chip
   const ratingWording = params.get("daywording") || undefined;
+  // Which day-detail treatment the day cards open into. Both are real screens
+  // on real trips, so the two can be compared on the same day rather than on
+  // different itineraries.
+  //   default            V1, the portrait video hero in a card deck
+  //   ?daymedia=collage  V2, the media collage as a band across the top
+  const dayMedia = params.get("daymedia") === "collage" ? "collage" : "video";
   const pillStyle = params.get("daystyle") || "pct";
   const dayRatingFor = (day, dayIdx) => {
     const keys = tourKeysForDay(getDayTours(day, dayIdx, daysWithActivities));
@@ -1527,6 +1533,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             days={mediaDays}
             index={dayDetailIndex}
             setIndex={setDayDetailIndex}
+            variant={dayMedia}
+            card={dayMedia === "video"}
             scoringFor={(_day, i) => scoringForDay(daysWithActivities[i], i)}
             ratingFor={(_day, i) => ratingForDay(daysWithActivities[i], i)}
             photos={it.dest && customerPhotos[it.dest] ? customerPhotos[it.dest] : []}
