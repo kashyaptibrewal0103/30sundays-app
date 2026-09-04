@@ -6,7 +6,8 @@ import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from ".
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
 import { buildDayMeta } from "../data/buildData";
 import { Camera, Volume2, VolumeX, FileText, ChevronLeft } from "lucide-react";
-import ChangeDaySheet from "../components/ChangeDaySheet";
+import ChangeDayScreen from "./ChangeDayScreen";
+import { toDayOptions, optionScoring } from "../data/dayOptionShape";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
 import TravelConsultantSection from "../components/TravelConsultantSection";
@@ -175,6 +176,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open
   const [dayDetailIndex, setDayDetailIndex] = useState(null); // which day's full-screen detail is open
   const [dayDetailJump, setDayDetailJump] = useState(null);   // section to land on, e.g. "reviews"
+  const [optionPreview, setOptionPreview] = useState(null);   // the day plan opened from Change day plan
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
   const [allCombosIndex, setAllCombosIndex] = useState(null); // dayIndex for the full "see all" browse screen
   const [selectedDayOptions, setSelectedDayOptions] = useState({}); // { dayIndex: option }
@@ -621,6 +623,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     scoringFor: (day, i) => scoringForDay(day, i),
   }), [daysWithActivities, it.dest, tripStart]);
 
+  // Every plan on offer for the day being changed, as cards.
   const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
 
   // ─── Change Day handlers ───
@@ -711,6 +714,43 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         return data;
       })()
     : null;
+
+  const dayOptionCards = useMemo(() => {
+    if (changeDayIndex === null || !changeDayData) return [];
+    const combos = getAllDayCombinations(it, changeDayIndex, daysWithActivities)?.combinations || [];
+    // The curated picks first, then the wider pool, dropping repeats of a plan
+    // the traveller can already see.
+    const seen = new Set();
+    const plans = [];
+    for (const p of [...(changeDayData.options || []), ...combos]) {
+      const key = (p.activities || []).join("|");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      plans.push(p);
+    }
+    return toDayOptions({ itinerary: it, dayIndex: changeDayIndex, plans, city: changeDayData.city });
+  }, [changeDayIndex, changeDayData, it, daysWithActivities]);
+
+  // The opened plan, shaped for the day detail screen.
+  const optionMediaDays = useMemo(() => {
+    if (!optionPreview || changeDayIndex === null) return [];
+    const day = daysWithActivities[changeDayIndex];
+    const pseudo = {
+      dayNum: day?.dayNum,
+      city: optionPreview.city,
+      activities: optionPreview.activities.map((name, k) => ({
+        name, img: optionPreview.images[k % (optionPreview.images.length || 1)],
+      })),
+    };
+    return toMediaDays([pseudo], it.dest, {
+      dateFor: () => {
+        const d = new Date(tripStart);
+        d.setDate(d.getDate() + changeDayIndex);
+        return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+      },
+      scoringFor: () => optionScoring(getDayScoring(pseudo, 0, [pseudo]), optionPreview),
+    });
+  }, [optionPreview, changeDayIndex, daysWithActivities, it.dest, tripStart]);
 
   // Check if a day has alternate options available.
   const dayHasOptions = (dayIndex) => {
@@ -1640,18 +1680,56 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         />
       )}
 
-      {/* ═══ Change Day Bottom Sheet ═══ */}
+      {/* ═══ Change day plan, full screen ═══ */}
       {changeDayData && (
-        <ChangeDaySheet
-          dayData={changeDayData}
-          combinations={getAllDayCombinations(it, changeDayIndex, daysWithActivities)?.combinations || []}
-          onSelect={(option) => handleChangeDaySelect(changeDayIndex, option)}
-          onPreview={(option) => setPreviewDay({ dayIndex: changeDayIndex, option })}
+        <ChangeDayScreen
+          frameStyle={overlayFrame}
+          dayNumber={changeDayData.dayNumber}
+          city={changeDayData.city}
+          options={dayOptionCards}
+          onOpen={(opt) => setOptionPreview(opt)}
           onClose={() => setChangeDayIndex(null)}
-          forceTier={demoTierFor(changeDayIndex)}
-          wording={ratingWording}
-          pillStyle={pillStyle}
+          onLeisureDay={() => handleChangeDaySelect(changeDayIndex, {
+            id: "leisure-day",
+            activities: ["Free day, explore at your own pace"],
+            scoring: { pace: "relaxed", activityHours: 0, travelHours: 0, crowdLevel: "low" },
+            priceDelta: -2000,
+            heroImage: daysWithActivities[changeDayIndex]?.activities?.[0]?.img || it.img,
+          })}
         />
+      )}
+
+      {/* One plan, opened from the Change day plan list. The same day detail as
+          the itinerary's own days, with the price difference on the CTA. */}
+      {optionPreview && changeDayIndex !== null && (
+        <div style={{ ...overlayFrame, zIndex: 320, background: "#0E1020" }}>
+          <DayMediaDetail
+            days={optionMediaDays}
+            index={0}
+            setIndex={() => {}}
+            variant={dayMedia}
+            card={dayMedia === "video"}
+            scoringFor={() => optionScoring(
+              getDayScoring(daysWithActivities[changeDayIndex], changeDayIndex, daysWithActivities),
+              optionPreview,
+            )}
+            ratingFor={() => optionPreview.rating}
+            photos={it.dest && customerPhotos[it.dest] ? customerPhotos[it.dest] : []}
+            tripDays={daysWithActivities.length}
+            ctaLabel={optionPreview.isCurrent ? "Keep this day" : "Choose this day"}
+            ctaNote={optionPreview.isCurrent || !optionPreview.priceDelta ? null : {
+              up: optionPreview.priceDelta > 0,
+              text: `${optionPreview.priceDelta > 0 ? "More" : "Lesser"} by ₹${Math.abs(optionPreview.priceDelta).toLocaleString("en-IN")}`,
+            }}
+            onChangeDay={() => {
+              const i = changeDayIndex;
+              setOptionPreview(null);
+              setChangeDayIndex(null);
+              if (!optionPreview.isCurrent) handleChangeDaySelect(i, optionPreview);
+            }}
+            onClose={() => setOptionPreview(null)}
+          />
+        </div>
       )}
 
       {/* Day preview overlay (above the tray) - visualise an option before finalising */}

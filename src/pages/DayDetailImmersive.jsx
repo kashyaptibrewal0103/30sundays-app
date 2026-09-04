@@ -500,7 +500,7 @@ function CustomerReviews({ rating, tours }) {
 
 // District's bottom bar: a floating dark pill with the context on the left and
 // the action as a white pill on the right.
-function DayActionBar({ day, tripDays, onChangeDay }) {
+function DayActionBar({ day, tripDays, onChangeDay, ctaLabel = "Change this day", ctaNote }) {
   const shortDate = (day.date || "").replace(/,? \d{4}$/, "");
   return (
     <div style={{ padding: "0 16px calc(18px + env(safe-area-inset-bottom))" }}>
@@ -526,6 +526,13 @@ function DayActionBar({ day, tripDays, onChangeDay }) {
               Day {day.dayNum}{tripDays ? ` of ${tripDays}` : ""}
             </p>
           )}
+          {/* On a plan you are choosing, the price difference matters more than
+              the date, so it takes the strong line instead. */}
+          {ctaNote && (
+            <p style={{ margin: "1px 0 0", fontSize: 12.5, fontWeight: 700, color: ctaNote.up ? "#FFB4AB" : "#9BE8B8", lineHeight: 1.3, whiteSpace: "nowrap" }}>
+              {ctaNote.text}
+            </p>
+          )}
         </div>
         <button onClick={onChangeDay || undefined} style={{
           flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7,
@@ -535,7 +542,7 @@ function DayActionBar({ day, tripDays, onChangeDay }) {
           fontFamily: "inherit",
         }}>
           <RefreshCw size={14} color={HEAD} />
-          Change this day
+          {ctaLabel}
         </button>
       </div>
     </div>
@@ -548,6 +555,7 @@ function DayCard({
   day, shapeIdx, scoring, rating, photos, tripDays, width, restWidth, radius, mediaH,
   variant, showMoments, active, muted, onMute, onGallery, onProgress,
   onPrev, onNext, hasPrev, hasNext, p, onClose, onChangeDay, onActivityOpen, jumpTo,
+  ctaLabel, ctaNote,
 }) {
   const [metric, setMetric] = useState(null);
   const [activity, setActivity] = useState(null);
@@ -745,7 +753,7 @@ function DayCard({
 
       {/* 6 · the day's action bar, part of the card the way District's is */}
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6 }}>
-        <DayActionBar day={day} tripDays={tripDays} onChangeDay={onChangeDay} />
+        <DayActionBar day={day} tripDays={tripDays} onChangeDay={onChangeDay} ctaLabel={ctaLabel} ctaNote={ctaNote} />
       </div>
 
       {active && metric && scoring && (
@@ -763,6 +771,7 @@ function DayCard({
 function DayPager({
   days, idx, setIdx, variant, card, moments, onGallery,
   scoringFor, ratingFor, photos, tripDays, onClose, onChangeDay, onActivityOpen, jumpTo,
+  ctaLabel, ctaNote,
 }) {
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -901,6 +910,8 @@ function DayPager({
             onChangeDay={onChangeDay}
             onActivityOpen={onActivityOpen}
             jumpTo={i === idx ? jumpTo : null}
+            ctaLabel={ctaLabel}
+            ctaNote={ctaNote}
             width={i === idx ? restW + M * 2 * grow : restW}
             restWidth={restW}
             radius={card ? (i === idx ? CARD_R * (1 - grow) : CARD_R) : 0}
@@ -936,6 +947,7 @@ function DayPager({
 export function DayMediaDetail({
   days, index, setIndex, variant = "video", card = true, moments = true,
   scoringFor, ratingFor, photos = [], tripDays, onClose, onChangeDay, onActivityOpen, jumpTo,
+  ctaLabel, ctaNote,
 }) {
   const [gallery, setGallery] = useState(null);
   if (!days?.length) return null;
@@ -958,6 +970,8 @@ export function DayMediaDetail({
         onChangeDay={onChangeDay}
         onActivityOpen={onActivityOpen}
         jumpTo={jumpTo}
+        ctaLabel={ctaLabel}
+        ctaNote={ctaNote}
         onGallery={setGallery}
       />
       {gallery && (
