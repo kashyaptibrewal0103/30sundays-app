@@ -502,35 +502,44 @@ function CustomerReviews({ rating, tours }) {
 // the action as a white pill on the right.
 function DayActionBar({ day, tripDays, onChangeDay, ctaLabel = "Change this day", ctaNote }) {
   const shortDate = (day.date || "").replace(/,? \d{4}$/, "");
+  // Choosing a plan: the price difference is the whole left side. The date and
+  // the day number belong to the trip you have, not to a plan you are weighing
+  // up, and they crowded out the number that decides it.
+  const choosing = !!ctaNote;
   return (
     <div style={{ padding: "0 16px calc(18px + env(safe-area-inset-bottom))" }}>
       <div style={{
         display: "flex", alignItems: "center", gap: 12,
-        background: HEAD, borderRadius: 999, padding: "8px 8px 8px 20px",
+        background: HEAD, borderRadius: 999, padding: "8px 8px 8px 12px",
         boxShadow: "0 12px 30px -10px rgba(16,24,40,0.55)",
       }}>
-        {/* Without travel dates there is only the day number to show, so it
-            takes the strong line rather than sitting above an empty one. */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {shortDate ? (
-            <>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", paddingLeft: choosing ? 0 : 8 }}>
+          {choosing ? (
+            // A light chip on the dark bar. Coloured text on navy was too dim
+            // to read, and this is the number people are deciding on.
+            // No arrow: "More by" and "Lesser by" already say the direction,
+            // and the icon was the 14px that pushed the chip past its space.
+            <span style={{
+              display: "inline-flex", alignItems: "center",
+              background: ctaNote.up ? "#FFE4E1" : "#D7F5E3",
+              color: ctaNote.up ? "#9F1D14" : "#04603A",
+              borderRadius: 999, padding: "7px 12px",
+              fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap",
+            }}>
+              {ctaNote.text}
+            </span>
+          ) : shortDate ? (
+            <div style={{ minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 10.5, fontWeight: 600, color: "rgba(255,255,255,0.6)", lineHeight: 1.3 }}>
                 Day {day.dayNum}{tripDays ? ` of ${tripDays}` : ""}
               </p>
               <p style={{ margin: "1px 0 0", fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {shortDate}
               </p>
-            </>
+            </div>
           ) : (
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               Day {day.dayNum}{tripDays ? ` of ${tripDays}` : ""}
-            </p>
-          )}
-          {/* On a plan you are choosing, the price difference matters more than
-              the date, so it takes the strong line instead. */}
-          {ctaNote && (
-            <p style={{ margin: "1px 0 0", fontSize: 12.5, fontWeight: 700, color: ctaNote.up ? "#FFB4AB" : "#9BE8B8", lineHeight: 1.3, whiteSpace: "nowrap" }}>
-              {ctaNote.text}
             </p>
           )}
         </div>
@@ -541,7 +550,7 @@ function DayActionBar({ day, tripDays, onChangeDay, ctaLabel = "Change this day"
           cursor: onChangeDay ? "pointer" : "default", opacity: onChangeDay ? 1 : 0.55,
           fontFamily: "inherit",
         }}>
-          <RefreshCw size={14} color={HEAD} />
+          {!choosing && <RefreshCw size={14} color={HEAD} />}
           {ctaLabel}
         </button>
       </div>

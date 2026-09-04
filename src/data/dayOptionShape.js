@@ -10,9 +10,9 @@ import { SCORE_PALETTE, LEVEL_KEYS } from "./dayScoring";
 // it has, what it is known for.
 //
 // Duration and stop count are real, off the plan's own scoring. Transfer type
-// and the tags are derived from the plan's id, so they are stable for a given
-// plan but they are not operator data. Nothing here invents a price: the
-// delta comes straight from the plan.
+// is derived from the plan's id, so it is stable for a given plan but it is not
+// operator data. Nothing here invents a price: the delta comes straight from
+// the plan.
 
 const hash = (s) => {
   let h = 2166136261 >>> 0;
@@ -25,7 +25,18 @@ const PACE_LABEL = { relaxed: "Relaxed", balanced: "Balanced", active: "Active",
 // wherever it appears.
 const PACE_LEVEL = { relaxed: 0, balanced: 1, active: 1, hectic: 2 };
 
-export const TAGS = ["Top seller", "Kid friendly", "Offbeat", "Relaxed"];
+// Rating buckets, so "how well reviewed" is filterable without a slider.
+export const RATING_BANDS = [
+  { key: "90", label: "90% and above", min: 90 },
+  { key: "75", label: "75% and above", min: 75 },
+  { key: "50", label: "50% and above", min: 50 },
+];
+
+export const PACES = [
+  { key: "relaxed", label: "Relaxed" },
+  { key: "balanced", label: "Balanced" },
+  { key: "active", label: "Active" },
+];
 export const DURATIONS = [
   { key: "quarter", label: "Quarter day", test: (h) => h <= 4 },
   { key: "half", label: "Half day", test: (h) => h > 4 && h <= 6.5 },
@@ -60,12 +71,6 @@ export function toDayOptions({ itinerary, dayIndex, plans, city }) {
     // Not every plan has footage, and the count is what says so.
     const video = h % 3 === 0 ? { poster: images[0], duration: "1:12" } : null;
 
-    const tags = [];
-    if (!p.isCurrent && h % 5 === 0) tags.push("Top seller");
-    if (h % 4 === 0) tags.push("Kid friendly");
-    if (h % 7 === 0) tags.push("Offbeat");
-    if (paceKey === "relaxed") tags.push("Relaxed");
-
     const key = p.id || acts.join("~");
     const rating = p.isCurrent ? null : getDayRating(key, [key]);
 
@@ -85,7 +90,6 @@ export function toDayOptions({ itinerary, dayIndex, plans, city }) {
       transferKey: h % 2 === 0 ? "private" : "shared",
       transfer: h % 2 === 0 ? "Private transfer" : "Shared transfer",
       activityCount: acts.length,
-      tags,
       city,
     };
   });

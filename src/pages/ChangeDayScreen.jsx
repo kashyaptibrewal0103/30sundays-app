@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ArrowLeft, Search, X as XIcon, SlidersHorizontal, ArrowDownUp, Check,
-  Clock, Car, MapPin, Layers, Play, Heart, Zap, Gauge, Flame, Moon, Sparkles,
+  Clock, Car, MapPin, Layers, Play, Heart, Zap, Gauge, Flame, Moon, ChevronRight,
 } from "lucide-react";
 import { C } from "../data";
 import { DayRatingPill } from "../components/DayRating";
-import { TAGS, DURATIONS, TRANSFERS } from "../data/dayOptionShape";
+import { DURATIONS, TRANSFERS, PACES, RATING_BANDS } from "../data/dayOptionShape";
 
 // ─── Change day plan, full screen ───
 //
@@ -20,10 +20,11 @@ import { TAGS, DURATIONS, TRANSFERS } from "../data/dayOptionShape";
 // difference from the day you already have.
 
 const PACE_ICON = { Relaxed: Moon, Balanced: Heart, Active: Zap, "Fast-paced": Flame };
+// Two directions, on the bar. Sorting is not a filter, so it does not appear
+// in the filter sheet as well.
 const SORTS = [
-  { key: "recommended", label: "Recommended", icon: Sparkles },
-  { key: "asc", label: "Price: low first", icon: ArrowDownUp },
-  { key: "desc", label: "Price: high first", icon: ArrowDownUp },
+  { key: "asc", label: "Sort Asc" },
+  { key: "desc", label: "Sort Desc" },
 ];
 
 const money = (n) => `₹${Math.abs(n).toLocaleString("en-IN")}`;
@@ -81,7 +82,7 @@ function OptionCard({ opt, onOpen }) {
       role="button"
       style={{
         borderRadius: 14, overflow: "hidden", background: C.white, cursor: "pointer",
-        border: `1px solid ${opt.isCurrent ? C.p300 : C.div}`,
+        border: `1px solid ${C.div}`,
         boxShadow: "0 1px 4px rgba(24,30,76,0.05)",
       }}
     >
@@ -119,13 +120,6 @@ function OptionCard({ opt, onOpen }) {
             </span>
           </div>
         )}
-        {opt.isCurrent && (
-          <span style={{
-            position: "absolute", left: 9, top: 9, background: C.p600, color: "#fff",
-            fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase",
-            borderRadius: 6, padding: "3px 8px",
-          }}>Your current plan</span>
-        )}
       </div>
 
       <div style={{ padding: "11px 12px 12px", display: "flex", flexDirection: "column", gap: 9 }}>
@@ -142,22 +136,11 @@ function OptionCard({ opt, onOpen }) {
           <Fact icon={MapPin}>{opt.activityCount} {opt.activityCount === 1 ? "activity" : "activities"}</Fact>
         </div>
 
-        {opt.tags.length > 0 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {opt.tags.map((t) => (
-              <span key={t} style={{
-                fontSize: 10.5, fontWeight: 700, color: "#5B7472", background: "#EEF4F3",
-                borderRadius: 6, padding: "3px 8px",
-              }}>{t}</span>
-            ))}
-          </div>
-        )}
-
+        {/* No CTA label: the whole card opens the plan, and the chevron is
+            what says so. */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderTop: `1px solid ${C.div}`, paddingTop: 10 }}>
-          {opt.isCurrent
-            ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, color: C.p600 }}><Check size={13} color={C.p600} /> Currently selected</span>
-            : <PriceDelta delta={opt.priceDelta} />}
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.head }}>View day</span>
+          <PriceDelta delta={opt.priceDelta} />
+          <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
         </div>
       </div>
     </div>
@@ -171,7 +154,7 @@ function FiltersSheet({ value, onChange, onClose, matchCount }) {
     ...d,
     [group]: d[group].includes(key) ? d[group].filter((x) => x !== key) : [...d[group], key],
   }));
-  const count = draft.duration.length + draft.transfer.length + draft.tags.length;
+  const count = draft.duration.length + draft.transfer.length + draft.pace.length + draft.rating.length;
 
   const Row = ({ label, on, onClick }) => (
     <button onClick={onClick} style={{
@@ -203,7 +186,7 @@ function FiltersSheet({ value, onChange, onClose, matchCount }) {
       <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${C.div}` }}>
         <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: C.head }}>Sort and filters</p>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <button onClick={() => setDraft({ duration: [], transfer: [], tags: [], sort: draft.sort })} style={{
+          <button onClick={() => setDraft({ duration: [], transfer: [], pace: [], rating: [], sort: draft.sort })} style={{
             background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
             fontSize: 13.5, fontWeight: 600, color: count ? C.head : C.inact, textDecoration: "underline", textUnderlineOffset: 3,
           }}>Reset all</button>
@@ -214,11 +197,6 @@ function FiltersSheet({ value, onChange, onClose, matchCount }) {
       </div>
 
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "18px 16px 24px" }}>
-        <Group title="Sort by">
-          {SORTS.map((s) => (
-            <Row key={s.key} label={s.label} on={draft.sort === s.key} onClick={() => setDraft((d) => ({ ...d, sort: s.key }))} />
-          ))}
-        </Group>
         <Group title="Day duration">
           {DURATIONS.map((d) => (
             <Row key={d.key} label={d.label} on={draft.duration.includes(d.key)} onClick={() => toggle("duration", d.key)} />
@@ -229,9 +207,14 @@ function FiltersSheet({ value, onChange, onClose, matchCount }) {
             <Row key={t.key} label={t.label} on={draft.transfer.includes(t.key)} onClick={() => toggle("transfer", t.key)} />
           ))}
         </Group>
-        <Group title="Other">
-          {TAGS.map((t) => (
-            <Row key={t} label={t} on={draft.tags.includes(t)} onClick={() => toggle("tags", t)} />
+        <Group title="Day pace">
+          {PACES.map((p) => (
+            <Row key={p.key} label={p.label} on={draft.pace.includes(p.key)} onClick={() => toggle("pace", p.key)} />
+          ))}
+        </Group>
+        <Group title="Day rating">
+          {RATING_BANDS.map((r) => (
+            <Row key={r.key} label={r.label} on={draft.rating.includes(r.key)} onClick={() => toggle("rating", r.key)} />
           ))}
         </Group>
       </div>
@@ -259,29 +242,30 @@ export default function ChangeDayScreen({
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [f, setF] = useState({ duration: [], transfer: [], tags: [], sort: "recommended" });
+  const [f, setF] = useState({ duration: [], transfer: [], pace: [], rating: [], sort: "asc" });
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = options.filter((o) => {
-      if (q && !o.name.toLowerCase().includes(q) && !o.tags.join(" ").toLowerCase().includes(q)) return false;
+    // The plan already on the day is not an option to change to, so it is not
+    // in the list at all.
+    let list = options.filter((o) => !o.isCurrent).filter((o) => {
+      if (q && !o.name.toLowerCase().includes(q)) return false;
       if (f.duration.length && !f.duration.includes(o.durationKey)) return false;
       if (f.transfer.length && !f.transfer.includes(o.transferKey)) return false;
-      if (f.tags.length && !o.tags.some((t) => f.tags.includes(t))) return false;
+      if (f.pace.length && !f.pace.includes(o.paceKey)) return false;
+      if (f.rating.length) {
+        const pct = o.rating?.enjoyedPct ?? -1;
+        const min = Math.min(...f.rating.map((k) => RATING_BANDS.find((b) => b.key === k)?.min ?? 0));
+        if (pct < min) return false;
+      }
       return true;
     });
-    if (f.sort === "asc") list = [...list].sort((a, b) => a.priceDelta - b.priceDelta);
-    else if (f.sort === "desc") list = [...list].sort((a, b) => b.priceDelta - a.priceDelta);
-    else list = [...list].sort((a, b) => {
-      // Recommended: the plan you already have first, then best rated.
-      if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
-      return (b.rating?.enjoyedPct || 0) - (a.rating?.enjoyedPct || 0);
-    });
+    list = [...list].sort((a, b) => (f.sort === "desc" ? b.priceDelta - a.priceDelta : a.priceDelta - b.priceDelta));
     return list;
   }, [options, query, f]);
 
-  const activeCount = f.duration.length + f.transfer.length + f.tags.length;
-  const sortLabel = SORTS.find((s) => s.key === f.sort)?.label || "Recommended";
+  const activeCount = f.duration.length + f.transfer.length + f.pace.length + f.rating.length;
+  const sortLabel = SORTS.find((s) => s.key === f.sort)?.label || "Sort Asc";
 
   // Escape closes, the way a full screen should.
   useEffect(() => {
@@ -314,10 +298,12 @@ export default function ChangeDayScreen({
             />
           ) : (
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 15.5, fontWeight: 700, color: C.head }}>
+              <p style={{ margin: 0, fontSize: 15.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Day {dayNumber} · {city}
+              </p>
+              <p style={{ margin: "1px 0 0", fontSize: 12, color: C.sub }}>
                 {shown.length} {shown.length === 1 ? "day plan" : "day plans"}
               </p>
-              <p style={{ margin: "1px 0 0", fontSize: 12, color: C.sub }}>Day {dayNumber} · {city}</p>
             </div>
           )}
           <button
@@ -343,7 +329,7 @@ export default function ChangeDayScreen({
             <p style={{ margin: "6px 0 16px", fontSize: 13, color: C.sub, lineHeight: "19px" }}>
               Try clearing a filter, or search for a place you had in mind.
             </p>
-            <button onClick={() => { setF({ duration: [], transfer: [], tags: [], sort: f.sort }); setQuery(""); }} style={{
+            <button onClick={() => { setF({ duration: [], transfer: [], pace: [], rating: [], sort: f.sort }); setQuery(""); }} style={{
               padding: "10px 18px", borderRadius: 999, border: `1px solid ${C.div}`, background: C.white,
               fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
             }}>Clear filters</button>
