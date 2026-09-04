@@ -408,6 +408,10 @@ function TravellerMoments({ onOpen, photos = STORIES }) {
 // summary of one day the three verdicts are being compared, and a grey bar
 // next to a green one reads as "no opinion" rather than "did not enjoy it".
 const NOT_RED = "#D92D20";
+
+// Reviews are stored under both partners' names. One is enough on a card this
+// size, and the second name never told the reader anything.
+const oneName = (name) => (name || "").split(/\s*&\s*/)[0].trim() || name;
 const barColor = (key) => (key === "not" ? NOT_RED : RATING_META[key].color);
 
 function CustomerReviews({ rating, tours }) {
@@ -419,7 +423,7 @@ function CustomerReviews({ rating, tours }) {
   const named = tours.length ? tours : [{ name: "This day" }];
   return (
     <div style={{ padding: "18px 20px 0" }}>
-      <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 500, color: HEAD }}>What couples said</h3>
+      <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 500, color: HEAD }}>What travellers said</h3>
 
       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
         <ThumbsUp size={20} color={rating.color} fill={rating.color} strokeWidth={0} />
@@ -458,24 +462,25 @@ function CustomerReviews({ rating, tours }) {
           const tour = named[i % named.length];
           return (
             <div key={i} style={{ padding: "14px 0", borderTop: `1px solid ${LINE}` }}>
-              {/* The tour leads the review. Running it underneath ran it into
-                  the comment above, and it is the thing being reviewed. */}
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 5, maxWidth: "100%",
-                background: SOFT, borderRadius: 6, padding: "3px 8px", marginBottom: 8,
-              }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#8A90B2", letterSpacing: 0.4, textTransform: "uppercase", flexShrink: 0 }}>On</span>
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: HEAD, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tour.name}</span>
-              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 700, color: HEAD }}>{r.name}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: HEAD }}>{oneName(r.name)}</span>
                 <span style={{ fontSize: 10.5, fontWeight: 700, color: ink, background: `${ink}1A`, borderRadius: 999, padding: "2px 8px", whiteSpace: "nowrap" }}>
                   {meta.label}
                 </span>
                 <span style={{ flex: 1 }} />
                 <span style={{ fontSize: 11.5, color: "#A4A7AE", whiteSpace: "nowrap" }}>{r.when}</span>
               </div>
-              <p style={{ margin: "6px 0 0", fontSize: 13.5, color: SUB, lineHeight: "21px" }}>{r.text}</p>
+              {r.text && <p style={{ margin: "6px 0 0", fontSize: 13.5, color: SUB, lineHeight: "21px" }}>{r.text}</p>}
+              {/* Named after the comment, not before it: the comment is what
+                  the reader came for. Kept as its own labelled block so it
+                  cannot be read as another line of the review. */}
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%",
+                background: SOFT, borderRadius: 6, padding: "4px 9px", marginTop: 9,
+              }}>
+                <span style={{ fontSize: 9.5, fontWeight: 700, color: "#8A90B2", letterSpacing: 0.5, textTransform: "uppercase", flexShrink: 0 }}>Tour name</span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: HEAD, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tour.name}</span>
+              </div>
             </div>
           );
         })}
