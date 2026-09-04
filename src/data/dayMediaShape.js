@@ -8,11 +8,14 @@ import { customerPhotos } from "../data";
 // exclusions and operator notes. The app does not hold any of that yet. What it
 // does hold is the day's tours, their stops, and each stop's photo.
 //
-// So this maps what exists and leaves out what does not. The tour card renders
-// only the sections it is given, so a tour here shows its overview, its
-// schedule of stops and the stops themselves. Inclusions, exclusions and the
-// operator notes stay absent until ops carries them per tour, rather than being
-// invented here.
+// So this maps what exists, and fills the rest from what is true of every
+// 30 Sundays tour: the package covers entry, the transfer and the guide, and
+// does not cover meals, tips or optional paid extras. Those lines are the same
+// on every tour until ops carries them per tour, which is a real limitation:
+// they describe the package, not this particular experience.
+//
+// Pickup times are laid out from the day's shape, earliest tour first, so a
+// three-stop day reads as a schedule rather than three tours at once.
 
 const listOf = (names) => {
   if (names.length === 1) return names[0];
@@ -30,6 +33,33 @@ const tourHours = (scoring, stops, totalStops) => {
   return share === 1 ? "about 1 hour" : `about ${share} hours`;
 };
 
+// A morning tour starts at 8:30 and an afternoon one after lunch. Written as a
+// clock time because that is what a traveller needs to plan around, and the
+// day's shape is what decides it.
+const PICKUPS = ["8:30 am", "1:30 pm", "4:00 pm"];
+const pickupAt = (tourIndex, hasTransferFirst) =>
+  PICKUPS[Math.min(tourIndex + (hasTransferFirst ? 1 : 0), PICKUPS.length - 1)];
+
+// What the package covers on a tour, and what it does not. The same on every
+// tour: these describe the 30 Sundays package, not the individual experience.
+const INCLUSIONS = (stops, transferLabel) => [
+  stops > 1 ? `Entry to all ${stops} places on this tour` : "Entry tickets where required",
+  `${transferLabel} to and from your hotel`,
+  "English-speaking guide for the day",
+  "Bottled water",
+  "Passenger insurance",
+];
+const EXCLUSIONS = [
+  "Meals and drinks, unless named above",
+  "Optional paid activities at each stop",
+  "Personal expenses and shopping",
+  "Tips for your guide and driver",
+];
+const IMPORTANT = (city) => [
+  `Timings shift with traffic and weather in ${city}. Your guide will call ahead if the day needs to move.`,
+  "Wear comfortable shoes. Some stops involve a fair amount of walking.",
+];
+
 function transferTour(t, dayCity, fallbackImg) {
   return {
     id: `transfer-${t.from}-${t.to}`,
@@ -44,6 +74,14 @@ function transferTour(t, dayCity, fallbackImg) {
       { label: t.sharing ? `${t.sharing} transfer` : "Transfer", text: `${t.duration ? `${t.duration}. ` : ""}Straight through to ${t.to}.` },
       { label: "Drop-off", text: `Direct drop at ${t.to}.` },
     ],
+    inclusions: [
+      `One-way ${(t.sharing || "private").toLowerCase()} ${t.vehicle || "transfer"}`,
+      "Air-conditioned vehicle",
+      "Professional driver",
+      "All tolls and parking",
+    ],
+    exclusions: ["Meals and drinks", "Tips for your driver", "Anything not listed above"],
+    important: [`Timings shift with traffic on the ${t.from} to ${t.to} road.`],
     activities: [],
   };
 }
@@ -68,40 +106,40 @@ export function toMediaDays(days, dest, opts = {}) {
     if (!free) {
       const grouped = getDayTours(day, i, days);
       const totalStops = grouped.reduce((n, g) => n + g.items.filter((x) => x.actIdx != null && !x.onTap).length, 0);
+      const hadTransfer = tours.length > 0;
+      let tourIndex = 0;
       grouped.forEach((g, gi) => {
         const items = g.items.filter((x) => x.actIdx != null && !x.onTap);
         if (!items.length) return;
         const names = items.map((x) => x.name);
+        const transferLabel = day.transfers?.[0]?.sharing
+          ? `${day.transfers[0].sharing} transfer`
+          : "Private transfer";
         tours.push({
           id: `tour-${i}-${gi}`,
           name: listOf(names),
           img: items[0].img,
           duration: tourHours(scoring, items.length, totalStops),
-          time: null,
-          transfer: day.transfers?.[0]?.sharing ? `${day.transfers[0].sharing} transfer` : "Private transfer",
+          time: pickupAt(tourIndex, hadTransfer),
+          transfer: transferLabel,
           overview: `${listOf(names)}, in ${day.city}. ${items.length > 1 ? "Your guide moves you between them" : "Your guide takes you there"} and back to your hotel.`,
-          covers: items.map((x) => ({ label: x.name, text: x.desc || `In ${day.city}.` })),
+          // A schedule, not a restatement of the stop list below it. The canned
+          // per-stop line from getDayTours claimed a private transfer on every
+          // tour, which contradicted the transfer shown right above it.
+          covers: [
+            { label: `${pickupAt(tourIndex, hadTransfer)} pickup`, text: `Your guide collects you from your hotel in ${day.city}.` },
+            ...items.map((x) => ({ label: x.name, text: "Guided stop, with time to look around on your own." })),
+            { label: "Back to your hotel", text: "Dropped back after the last stop." },
+          ],
+          inclusions: INCLUSIONS(items.length, transferLabel),
+          exclusions: EXCLUSIONS,
+          important: IMPORTANT(day.city),
           activities: items.map((x) => ({ name: x.name, img: x.img, actIdx: x.actIdx })),
         });
+        tourIndex += 1;
       });
     }
 
-    // A free day with no transfer still needs something on the card.
-    if (!tours.length) {
-      tours.push({
-        id: `free-${i}`,
-        name: day.departure ? "Checkout and airport transfer" : `A free day in ${day.city}`,
-        img: acts[0]?.img,
-        duration: null,
-        time: null,
-        transfer: null,
-        overview: day.departure
-          ? "Check out, then the transfer to the airport for your flight home."
-          : `Nothing is booked today. ${day.city} is yours to wander, and your consultant can add a tour if you would rather not.`,
-        covers: [],
-        activities: [],
-      });
-    }
 
     // Media: one video per activity, matching what the app counts elsewhere.
     // A free day has no tours and so no video, and falls back to photos.
@@ -123,6 +161,11 @@ export function toMediaDays(days, dest, opts = {}) {
       date: dateFor ? dateFor(day, i) : "",
       title,
       tours,
+      // A day with nothing booked has no tours, so the screen drops the
+      // "Your day will cover" list rather than inventing a tour to fill it.
+      freeNote: tours.length ? null : (day.departure
+        ? "Check out, then the transfer to the airport for your flight home."
+        : `Nothing is booked today. ${day.city} is yours to wander, and your consultant can add a tour if you would rather not.`),
       media: { video, images: video ? images.slice(1) : images },
       photos: photoPool,
     };

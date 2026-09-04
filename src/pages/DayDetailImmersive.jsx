@@ -267,7 +267,10 @@ function GalleryScreen({ day, photos = STORIES, initialTab = "activity", onClose
               <div key={i} style={{
                 gridColumn: big ? (leftSide ? "1 / span 2" : "2 / span 2") : "auto",
                 gridRow: big ? "span 2" : "auto",
-                aspectRatio: big ? undefined : "1 / 1",
+                // Both tile sizes need a ratio. Without one the big tile sized
+                // itself off its image and grew taller than the two rows it
+                // spans, leaving the singles beside it short of the row.
+                aspectRatio: "1 / 1",
                 borderRadius: 8, overflow: "hidden", background: SOFT,
               }}>
                 <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -401,11 +404,17 @@ function TravellerMoments({ onOpen, photos = STORIES }) {
 // What the ratings sheet showed, minus the day's own name, the filters, the
 // sort and the review count. Each review says which tour it was left against.
 
+// "Not for me" is red here, not the neutral grey it wears elsewhere. On a
+// summary of one day the three verdicts are being compared, and a grey bar
+// next to a green one reads as "no opinion" rather than "did not enjoy it".
+const NOT_RED = "#D92D20";
+const barColor = (key) => (key === "not" ? NOT_RED : RATING_META[key].color);
+
 function CustomerReviews({ rating, tours }) {
   const bars = [
-    { key: "loved", pct: Math.round((rating.loved / rating.count) * 100), n: rating.loved },
-    { key: "liked", pct: Math.round((rating.liked / rating.count) * 100), n: rating.liked },
-    { key: "not", pct: Math.round((rating.notForMe / rating.count) * 100), n: rating.notForMe },
+    { key: "loved", pct: rating.lovedPct },
+    { key: "liked", pct: rating.likedPct },
+    { key: "not", pct: rating.notPct },
   ];
   const named = tours.length ? tours : [{ name: "This day" }];
   return (
@@ -418,21 +427,20 @@ function CustomerReviews({ rating, tours }) {
         <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: HEAD }}>enjoyed it</span>
         <span style={{ fontSize: 12.5, color: SUB }}>{rating.count} ratings</span>
       </div>
-      <p style={{ margin: "8px 0 14px", fontSize: 13, color: SUB }}>
-        {rating.lovedPct}% loved it, {rating.likedPct}% liked it
-      </p>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+      {/* Percentages only. The head count per verdict said nothing the total
+          above does not already say, and three numbers competed with it. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 14 }}>
         {bars.map((b) => (
           <div key={b.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ width: 74, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: RATING_META[b.key].color }}>
+            <span style={{ width: 74, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: barColor(b.key) }}>
               {RATING_META[b.key].label}
             </span>
             <span style={{ flex: 1, height: 7, borderRadius: 99, background: "#F0F1F5", overflow: "hidden" }}>
-              <span style={{ display: "block", width: `${b.pct}%`, height: "100%", background: RATING_META[b.key].color }} />
+              <span style={{ display: "block", width: `${b.pct}%`, height: "100%", background: barColor(b.key) }} />
             </span>
-            <span style={{ width: 62, textAlign: "right", flexShrink: 0, fontSize: 12, color: SUB, fontVariantNumeric: "tabular-nums" }}>
-              {b.pct}% · {b.n}
+            <span style={{ width: 40, textAlign: "right", flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: HEAD, fontVariantNumeric: "tabular-nums" }}>
+              {b.pct}%
             </span>
           </div>
         ))}
@@ -446,21 +454,28 @@ function CustomerReviews({ rating, tours }) {
       <div>
         {rating.reviews.map((r, i) => {
           const meta = RATING_META[r.rating];
+          const ink = r.rating === "not" ? NOT_RED : meta.color;
           const tour = named[i % named.length];
           return (
             <div key={i} style={{ padding: "14px 0", borderTop: `1px solid ${LINE}` }}>
+              {/* The tour leads the review. Running it underneath ran it into
+                  the comment above, and it is the thing being reviewed. */}
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 5, maxWidth: "100%",
+                background: SOFT, borderRadius: 6, padding: "3px 8px", marginBottom: 8,
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#8A90B2", letterSpacing: 0.4, textTransform: "uppercase", flexShrink: 0 }}>On</span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: HEAD, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tour.name}</span>
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 13.5, fontWeight: 700, color: HEAD }}>{r.name}</span>
-                <span style={{ fontSize: 10.5, fontWeight: 700, color: meta.color, background: `${meta.color}1A`, borderRadius: 999, padding: "2px 8px", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: ink, background: `${ink}1A`, borderRadius: 999, padding: "2px 8px", whiteSpace: "nowrap" }}>
                   {meta.label}
                 </span>
                 <span style={{ flex: 1 }} />
                 <span style={{ fontSize: 11.5, color: "#A4A7AE", whiteSpace: "nowrap" }}>{r.when}</span>
               </div>
               <p style={{ margin: "6px 0 0", fontSize: 13.5, color: SUB, lineHeight: "21px" }}>{r.text}</p>
-              <p style={{ margin: "6px 0 0", fontSize: 11.5, color: "#8A90B2" }}>
-                On <span style={{ fontWeight: 600, color: SUB }}>{tour.name}</span>
-              </p>
             </div>
           );
         })}
@@ -521,7 +536,7 @@ function DayActionBar({ day, tripDays, onChangeDay }) {
 function DayCard({
   day, shapeIdx, scoring, rating, photos, tripDays, width, restWidth, radius, mediaH,
   variant, showMoments, active, muted, onMute, onGallery, onProgress,
-  onPrev, onNext, hasPrev, hasNext, p, onClose, onChangeDay, onActivityOpen,
+  onPrev, onNext, hasPrev, hasNext, p, onClose, onChangeDay, onActivityOpen, jumpTo,
 }) {
   const [metric, setMetric] = useState(null);
   const [activity, setActivity] = useState(null);
@@ -529,6 +544,7 @@ function DayCard({
   const reviews = useRef(null);
   const duration = useRef(null);
   const [open, setOpen] = useState(() => {
+    if (!day.tours.length) return [];
     const first = day.tours.findIndex((t) => t.activities.length > 0);
     return day.tours.map((_, i) => i === (first === -1 ? 0 : first));
   });
@@ -545,6 +561,23 @@ function DayCard({
   };
   const toReviews = () => scrollTo(reviews);
   const toDuration = () => scrollTo(duration);
+
+  // Opened from the rating chip on the itinerary, so the day lands on the
+  // reviews rather than making the reader scroll the whole sheet to find them.
+  const jumped = useRef(false);
+  useEffect(() => {
+    if (!active || jumped.current || jumpTo !== "reviews" || !reviews.current) return;
+    jumped.current = true;
+    const box = scroller.current;
+    const el = reviews.current;
+    if (!box) return;
+    const run = () => {
+      const top = box.scrollTop + el.getBoundingClientRect().top - box.getBoundingClientRect().top - 8;
+      box.scrollTop = top;
+    };
+    // Two frames: the sheet's spacer depends on the measured media height.
+    requestAnimationFrame(() => requestAnimationFrame(run));
+  }, [active, jumpTo]);
 
   const onScroll = useCallback((e) => {
     onProgress(shapeIdx, Math.max(0, Math.min(1, e.currentTarget.scrollTop / mediaH)));
@@ -597,22 +630,30 @@ function DayCard({
             </div>
           )}
 
-          <div style={{ padding: "18px 20px 0" }}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 500, color: HEAD }}>Your day will cover:</h3>
-          </div>
-          <div style={{ padding: "12px 20px 4px" }}>
-            {day.tours.map((t, i) => (
-              <TourCard
-                key={t.id}
-                tour={t}
-                index={i}
-                total={day.tours.length}
-                open={open[i]}
-                onToggle={() => setOpen((o) => o.map((v, j) => (j === i ? !v : v)))}
-                onActivity={onActivityOpen || setActivity}
-              />
-            ))}
-          </div>
+          {day.tours.length > 0 ? (
+            <>
+              <div style={{ padding: "18px 20px 0" }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 500, color: HEAD }}>Your day will cover:</h3>
+              </div>
+              <div style={{ padding: "12px 20px 4px" }}>
+                {day.tours.map((t, i) => (
+                  <TourCard
+                    key={t.id}
+                    tour={t}
+                    index={i}
+                    total={day.tours.length}
+                    open={open[i]}
+                    onToggle={() => setOpen((o) => o.map((v, j) => (j === i ? !v : v)))}
+                    onActivity={onActivityOpen || setActivity}
+                  />
+                ))}
+              </div>
+            </>
+          ) : day.freeNote ? (
+            <div style={{ padding: "16px 20px 4px" }}>
+              <p style={{ margin: 0, fontSize: 13.5, color: SUB, lineHeight: "21px" }}>{day.freeNote}</p>
+            </div>
+          ) : null}
 
           {scoring && (
             <>
@@ -710,7 +751,7 @@ function DayCard({
 
 function DayPager({
   days, idx, setIdx, variant, card, moments, onGallery,
-  scoringFor, ratingFor, photos, tripDays, onClose, onChangeDay, onActivityOpen,
+  scoringFor, ratingFor, photos, tripDays, onClose, onChangeDay, onActivityOpen, jumpTo,
 }) {
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -847,6 +888,7 @@ function DayPager({
             onClose={onClose}
             onChangeDay={onChangeDay}
             onActivityOpen={onActivityOpen}
+            jumpTo={i === idx ? jumpTo : null}
             width={i === idx ? restW + M * 2 * grow : restW}
             restWidth={restW}
             radius={card ? (i === idx ? CARD_R * (1 - grow) : CARD_R) : 0}
@@ -881,7 +923,7 @@ function DayPager({
  */
 export function DayMediaDetail({
   days, index, setIndex, variant = "video", card = true, moments = true,
-  scoringFor, ratingFor, photos = [], tripDays, onClose, onChangeDay, onActivityOpen,
+  scoringFor, ratingFor, photos = [], tripDays, onClose, onChangeDay, onActivityOpen, jumpTo,
 }) {
   const [gallery, setGallery] = useState(null);
   if (!days?.length) return null;
@@ -903,6 +945,7 @@ export function DayMediaDetail({
         onClose={onClose}
         onChangeDay={onChangeDay}
         onActivityOpen={onActivityOpen}
+        jumpTo={jumpTo}
         onGallery={setGallery}
       />
       {gallery && (

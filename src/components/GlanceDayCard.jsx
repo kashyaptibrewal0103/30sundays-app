@@ -55,7 +55,7 @@ function PaceChip({ pace, level }) {
 export default function GlanceDayCard({
   dayNum, city, lines, poster, videoCount = 0,
   pace, paceLevel, rating, note, canChange,
-  onOpen, onChange, testId, changeTestId,
+  onOpen, onChange, onOpenReviews, testId, changeTestId,
 }) {
   return (
     <div
@@ -102,7 +102,20 @@ export default function GlanceDayCard({
 
           {(rating || pace) && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              <DayRatingPill rating={rating} style="outline" showCount />
+              {/* The rating is a way in, not just a badge: it opens the day
+                  already scrolled to what couples actually said. */}
+              {rating && onOpenReviews ? (
+                <button
+                  data-testid={testId ? `${testId}-reviews` : undefined}
+                  onClick={(e) => { e.stopPropagation(); onOpenReviews(); }}
+                  aria-label="Read what couples said about this day"
+                  style={{ padding: 0, border: "none", background: "none", cursor: "pointer", display: "inline-flex", fontFamily: "inherit" }}
+                >
+                  <DayRatingPill rating={rating} style="outline" showCount />
+                </button>
+              ) : (
+                <DayRatingPill rating={rating} style="outline" showCount />
+              )}
               {pace && <PaceChip pace={pace} level={paceLevel} />}
             </div>
           )}

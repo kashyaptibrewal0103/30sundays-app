@@ -174,6 +174,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [flightsMenuOpen, setFlightsMenuOpen] = useState(false);
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open
   const [dayDetailIndex, setDayDetailIndex] = useState(null); // which day's full-screen detail is open
+  const [dayDetailJump, setDayDetailJump] = useState(null);   // section to land on, e.g. "reviews"
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
   const [allCombosIndex, setAllCombosIndex] = useState(null); // dayIndex for the full "see all" browse screen
   const [selectedDayOptions, setSelectedDayOptions] = useState({}); // { dayIndex: option }
@@ -303,15 +304,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     return `${f(s)} – ${f(e)}`;
   })() : null;
 
-  // Built trips carry a real start date; show its range. Seed trips keep the demo dates.
-  const dateLabel = it.custom && it.startDate
-    ? (() => {
-        const s = new Date(it.startDate);
-        const e = new Date(s); e.setDate(e.getDate() + (it.nights || 0));
-        const f = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-        return `${f(s)} – ${f(e)}`;
-      })()
-    : "Mar 31 – Apr 6";
+  // One start date for the whole screen: the one the traveller picked, else the
+  // trip's own, else the demo date. The header range and every day's own date
+  // are both read off it, so they cannot disagree.
+  const DEMO_START = "2027-03-31";
+  const tripStart = exploreStart || (it.custom && it.startDate) || DEMO_START;
+  const dateLabel = (() => {
+    const st = new Date(tripStart);
+    const en = new Date(st); en.setDate(en.getDate() + (it.nights || 0));
+    const f = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    return `${f(st)} – ${f(en)}`;
+  })();
   // One edit entry → the wizard on the relevant screen (travellers / dates /
   // cities). Each change forks a new version (handled in Build). Only built
   // (wizard-backed) trips can round-trip through the wizard.
@@ -604,17 +607,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // The day detail screen takes days in its own shape. Built here so the day
   // deck can swipe across the whole trip without rebuilding on every swipe.
   const mediaDays = useMemo(() => toMediaDays(daysWithActivities, it.dest, {
-    dateFor: (day, i) => {
-      const start = it.custom && it.startDate ? new Date(it.startDate) : null;
-      // No travel dates chosen yet, so the day carries no date at all rather
-      // than a made-up one.
-      if (!start) return "";
-      const d = new Date(start);
+    dateFor: (_day, i) => {
+      const d = new Date(tripStart);
       d.setDate(d.getDate() + i);
-      return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+      return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
     },
     scoringFor: (day, i) => scoringForDay(day, i),
-  }), [daysWithActivities, it.dest, it.custom, it.startDate]);
+  }), [daysWithActivities, it.dest, tripStart]);
 
   const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
 
@@ -997,7 +996,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 // A transfer day has nothing to swap. A free day does: the
                 // alternatives are tours you can add to it.
                 canChange={dayHasOptions(i) && !(free && hasTransfer)}
-                onOpen={() => setDayDetailIndex(i)}
+                onOpen={() => { setDayDetailJump(null); setDayDetailIndex(i); }}
+                onOpenReviews={() => { setDayDetailJump("reviews"); setDayDetailIndex(i); }}
                 onChange={() => setChangeDayIndex(i)}
               />
             );
@@ -1531,9 +1531,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             ratingFor={(_day, i) => ratingForDay(daysWithActivities[i], i)}
             photos={it.dest && customerPhotos[it.dest] ? customerPhotos[it.dest] : []}
             tripDays={daysWithActivities.length}
-            onClose={() => setDayDetailIndex(null)}
+            jumpTo={dayDetailJump}
+            onClose={() => { setDayDetailIndex(null); setDayDetailJump(null); }}
             onChangeDay={dayHasOptions(dayDetailIndex)
-              ? () => { const i = dayDetailIndex; setDayDetailIndex(null); setChangeDayIndex(i); }
+              ? () => { const i = dayDetailIndex; setDayDetailIndex(null); setDayDetailJump(null); setChangeDayIndex(i); }
               : null}
           />
         </div>
