@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  ArrowLeft, Search, X as XIcon, SlidersHorizontal, ArrowDownUp, Check,
-  Clock, Car, MapPin, Layers, Play, Heart, Zap, Gauge, Flame, Moon, ChevronRight, Sparkles,
+  ArrowLeft, Search, X as XIcon, SlidersHorizontal,
+  Clock, Car, MapPin, Layers, Play, Heart, Zap, Gauge, Flame, Moon, ChevronRight,
 } from "lucide-react";
 import { C } from "../data";
 import { DayRatingPill } from "../components/DayRating";
-import { DURATIONS, TRANSFERS, PACES, RATING_BANDS } from "../data/dayOptionShape";
+import { TRANSFERS, PACES, RATING_BANDS } from "../data/dayOptionShape";
+import { FilterChip, SearchableCheckList } from "./HotelListing";
 
 // ─── Change day plan, full screen ───
 //
@@ -20,12 +21,21 @@ import { DURATIONS, TRANSFERS, PACES, RATING_BANDS } from "../data/dayOptionShap
 // difference from the day you already have.
 
 const PACE_ICON = { Relaxed: Moon, Balanced: Heart, Active: Zap, "Fast-paced": Flame };
-// Sorting lives on the bar, not in the filter sheet. Recommended is one of the
-// three controls rather than only the starting state: once you have sorted by
-// price there has to be a way back to the order we put them in.
+// Same shape as the Change hotel screen: sorting and filters share one tabbed
+// sheet, so there is one place to change how the list is ordered or cut.
 const SORTS = [
-  { key: "asc", label: "Sort Asc" },
-  { key: "desc", label: "Sort Desc" },
+  { key: "recommended", label: "Recommended" },
+  { key: "asc", label: "Price difference: low to high" },
+  { key: "desc", label: "Price difference: high to low" },
+];
+
+// The four cuts people reach for most, on the bar itself. Each is a shortcut
+// into the same filter state the sheet writes, so the two never disagree.
+const QUICK = [
+  { label: "Private transfer", group: "transfer", key: "private" },
+  { label: "Shared transfer", group: "transfer", key: "shared" },
+  { label: "Relaxed day", group: "pace", key: "relaxed" },
+  { label: "90% and above rating", group: "rating", key: "90" },
 ];
 
 const money = (n) => `₹${Math.abs(n).toLocaleString("en-IN")}`;
@@ -148,89 +158,115 @@ function OptionCard({ opt, onOpen }) {
   );
 }
 
-// ─── Filters ────────────────────────────────────────────────────────────────
-function FiltersSheet({ value, onChange, onClose, matchCount }) {
-  const [draft, setDraft] = useState(value);
-  const toggle = (group, key) => setDraft((d) => ({
+// ─── Sorting and filters, one tabbed sheet ────────────────────────────────
+// Deliberately the Change hotel screen's sheet: same tabs, same chips, same
+// searchable checklist, so the two flows are learned once.
+function SortFilterSheet({ tab, setTab, f, setF, activityOptions, matchCount, onClose }) {
+  const toggle = (group, key) => setF((d) => ({
     ...d,
     [group]: d[group].includes(key) ? d[group].filter((x) => x !== key) : [...d[group], key],
   }));
-  const count = draft.duration.length + draft.transfer.length + draft.pace.length + draft.rating.length;
+  const activeCount = f.transfer.length + f.pace.length + f.rating.length + f.activities.length;
 
-  const Row = ({ label, on, onClick }) => (
-    <button onClick={onClick} style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
-      padding: "13px 14px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit",
-      border: `1px solid ${on ? C.p600 : C.div}`, background: on ? "#FFF5F7" : C.white,
-      fontSize: 14, fontWeight: on ? 700 : 500, color: C.head, textAlign: "left",
-    }}>
-      {label}
-      <span style={{
-        width: 19, height: 19, borderRadius: 5, flexShrink: 0,
-        border: `1.5px solid ${on ? C.p600 : C.icon}`, background: on ? C.p600 : "transparent",
-        display: "grid", placeItems: "center",
-      }}>
-        {on && <Check size={13} color="#fff" strokeWidth={3} />}
-      </span>
-    </button>
-  );
-
-  const Group = ({ title, children }) => (
-    <div style={{ marginBottom: 22 }}>
-      <p style={{ margin: "0 0 10px", fontSize: 15, fontWeight: 700, color: C.head }}>{title}</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{children}</div>
-    </div>
+  const label = (t) => (
+    <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>{t}</p>
   );
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 20, background: C.white, display: "flex", flexDirection: "column" }}>
-      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${C.div}` }}>
-        <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: C.head }}>Sort and filters</p>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <button onClick={() => setDraft({ duration: [], transfer: [], pace: [], rating: [], sort: draft.sort })} style={{
-            background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
-            fontSize: 13.5, fontWeight: 600, color: count ? C.head : C.inact, textDecoration: "underline", textUnderlineOffset: 3,
-          }}>Reset all</button>
-          <button onClick={onClose} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}>
-            <XIcon size={20} color={C.head} />
+    <div style={{ position: "absolute", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={onClose} />
+      <div style={{ position: "relative", background: C.white, borderRadius: "20px 20px 0 0", zIndex: 1, height: "72%", display: "flex", flexDirection: "column" }}>
+
+        <div style={{ flexShrink: 0, padding: "14px 20px 0", display: "flex", alignItems: "flex-start" }}>
+          <div style={{ flex: 1, display: "flex" }}>
+            {["Filters", "Sort"].map((t) => (
+              <button key={t} onClick={() => setTab(t)} style={{
+                flex: 1, fontSize: 15, fontWeight: tab === t ? 600 : 500, color: tab === t ? C.head : C.inact,
+                background: "none", border: "none", cursor: "pointer", padding: "0 0 12px", fontFamily: "inherit",
+                borderBottom: tab === t ? "2px solid #FD014F" : "2px solid transparent", textAlign: "center",
+              }}>{t}</button>
+            ))}
+          </div>
+          <button onClick={onClose} aria-label="Close" style={{ width: 28, height: 28, borderRadius: "50%", background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginLeft: 4 }}>
+            <XIcon size={14} color={C.sub} />
           </button>
         </div>
-      </div>
 
-      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "18px 16px 24px" }}>
-        <Group title="Day duration">
-          {DURATIONS.map((d) => (
-            <Row key={d.key} label={d.label} on={draft.duration.includes(d.key)} onClick={() => toggle("duration", d.key)} />
-          ))}
-        </Group>
-        <Group title="Transfer">
-          {TRANSFERS.map((t) => (
-            <Row key={t.key} label={t.label} on={draft.transfer.includes(t.key)} onClick={() => toggle("transfer", t.key)} />
-          ))}
-        </Group>
-        <Group title="Day pace">
-          {PACES.map((p) => (
-            <Row key={p.key} label={p.label} on={draft.pace.includes(p.key)} onClick={() => toggle("pace", p.key)} />
-          ))}
-        </Group>
-        <Group title="Day rating">
-          {RATING_BANDS.map((r) => (
-            <Row key={r.key} label={r.label} on={draft.rating.includes(r.key)} onClick={() => toggle("rating", r.key)} />
-          ))}
-        </Group>
-      </div>
+        {tab === "Sort" && (
+          <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 24px" }}>
+            {SORTS.map((opt, i) => (
+              <button
+                key={opt.key}
+                data-testid={`sort-${opt.key}`}
+                onClick={() => { setF((d) => ({ ...d, sort: opt.key })); onClose(); }}
+                style={{
+                  display: "block", width: "100%", textAlign: "left", padding: "12px 0",
+                  background: "none", border: "none",
+                  borderBottom: i < SORTS.length - 1 ? `1px solid ${C.div}` : "none",
+                  fontSize: 14, color: f.sort === opt.key ? "#FD014F" : C.head,
+                  fontWeight: f.sort === opt.key ? 600 : 400, cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                {opt.label} {f.sort === opt.key && "✓"}
+              </button>
+            ))}
+          </div>
+        )}
 
-      <div style={{ flexShrink: 0, padding: "12px 16px calc(14px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.div}` }}>
-        <button
-          data-testid="apply-filters"
-          onClick={() => { onChange(draft); onClose(); }}
-          style={{
-            width: "100%", padding: "15px 0", borderRadius: 12, border: "none",
-            background: C.p600, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-          }}
-        >
-          Apply
-        </button>
+        {tab === "Filters" && (
+          <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "16px 20px 24px" }}>
+            {label("Transfer")}
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              {TRANSFERS.map((t) => (
+                <FilterChip key={t.key} label={t.label} on={f.transfer.includes(t.key)} onClick={() => toggle("transfer", t.key)} />
+              ))}
+            </div>
+
+            {label("Day pace")}
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              {PACES.map((p) => (
+                <FilterChip key={p.key} label={p.label} on={f.pace.includes(p.key)} onClick={() => toggle("pace", p.key)} />
+              ))}
+            </div>
+
+            {label("Day rating")}
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              {RATING_BANDS.map((r) => (
+                <FilterChip key={r.key} label={r.label} on={f.rating.includes(r.key)} onClick={() => toggle("rating", r.key)} />
+              ))}
+            </div>
+
+            {label("Activities")}
+            <SearchableCheckList
+              options={activityOptions}
+              selected={new Set(f.activities)}
+              onToggle={(a) => toggle("activities", a)}
+              placeholder="Search activities"
+            />
+          </div>
+        )}
+
+        <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, padding: "10px 20px calc(12px + env(safe-area-inset-bottom))", display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={() => setF((d) => ({ transfer: [], pace: [], rating: [], activities: [], sort: d.sort }))}
+            style={{
+              background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
+              fontSize: 13.5, fontWeight: 600, color: activeCount ? C.head : C.inact,
+              textDecoration: "underline", textUnderlineOffset: 3, flexShrink: 0,
+            }}
+          >Reset all</button>
+          <button
+            data-testid="apply-filters"
+            onClick={onClose}
+            style={{
+              flex: 1, padding: "13px 0", borderRadius: 12, border: "none",
+              background: C.p600, color: "#fff", fontSize: 14.5, fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            Show {matchCount} {matchCount === 1 ? "plan" : "plans"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -243,7 +279,14 @@ export default function ChangeDayScreen({
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [f, setF] = useState({ duration: [], transfer: [], pace: [], rating: [], sort: "recommended" });
+  const [sheetTab, setSheetTab] = useState("Filters");
+  const [f, setF] = useState({ transfer: [], pace: [], rating: [], activities: [], sort: "recommended" });
+
+  // Every activity on offer for this day, for the searchable filter.
+  const activityOptions = useMemo(
+    () => [...new Set(options.flatMap((o) => o.activities || []))].sort(),
+    [options],
+  );
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -251,7 +294,6 @@ export default function ChangeDayScreen({
     // in the list at all.
     let list = options.filter((o) => !o.isCurrent).filter((o) => {
       if (q && !o.name.toLowerCase().includes(q)) return false;
-      if (f.duration.length && !f.duration.includes(o.durationKey)) return false;
       if (f.transfer.length && !f.transfer.includes(o.transferKey)) return false;
       if (f.pace.length && !f.pace.includes(o.paceKey)) return false;
       if (f.rating.length) {
@@ -259,6 +301,8 @@ export default function ChangeDayScreen({
         const min = Math.min(...f.rating.map((k) => RATING_BANDS.find((b) => b.key === k)?.min ?? 0));
         if (pct < min) return false;
       }
+      // A plan matches if it contains any of the chosen activities.
+      if (f.activities.length && !(o.activities || []).some((a) => f.activities.includes(a))) return false;
       return true;
     });
     if (f.sort === "asc") list = [...list].sort((a, b) => a.priceDelta - b.priceDelta);
@@ -268,9 +312,12 @@ export default function ChangeDayScreen({
     return list;
   }, [options, query, f]);
 
-  const activeCount = f.duration.length + f.transfer.length + f.pace.length + f.rating.length;
-  const sorted = f.sort === "asc" || f.sort === "desc";
-  const sortLabel = SORTS.find((s) => s.key === f.sort)?.label || "Sort Asc";
+  const activeCount = f.transfer.length + f.pace.length + f.rating.length + f.activities.length;
+  const quickOn = (q) => f[q.group].includes(q.key);
+  const toggleQuick = (q) => setF((d) => ({
+    ...d,
+    [q.group]: d[q.group].includes(q.key) ? d[q.group].filter((x) => x !== q.key) : [...d[q.group], q.key],
+  }));
 
   // Escape closes, the way a full screen should.
   useEffect(() => {
@@ -327,7 +374,7 @@ export default function ChangeDayScreen({
       </div>
 
       {/* List */}
-      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(132px + env(safe-area-inset-bottom))" }}>
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(112px + env(safe-area-inset-bottom))" }}>
         {shown.length === 0 ? (
           <div style={{ textAlign: "center", padding: "48px 20px" }}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.head }}>Nothing matches those filters</p>
@@ -347,75 +394,87 @@ export default function ChangeDayScreen({
 
       </div>
 
-      {/* Recommended · sort · filters. Three controls, so a price sort is
-          always reversible back to the order we put them in. */}
+      {/* Floating bar, the Change hotel screen's pattern: quick chips, a
+          separator, then one control that opens sorting and filters. The
+          leisure-day offer rides on the same card so it stays in view without
+          competing with the chips. */}
       <div style={{
-        position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 5,
-        background: C.head,
+        position: "absolute", bottom: 12, left: 12, right: 12, zIndex: 10,
+        background: "rgba(255,255,255,0.94)",
+        backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+        borderRadius: 16,
+        boxShadow: "0 4px 24px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)",
+        overflow: "hidden",
       }}>
-        {/* Sticky, and deliberately quiet. At the foot of a twelve-card list
-            nobody ever scrolled far enough to find it. */}
         {onLeisureDay && (
-          <button onClick={onLeisureDay} style={{
-            display: "block", width: "100%", padding: "9px 16px", background: "rgba(255,255,255,0.07)",
-            border: "none", borderBottom: "1px solid rgba(255,255,255,0.1)", cursor: "pointer",
-            fontFamily: "inherit", fontSize: 12, color: "rgba(255,255,255,0.68)", textAlign: "center",
-          }}>
-            Prefer a free day? <span style={{ color: "#fff", fontWeight: 700 }}>Make it a leisure day</span>
+          <button
+            data-testid="make-leisure-day"
+            onClick={onLeisureDay}
+            style={{
+              display: "block", width: "100%", padding: "8px 12px",
+              background: "none", border: "none", borderBottom: `1px solid ${C.div}`,
+              cursor: "pointer", fontFamily: "inherit", fontSize: 12, color: C.sub,
+              textAlign: "center",
+            }}
+          >
+            Prefer a free day? <span style={{ color: C.p600, fontWeight: 700 }}>Make it a leisure day</span>
           </button>
         )}
-        <div style={{ display: "flex", gap: 7, padding: "9px 11px calc(11px + env(safe-area-inset-bottom))" }}>
-          <button
-            data-testid="sort-recommended"
-            onClick={() => setF((x) => ({ ...x, sort: "recommended" }))}
-            style={{
-              flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-              padding: "11px 6px", borderRadius: 999, border: "none",
-              background: !sorted ? "#fff" : "rgba(255,255,255,0.14)",
-              fontSize: 12, fontWeight: 700, color: !sorted ? C.head : "#fff",
-              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-            }}
-          >
-            <Sparkles size={13} color={!sorted ? C.head : "#fff"} />
-            Recommended
-          </button>
-          <button
-            data-testid="cycle-sort"
-            onClick={() => setF((x) => ({ ...x, sort: x.sort === "asc" ? "desc" : "asc" }))}
-            style={{
-              flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-              padding: "11px 6px", borderRadius: 999, border: "none",
-              background: sorted ? "#fff" : "rgba(255,255,255,0.14)",
-              fontSize: 12, fontWeight: 700, color: sorted ? C.head : "#fff",
-              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-            }}
-          >
-            <ArrowDownUp size={13} color={sorted ? C.head : "#fff"} />
-            {sorted ? sortLabel : "Sort"}
-          </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px" }}>
+          <div className="hs" style={{ flex: 1, gap: 6, paddingBottom: 0, minWidth: 0 }}>
+            {QUICK.map((q) => {
+              const on = quickOn(q);
+              return (
+                <button
+                  key={q.label}
+                  data-testid={`quick-${q.key}-${q.group}`}
+                  onClick={() => toggleQuick(q)}
+                  style={{
+                    flexShrink: 0, borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
+                    border: on ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
+                    background: on ? "#FFEBF1" : C.white,
+                    fontSize: 12, fontWeight: 500, color: on ? "#FD014F" : C.head,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {q.label}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ width: 1, height: 24, background: C.div, flexShrink: 0 }} />
           <button
             data-testid="open-filters"
-            onClick={() => setShowFilters(true)}
+            onClick={() => { setSheetTab("Filters"); setShowFilters(true); }}
+            aria-label="Sorting and filters"
             style={{
-              flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-              padding: "11px 6px", borderRadius: 999, border: "none",
-              background: activeCount ? C.p600 : "rgba(255,255,255,0.14)",
-              fontSize: 12, fontWeight: 700, color: "#fff",
-              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+              position: "relative", width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              background: activeCount > 0 ? "#FFEBF1" : "transparent",
+              border: activeCount > 0 ? "1.5px solid #FD014F" : `1px solid ${C.div}`,
+              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
             }}
           >
-            <SlidersHorizontal size={13} color="#fff" />
-            Filters{activeCount ? ` · ${activeCount}` : ""}
+            <SlidersHorizontal size={14} color={activeCount > 0 ? "#FD014F" : C.sub} />
+            {activeCount > 0 && (
+              <div style={{
+                position: "absolute", top: -6, right: -6, width: 16, height: 16, borderRadius: "50%",
+                background: "#FD014F", color: "#fff", fontSize: 11, fontWeight: 700,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>{activeCount}</div>
+            )}
           </button>
         </div>
       </div>
 
       {showFilters && (
-        <FiltersSheet
-          value={f}
-          onChange={setF}
-          onClose={() => setShowFilters(false)}
+        <SortFilterSheet
+          tab={sheetTab}
+          setTab={setSheetTab}
+          f={f}
+          setF={setF}
+          activityOptions={activityOptions}
           matchCount={shown.length}
+          onClose={() => setShowFilters(false)}
         />
       )}
     </div>

@@ -610,7 +610,8 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
 }
 
 // ─── Pink pill chip used across the filter sheet ───
-function FilterChip({ label, on, onClick }) {
+// Exported so the Change day plan screen uses the same chip, not a copy of it.
+export function FilterChip({ label, on, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -627,7 +628,8 @@ function FilterChip({ label, on, onClick }) {
 }
 
 // ─── Searchable checkbox list: one option per row, 5 visible, rest behind "Show more" ───
-function SearchableCheckList({ options, selected, onToggle, placeholder }) {
+// Exported for the same reason: one searchable checklist across the app.
+export function SearchableCheckList({ options, selected, onToggle, placeholder }) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
   const q = query.trim().toLowerCase();
