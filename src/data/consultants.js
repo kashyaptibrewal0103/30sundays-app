@@ -23,26 +23,32 @@ export const teamLeads = {
 
 // Same person, two demo profiles, so both versions are reviewable in one build.
 // In production this comes from the deal's assigned consultant.
+//
+// `avatar` is optional. With one the card shows the photo, without one it falls
+// back to initials, which is what a consultant with no photo on file will get.
+// The team leads deliberately have none, so both states are on screen at once.
 export const consultantProfiles = {
   v1: {
-    id: "rohit-senior",
-    name: "Rohit Sharma",
+    id: "meera-senior",
+    name: "Meera Nair",
+    avatar: "/consultant-meera.jpg",
     phone: "+919876500011",
     destination: "Bali",
     tripsPlanned: 2000,
     languages: ["English", "Hindi"],
     leadId: "aarav",
-    bio: "Rohit has been planning couple trips for 3 years, 2,000 Bali itineraries, and he still books the villas himself.",
+    bio: "Three years planning couple trips, 2,000 Bali itineraries, and still books the villas personally.",
   },
   v2: {
-    id: "rohit-new",
-    name: "Rohit Sharma",
+    id: "meera-new",
+    name: "Meera Nair",
+    avatar: "/consultant-meera.jpg",
     phone: "+919876500011",
     destination: "Bali",
     tripsPlanned: 42,
     languages: ["English", "Hindi"],
     leadId: "aarav",
-    bio: "Rohit has been planning couple trips to Bali for 2 years, and he still books the villas himself.",
+    bio: "Two years planning couple trips to Bali, and still books the villas personally.",
   },
 };
 

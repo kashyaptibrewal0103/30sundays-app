@@ -11,6 +11,38 @@ import { consultantVersion, teamLeadFor, formatCount } from "../data/consultants
 
 const firstName = (name) => (name || "").trim().split(/\s+/)[0] || "";
 
+// The consultant's photo, falling back to their initials. A real roster will
+// have people with no photo on file, so the fallback is the normal case rather
+// than an error state.
+function Avatar({ name, src, size }) {
+  const ring = {
+    width: size, height: size, borderRadius: "50%", flexShrink: 0,
+    overflow: "hidden", background: BRAND.coastalMist,
+    display: "flex", alignItems: "center", justifyContent: "center",
+  };
+  if (src) {
+    return (
+      <div style={ring}>
+        <img
+          src={src}
+          alt={name}
+          style={{
+            width: "100%", height: "100%", objectFit: "cover", display: "block",
+            // Portrait source, square frame: hold the crop at the top so the
+            // face stays in the circle instead of the chin being cut off.
+            objectPosition: "center top",
+          }}
+        />
+      </div>
+    );
+  }
+  return (
+    <div style={{ ...ring, color: BRAND.tropicalForest, fontSize: size * 0.33, fontWeight: 600 }}>
+      {initials(name)}
+    </div>
+  );
+}
+
 function initials(name) {
   if (!name) return "?";
   const p = name.trim().split(/\s+/);
@@ -80,13 +112,7 @@ function TeamLeadSheet({ lead, onClose }) {
         {/* Hero */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 16 }}>
           <div style={{ position: "relative", marginBottom: 9 }}>
-            <div style={{
-              width: 68, height: 68, borderRadius: "50%", background: BRAND.coastalMist,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: BRAND.tropicalForest, fontSize: 21, fontWeight: 600,
-            }}>
-              {initials(lead.name)}
-            </div>
+            <Avatar name={lead.name} src={lead.avatar} size={68} />
             <span style={{
               position: "absolute", right: 2, top: 4, width: 13, height: 13,
               borderRadius: "50%", background: BRAND.lagoonBliss, border: `2.5px solid ${C.white}`,
@@ -190,19 +216,13 @@ export default function TravelConsultantSection({ consultant, onVersionChange })
       }}>
         {/* Name + contact actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: "50%", background: BRAND.coastalMist,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: BRAND.tropicalForest, fontSize: 17, fontWeight: 600, flexShrink: 0,
-          }}>
-            {initials(consultant.name)}
-          </div>
+          <Avatar name={consultant.name} src={consultant.avatar} size={52} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: BRAND.tropicalForest, letterSpacing: "-0.2px" }}>{consultant.name}</p>
             {/* Version 2 only: borrow the team lead's record right under the name. */}
             {isNew && lead && (
               <p style={{ margin: "2px 0 0", fontSize: 12.5, color: BRAND_SUB, lineHeight: "17px" }}>
-                His team lead has planned {formatCount(lead.tripsPlanned)}+ trips
+                Their team lead has planned {formatCount(lead.tripsPlanned)}+ trips
               </p>
             )}
           </div>
@@ -251,7 +271,7 @@ export default function TravelConsultantSection({ consultant, onVersionChange })
                 borderBottom: `1.5px solid ${BRAND.sunsetFuchsia}66`,
               }}
             >
-              Talk to his team lead
+              Talk to their team lead
             </button>
           </p>
         )}
