@@ -10,6 +10,7 @@ import {
   ChevronDown, CreditCard, Copy, AlertCircle, ReceiptIndianRupee, Download, Clock,
 } from "lucide-react";
 import { C } from "../data";
+import RatingSheet from "../components/RatingSheet";
 import { useDeals } from "../data/deals";
 import { useWishlist } from "../data/wishlist";
 
@@ -1079,9 +1080,14 @@ function DocCard({ doc }) {
 
 function ContactSupportScreen({ onClose }) {
   const frame = typeof document !== "undefined" ? document.getElementById("phone-frame") : null;
+  const [rating, setRating] = useState(false);
+
+  // Phone and email reach a person. Rating the app is the third thing people
+  // come here to do, and it had no entry point of its own.
   const rows = [
     { icon: Phone, label: SUPPORT.phone, href: `tel:${SUPPORT.phone.replace(/\s/g, "")}` },
     { icon: Mail, label: SUPPORT.email, href: `mailto:${SUPPORT.email}` },
+    { icon: Star, label: "Rate the app", sub: "Takes one tap", onClick: () => setRating(true) },
   ];
 
   const content = (
@@ -1092,27 +1098,46 @@ function ContactSupportScreen({ onClose }) {
       }}>
         {rows.map((r, i) => {
           const Icon = r.icon;
-          return (
-            <a key={r.label} href={r.href} style={{
-              display: "flex", alignItems: "center", gap: 14, padding: "16px",
-              textDecoration: "none",
-              borderBottom: i < rows.length - 1 ? `1px solid ${C.div}` : "none",
-            }}>
+          const last = i === rows.length - 1;
+          const inner = (
+            <>
               <div style={{
                 width: 40, height: 40, borderRadius: 11, background: C.p100,
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}>
                 <Icon size={18} color={C.p600} />
               </div>
-              <span style={{ flex: 1, fontSize: 15.5, fontWeight: 600, color: C.head }}>{r.label}</span>
+              <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                <span style={{ display: "block", fontSize: 15.5, fontWeight: 600, color: C.head }}>{r.label}</span>
+                {r.sub && <span style={{ display: "block", fontSize: 12.5, color: C.sub, marginTop: 1 }}>{r.sub}</span>}
+              </span>
               <ChevronRight size={16} color={C.inact} />
-            </a>
+            </>
+          );
+          const shared = {
+            display: "flex", alignItems: "center", gap: 14, padding: "16px",
+            width: "100%", boxSizing: "border-box", textDecoration: "none",
+            borderBottom: last ? "none" : `1px solid ${C.div}`,
+          };
+          return r.href ? (
+            <a key={r.label} href={r.href} style={shared}>{inner}</a>
+          ) : (
+            <button
+              key={r.label}
+              data-testid="support-rate-app"
+              onClick={r.onClick}
+              style={{ ...shared, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+            >
+              {inner}
+            </button>
           );
         })}
       </div>
       <p style={{ fontSize: 12.5, color: C.sub, textAlign: "center", margin: "16px 8px 0", lineHeight: "18px" }}>
-        Our team is available 9 AM – 9 PM IST, all days.
+        Our team is available 9 AM to 9 PM IST, all days.
       </p>
+
+      {rating && <RatingSheet source="support" onClose={() => setRating(false)} />}
     </ScreenFrame>
   );
 
