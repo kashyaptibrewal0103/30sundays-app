@@ -3,6 +3,9 @@
 
 // The old digitalocean bucket 404s on every path; the same files are served
 // from the current CDN.
+// One source for footage across the app. The old bucket 404s.
+import { SAMPLE_VIDEO as VIDEO_SAMPLE } from "./videoSource";
+
 const CDN = "https://cdn.30sundays.club/app_content";
 
 const FALLBACK_IMAGES = [
@@ -105,7 +108,6 @@ function pickReviews(name) {
     .slice(0, 3);
 }
 
-const VIDEO_SAMPLE = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
 
 // Hand-authored overrides for specific activity names. When the itinerary
 // sends a generic label (e.g. "Dining"), we swap in a richer real-place record.

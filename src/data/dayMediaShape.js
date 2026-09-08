@@ -1,5 +1,6 @@
 import { getDayTours } from "./dayScoring";
 import { customerPhotos } from "../data";
+import { SAMPLE_VIDEO } from "./videoSource";
 
 // ─── Real itinerary days → the shape the media day detail renders ───
 //
@@ -146,7 +147,7 @@ export function toMediaDays(days, dest, opts = {}) {
     const images = [...new Set(acts.map((a) => a.img).filter(Boolean))];
     const video = free || !images.length
       ? null
-      : { poster: images[0], duration: "1:12", title: `Your day in ${day.city}` };
+      : { poster: images[0], src: SAMPLE_VIDEO, duration: "1:12", title: `Your day in ${day.city}` };
 
     const title = day.departure
       ? "Departure day"

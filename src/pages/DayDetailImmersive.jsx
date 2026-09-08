@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { C } from "../data";
 import { getDayScoring } from "../data/dayScoring";
+import { SAMPLE_VIDEO } from "../data/videoSource";
 import { DayScoreModal, DurationBody } from "../components/DayScoring";
 import { getDayRating } from "../data/dayRatings";
 import { RATING_META } from "../data/tourRatings";
@@ -120,18 +121,64 @@ function MediaImage({ src, live = false }) {
 // Inside a card the layers stack: media at the bottom, the scrolling sheet
 // over it, then the media's own controls on top so they stay tappable.
 
-function VideoMedia({ day }) {
+// The day's footage, playing on arrival. Muted and looping, because a video
+// that starts with sound on a screen you scrolled into is hostile.
+//
+// If the file is missing the element errors and we fall back to the poster with
+// its slow zoom, so a day without footage looks deliberate rather than broken.
+function AutoVideo({ src, poster, active = true, fit = "cover", onFail }) {
+  const ref = useRef(null);
+  // Only the day you are looking at plays. The deck holds every day at once, so
+  // without this a seven-day trip would have seven videos decoding in the
+  // background, and any one of them could be the one you hear.
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = true;
+    if (active) {
+      // Browsers can refuse autoplay until the reader has interacted with the
+      // page. Nothing to do about it, and the poster is already underneath.
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+      v.currentTime = 0;
+    }
+  }, [src, active]);
+  return (
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
+      // preload metadata only: the deck mounts every day, and full preload on
+      // all of them is a lot of data for footage nobody has swiped to yet.
+      preload={active ? "auto" : "metadata"}
+      autoPlay={active}
+      muted
+      loop
+      playsInline
+      onError={onFail}
+      style={{ width: "100%", height: "100%", objectFit: fit, display: "block", background: "#15172A" }}
+    />
+  );
+}
+
+function VideoMedia({ day, active }) {
   const v = day.media.video;
+  const [failed, setFailed] = useState(false);
+  const playable = v?.src && !failed;
   return (
     <>
-      <MediaImage src={v ? v.poster : day.media.images[0]} live={!!v} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 26%, transparent 60%, rgba(0,0,0,0.5) 100%)" }} />
+      {playable
+        ? <AutoVideo src={v.src} poster={v.poster} active={active} onFail={() => setFailed(true)} />
+        : <MediaImage src={v ? v.poster : day.media.images[0]} live={!!v} />}
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 26%, transparent 60%, rgba(0,0,0,0.5) 100%)", pointerEvents: "none" }} />
     </>
   );
 }
 
-function CollageMedia({ day }) {
+function CollageMedia({ day, active }) {
   const { video, images } = day.media;
+  const [failed, setFailed] = useState(false);
 
   if (!video && images.length === 1) {
     return (
@@ -158,8 +205,10 @@ function CollageMedia({ day }) {
         }}
       >
         <div style={{ position: "relative", width: "78%", minWidth: "78%", height: "100%", flexShrink: 0, background: SOFT }}>
-          <MediaImage src={first.src} live={first.live} />
-          {video && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.38) 0%, transparent 36%, transparent 64%, rgba(0,0,0,0.42) 100%)" }} />}
+          {video?.src && !failed
+            ? <AutoVideo src={video.src} poster={video.poster} active={active} onFail={() => setFailed(true)} />
+            : <MediaImage src={first.src} live={first.live} />}
+          {video && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.38) 0%, transparent 36%, transparent 64%, rgba(0,0,0,0.42) 100%)", pointerEvents: "none" }} />}
         </div>
         {pairs.map((pair, i) => (
           <div key={i} style={{ width: "52%", minWidth: "52%", flexShrink: 0, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -181,44 +230,30 @@ function CollageMedia({ day }) {
 function MediaControls({ day, variant, muted, onMute, onGallery }) {
   const v = day.media.video;
   const count = day.media.images.length + (v ? 1 : 0);
-  const showGallery = variant === "collage" && count > 1;
   return (
     <>
-      {variant === "video" && v && (
-        <>
-          <div style={{ position: "absolute", left: 12, bottom: 26, pointerEvents: "auto" }}>
-            <RoundBtn onClick={onMute} size={32}>
-              {muted ? <VolumeX size={15} color="#fff" /> : <Volume2 size={15} color="#fff" />}
-            </RoundBtn>
-          </div>
-          <button style={{
-            position: "absolute", right: 12, bottom: 26, ...glass, borderRadius: 999,
-            padding: "7px 12px 7px 10px", display: "inline-flex", alignItems: "center", gap: 6,
-            cursor: "pointer", fontFamily: "inherit", pointerEvents: "auto",
-          }}>
-            <Play size={13} color="#fff" fill="#fff" />
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: "#fff" }}>Watch full video</span>
-          </button>
-        </>
-      )}
-      {variant === "collage" && v && (
-        <div style={{ position: "absolute", left: 12, bottom: 26, ...glass, borderRadius: 999, padding: "4px 9px 4px 7px", display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <Play size={11} color="#fff" fill="#fff" />
-          <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{v.duration}</span>
+      {/* Mute belongs to footage. A day showing a photo has nothing to mute. */}
+      {v && (
+        <div style={{ position: "absolute", left: 12, bottom: 26, pointerEvents: "auto" }}>
+          <RoundBtn onClick={onMute} size={32}>
+            {muted ? <VolumeX size={15} color="#fff" /> : <Volume2 size={15} color="#fff" />}
+          </RoundBtn>
         </div>
       )}
-      {showGallery && (
-        <button onClick={() => onGallery("activity")} style={{
-          position: "absolute", right: 12, bottom: 26, ...glass, borderRadius: 8,
-          padding: "7px 11px", display: "inline-flex", alignItems: "center", gap: 6,
-          cursor: "pointer", fontFamily: "inherit", pointerEvents: "auto",
-        }}>
-          <Images size={13} color="#fff" />
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#fff" }}>
-            View gallery <span style={{ color: "rgba(255,255,255,0.6)" }}>· {count}</span>
-          </span>
-        </button>
-      )}
+      {/* One entry point to the media, whether the day has footage or only
+          photos. It replaced "Watch full video", which only ever appeared on
+          days that had a video and led somewhere narrower. */}
+      <button onClick={() => onGallery("activity")} style={{
+        position: "absolute", right: 12, bottom: 26, ...glass, borderRadius: 999,
+        padding: "7px 13px 7px 11px", display: "inline-flex", alignItems: "center", gap: 6,
+        cursor: "pointer", fontFamily: "inherit", pointerEvents: "auto",
+      }}>
+        <Images size={13} color="#fff" />
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: "#fff" }}>
+          View media gallery
+          {count > 1 && <span style={{ color: "rgba(255,255,255,0.6)" }}> · {count}</span>}
+        </span>
+      </button>
     </>
   );
 }
@@ -644,7 +679,7 @@ function DayCard({
         position: "absolute", top: 0, left: 0, right: 0, height: mediaH, zIndex: 1,
         transform: `translateY(${mediaY}px)`, opacity: mediaFade,
       }}>
-        {variant === "video" ? <VideoMedia day={day} /> : <CollageMedia day={day} />}
+        {variant === "video" ? <VideoMedia day={day} active={active} /> : <CollageMedia day={day} active={active} />}
       </div>
 
       {/* 2 · the sheet of details, scrolling over the media */}

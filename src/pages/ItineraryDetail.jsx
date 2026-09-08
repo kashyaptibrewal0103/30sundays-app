@@ -2645,7 +2645,7 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onP
       {/* Activity detail - bottom drawer over the reel (keeps video in context) */}
       {showActivityDetail && currentAct && (
         <ActivityDetailSheet
-          detail={buildActivityDetail(currentAct, { city: currentDay?.city, country: dest, isBooked: false, dayNum })}
+          detail={buildActivityDetail(currentAct, { city: currentDay?.city, country: dest, isBooked: true, dayNum })}
           onClose={() => setShowActivityDetail(false)}
         />
       )}

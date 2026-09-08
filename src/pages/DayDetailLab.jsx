@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Check, X as XIcon,
-  Clock, Timer, Car, Info, RefreshCw,
+  Clock, Timer, Car, Info, RefreshCw, Play,
 } from "lucide-react";
 import { C } from "../data";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { TourReviewsSheet } from "./ItineraryDetail";
 import { buildActivityDetail } from "../data/activityData";
+import { SAMPLE_VIDEO } from "../data/videoSource";
 import { getDayScoring } from "../data/dayScoring";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import { getDayRating } from "../data/dayRatings";
@@ -194,7 +195,7 @@ const TOUR_TRANSFER = {
 // be checked against all three cases: video plus images, images only, and a
 // single image.
 const MEDIA_FULL = {
-  video: { poster: IMG.vinwonders, duration: "1:12", title: "Your day in Phu Quoc" },
+  video: { poster: IMG.vinwonders, src: SAMPLE_VIDEO, duration: "1:12", title: "Your day in Phu Quoc" },
   images: [IMG.safari, IMG.grandworld, IMG.island, IMG.kayak, IMG.taichi, IMG.cooking],
 };
 const MEDIA_IMAGES = {
@@ -314,8 +315,18 @@ function ActivityList({ activities, onOpen }) {
           padding: 6, background: "#fff", border: `1px solid ${SOFT}`, borderRadius: 10,
           boxShadow: "0 4px 16px -6px rgba(16,24,40,0.08)", cursor: "pointer", fontFamily: "inherit",
         }}>
-          <span style={{ width: 46, height: 46, borderRadius: 8, overflow: "hidden", background: SOFT, flexShrink: 0 }}>
+          {/* A video thumbnail: the row leads to a page that opens on the
+              activity's footage, so the thumb should say so. */}
+          <span style={{ position: "relative", width: 46, height: 46, borderRadius: 8, overflow: "hidden", background: SOFT, flexShrink: 0 }}>
             <img src={a.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <span style={{ position: "absolute", inset: 0, background: "rgba(8,10,24,0.24)" }} />
+            <span style={{
+              position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+              width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.94)",
+              display: "grid", placeItems: "center",
+            }}>
+              <Play size={9} color={HEAD} fill={HEAD} style={{ marginLeft: 1 }} />
+            </span>
           </span>
           <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: HEAD, lineHeight: 1.3 }}>{a.name}</span>
           <ChevronRight size={17} color={PINK} style={{ flexShrink: 0 }} />
@@ -490,7 +501,9 @@ export function ChangeDayCTA() {
 // The app's own activity detail screen, full screen over the day.
 export function ActivityScreen({ activity, city, dayNum, onClose }) {
   const detail = useMemo(
-    () => buildActivityDetail(activity, { city, country: "Vietnam", isBooked: false, dayNum }),
+    // isBooked gates the video hero on the activity page. Reaching it from a
+    // day in your own itinerary is exactly the case that should get it.
+    () => buildActivityDetail(activity, { city, country: "Vietnam", isBooked: true, dayNum }),
     [activity, city, dayNum]
   );
   return (
