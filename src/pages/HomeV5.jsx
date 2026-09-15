@@ -6,7 +6,6 @@ import { useDeals } from "../data/deals";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
-import HomeBanners, { BANNERS } from "../components/HomeBanners";
 import { SIX, getSeasonGroups, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
@@ -330,16 +329,12 @@ export default function HomeV5({ userState = "new" }) {
       {/* Circular destination tabs, above the hero */}
       <DestCircles />
 
-      {/* Top slot below the circles. Leads see the customisation card here
-          (the marketing banners are hidden for them); everyone else sees the
-          marketing banner carousel. When a lead is no longer being educated,
-          the banners come back. */}
-      {isLead ? (
+      {/* Top slot below the circles. Leads see the customisation card here.
+          Everyone else goes straight to the hero: the marketing banner
+          carousel is off, though HomeBanners and the banner lab still exist
+          if it is ever wanted back. */}
+      {isLead && (
         <CustomiseHeroCard dest={tripDest} dates={tripDates} nights={tripNights} img={tripImg} onOpen={() => navigate(tourTarget)} />
-      ) : (
-        <div style={{ padding: "2px 0 14px" }}>
-          <HomeBanners banners={BANNERS} />
-        </div>
       )}
 
       {/* ─── Cinematic full-bleed hero ─── (hidden for leads: they already
