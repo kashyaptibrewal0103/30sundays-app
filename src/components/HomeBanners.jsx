@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Megaphone, Sparkles, Heart } from "lucide-react";
+import { ArrowRight, Sparkles, Heart } from "lucide-react";
 import { C } from "../data";
 
 // Home marketing banner carousel (finalised design): sits between the
@@ -10,17 +10,6 @@ import { C } from "../data";
 const PAD = 18;
 
 export const BANNERS = [
-  {
-    id: "series-a",
-    kicker: "Big news",
-    title: "We've raised our Series A 🎉",
-    sub: "Backed to craft many more honeymoons.",
-    cta: "Read the story",
-    Icon: Megaphone,
-    url: "https://30sundays.club",
-    bg: "linear-gradient(115deg, #FFF0F4 0%, #FFE4E8 55%, #FFD9E8 100%)",
-    border: "rgba(253,1,79,0.18)", accent: "#FD014F", tile: "#FD014F",
-  },
   {
     id: "maldives-offer",
     kicker: "Limited time",
