@@ -15,7 +15,7 @@ const HERO_IMGS = [destData.Maldives.hero, destData.Bali.hero, destData.Vietnam.
 const HERO_VIDEO = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
 
 // Fullscreen video player. Tap the backdrop or the close button to dismiss.
-function FullscreenVideo({ src, onClose }) {
+export function FullscreenVideo({ src, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <video src={src} autoPlay controls playsInline onClick={(e) => e.stopPropagation()} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} />
@@ -37,7 +37,7 @@ function SectionTitle({ title, sub }) {
 }
 
 // Circular destination tabs (same set as the main home), shown above the hero.
-function DestCircles() {
+export function DestCircles() {
   return (
     <div className="hs" style={{ gap: 14, padding: `12px ${PAD}px 14px`, background: C.white }}>
       {destinations.map((d, i) => (
@@ -53,7 +53,7 @@ function DestCircles() {
 }
 
 // Traveller moments reels (same as HomeV2's "From the road").
-function TravellerMomentsReels() {
+export function TravellerMomentsReels() {
   return (
     <div style={{ marginTop: 28 }}>
       <div style={{ padding: `0 ${PAD}px`, marginBottom: 12 }}>
@@ -118,7 +118,7 @@ function CoupleFaces() {
 }
 
 // Reviews block (same as HomeV2's "What couples say").
-function LovedByCouples() {
+export function LovedByCouples() {
   return (
     <div style={{ margin: "28px 16px 0" }}>
       <div style={{ marginBottom: 12 }}>
@@ -200,7 +200,7 @@ function LowerSections({ groups, showUsp = true }) {
   );
 }
 
-function AllSixCountries() {
+export function AllSixCountries() {
   return (
     <div style={{ marginTop: 28, background: C.white }}>
       <SectionTitle title="All six countries" sub="Every country, honestly priced." />
