@@ -1192,6 +1192,10 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
   // Default filter = the first 2 areas in curated order, so the auto-picked
   // route (variant #0, same order) is always visible under the default filter.
   const [filterCities, setFilterCities] = useState(() => areas.slice(0, 2).map(a => a.city));
+  // Region picks only take effect on Apply, so the route list never shifts
+  // under the couple while they are still choosing.
+  const [appliedCities, setAppliedCities] = useState(() => areas.slice(0, 2).map(a => a.city));
+  const [recOpen, setRecOpen] = useState(false);
   const [leadSent, setLeadSent] = useState(false);
   // Region chips can wrap past two rows; collapse the extra rows behind a
   // "View more" toggle so the routes below stay reachable.
@@ -1228,14 +1232,28 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
   const totalN = route.reduce((s, x) => s + x.n, 0);
 
   const variants = useMemo(() => routeVariants(dest, n), [dest, n]);
-  const filtered = filterCities.length
-    ? variants.filter(r => r.some(s => filterCities.includes(s.city)))
-    : variants;
-  const shownRoutes = filtered.slice(0, 3);
-  const moreRoutes = filtered.slice(3);
-
   const sigOf = (r) => r.map(s => `${s.city}${s.n}`).join("|");
   const selectedSig = sigOf(route);
+
+  // Our fixed expert pick. Always shown, never filtered, and the fallback when
+  // a region combination returns nothing.
+  const recRoute = useMemo(() => recommendedRoute(dest, n), [dest, n]);
+  const recSig = sigOf(recRoute);
+
+  const sameCities = (a, b) => a.length === b.length && a.every(c => b.includes(c));
+  const dirty = !sameCities(filterCities, appliedCities);
+  const applyCities = () => setAppliedCities(filterCities);
+
+  // Filtering runs off the applied set, not the live one. The recommendation is
+  // pinned separately above, so it is left out of the list to avoid a duplicate.
+  // Every applied region must appear in the route, so the chips read as "build
+  // me this combination" rather than "widen the list".
+  const filtered = (appliedCities.length
+    ? variants.filter(r => appliedCities.every(c => r.some(s => s.city === c)))
+    : variants
+  ).filter(r => sigOf(r) !== recSig);
+  const shownRoutes = filtered.slice(0, 3);
+  const moreRoutes = filtered.slice(3);
   // Wishlisted regions first, then the rest. Frozen per destination so a heart
   // tap doesn't reshuffle the row mid-interaction.
   const orderedAreas = useMemo(
@@ -1266,7 +1284,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
   // small row per region (thumbnail with a corner play badge opens that
   // region's video), then a Select / Selected CTA. The selected route gets the
   // solid pink primary CTA; the rest get a white CTA with a pink border.
-  const renderRouteCard = (r, idx) => {
+  const renderRouteCard = (r, idx, label) => {
     const selected = sigOf(r) === selectedSig;
     const pct = couplePct(sigOf(r));
     return (
@@ -1278,7 +1296,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
         {/* Header: route number + a "view on map" link, then how many couples picked this one */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>Route {idx + 1}</p>
+            <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>{label || `Route ${idx + 1}`}</p>
             <button
               onClick={(e) => { e.stopPropagation(); setRoute(r); setMapOpen(true); }}
               style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: 0, border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: 400, color: C.sub, flexShrink: 0 }}
@@ -1374,7 +1392,17 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
 
       {/* ── Section 2: curated routes (or an edge-case nudge) ── */}
       <div ref={routesRef}>
-      <p style={sectionHead}>Choose your route for {n} Night{n > 1 ? "s" : ""}</p>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, margin: "26px 0 12px" }}>
+        <p style={{ ...sectionHead, margin: 0 }}>Choose your route for {n} Night{n > 1 ? "s" : ""}</p>
+        {dirty && !tooShort && !tooLong && (
+          <button
+            onClick={applyCities}
+            style={{ flexShrink: 0, padding: 0, border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", fontSize: 15, fontWeight: 800, color: C.p600, textDecoration: "underline", textUnderlineOffset: 3 }}
+          >
+            Apply
+          </button>
+        )}
+      </div>
 
       {tooLong ? (
         leadSent ? (
@@ -1439,8 +1467,43 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
             </div>
           )}
 
+          {/* Our pick, pinned on top. One line by default, no image or tags, and
+              expands into the same card as any other route. */}
+          <div style={{ marginBottom: 12, border: `1px solid ${C.p300}`, borderRadius: 14, background: C.p100, overflow: "hidden" }}>
+            <button
+              onClick={() => setRecOpen(o => !o)}
+              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "11px 13px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 10.5, fontWeight: 800, color: C.p600, letterSpacing: ".3px" }}>OUR RECOMMENDED ROUTE</span>
+                <span style={{ display: "block", marginTop: 2, fontSize: 13.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {recRoute.map(s => `${s.n}N ${s.city}`).join(" · ")}
+                </span>
+              </div>
+              <ChevronDown size={16} color={C.p600} style={{ flexShrink: 0, transform: recOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
+            </button>
+            {recOpen && (
+              <div style={{ padding: "0 10px 10px" }}>
+                {renderRouteCard(recRoute, 0, "Recommended")}
+              </div>
+            )}
+          </div>
+
+          {filtered.length === 0 ? (
+            <div style={{ padding: 14, borderRadius: 12, background: C.wBg, border: "1px solid #FDE7B2" }}>
+              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: C.head }}>No routes match those regions</p>
+              <p style={{ margin: "5px 0 0", fontSize: 12.5, color: C.sub, lineHeight: 1.5 }}>
+                We could not build a {n}-night trip from that combination. Start with our recommended route above, or pick different regions.
+              </p>
+            </div>
+          ) : shownRoutes.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, opacity: dirty ? 0.45 : 1, transition: "opacity .15s" }}>
+              {shownRoutes.map((r, i) => renderRouteCard(r, i))}
+            </div>
+          ) : null}
+
           {moreRoutes.length > 0 && (
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 12, opacity: dirty ? 0.45 : 1, transition: "opacity .15s" }}>
               <button onClick={() => setMoreOpen(o => !o)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%", padding: "12px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, fontSize: 13.5, fontWeight: 700, color: C.head, cursor: "pointer", fontFamily: "inherit" }}>
                 {moreOpen ? "Show fewer routes" : `${moreRoutes.length} more route${moreRoutes.length > 1 ? "s" : ""}`}
                 <ChevronDown size={15} color={C.sub} style={{ transform: moreOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }} />

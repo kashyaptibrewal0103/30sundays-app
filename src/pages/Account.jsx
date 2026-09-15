@@ -6,7 +6,7 @@ import {
   Bookmark, Users, Lightbulb, Bug, Star, Share2, Shield, MessageCircle,
   Instagram, Youtube, Linkedin, X as XIcon, Send, Check,
   ArrowLeft, Phone, Mail, Calendar, MapPin, Trash2, AlertTriangle,
-  Gift, Megaphone, Palmtree, UserPlus, Plus, BookUser,
+  Gift, Megaphone, Palmtree, UserPlus, Plus, BookUser, HeartHandshake,
   ChevronDown, CreditCard, Copy, AlertCircle, ReceiptIndianRupee, Download, Clock,
 } from "lucide-react";
 import { C } from "../data";
@@ -129,9 +129,11 @@ export default function Account({ userState, leadData, setUserState, setLeadData
   const { counts } = useWishlist();
   const wishlistTotal = Object.values(wished || {}).filter(Boolean).length + (counts?.poiTotal || 0);
 
+  // AI Couple Photos. This is where the couple configures the feature: nothing
+  // for it sits on the home screen.
+
   const [feedback, setFeedback] = useState(null); // "feature" | "problem" | null
   const [showDetails, setShowDetails] = useState(false);
-  const [showWallet, setShowWallet] = useState(false);
   const [showTravellers, setShowTravellers] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [showRate, setShowRate] = useState(false);
@@ -150,8 +152,12 @@ export default function Account({ userState, leadData, setUserState, setLeadData
 
   // Single settings list (matches the app): TCS certificate sits above Logout.
   const mainList = [
-    { icon: Wallet, label: "Wallet", onClick: () => setShowWallet(true) },
-    { icon: Gift, label: "Refer & Earn", onClick: () => setShowRefer(true) },
+    { icon: Wallet, label: "Wallet", onClick: () => navigate("/wallet") },
+    { icon: Gift, label: "Gift cards", onClick: () => navigate("/gift-cards") },
+    { icon: HeartHandshake, label: "Gift registry", onClick: () => navigate("/registry") },
+    { icon: Share2, label: "Refer & Earn", onClick: () => setShowRefer(true) },
+    { icon: Bookmark, label: "Saved & Wishlist", badge: wishlistTotal || undefined, onClick: () => navigate("/saved") },
+    { icon: Users, label: "Travellers & documents", onClick: () => setShowTravellers(true) },
     { icon: HelpCircle, label: "Contact Support", onClick: () => setShowSupport(true) },
     { icon: FileText, label: "Terms & Conditions" },
     ...(tcsCerts.length ? [{ icon: ReceiptIndianRupee, label: "TCS certificate", badge: tcsReady || undefined, onClick: () => setShowTcs(true) }] : []),
@@ -252,10 +258,6 @@ export default function Account({ userState, leadData, setUserState, setLeadData
           onClose={() => setShowDetails(false)}
           onDelete={handleLogout}
         />
-      )}
-
-      {showWallet && profile && (
-        <WalletScreen profile={profile} onClose={() => setShowWallet(false)} />
       )}
 
       {showTravellers && profile && (
@@ -790,12 +792,6 @@ function PersonalDetailsScreen({ profile, onClose, onDelete }) {
   return frame ? createPortal(content, frame) : content;
 }
 
-const EARN_WAYS = [
-  { icon: Gift, title: "Refer & earn", desc: "Invite friends to join and book their first trip, get wallet credit for every successful referral." },
-  { icon: Megaphone, title: "Campaigns", desc: "Participate in special promotions and challenges to unlock extra wallet rewards." },
-  { icon: Palmtree, title: "Repeat bookings", desc: "Earn wallet credit every time you book a trip with us." },
-];
-
 function ScreenFrame({ title, onClose, children }) {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   return (
@@ -815,77 +811,6 @@ function ScreenFrame({ title, onClose, children }) {
       <div style={{ flex: 1, overflowY: "auto", padding: "4px 16px 24px" }}>{children}</div>
     </div>
   );
-}
-
-function WalletScreen({ profile, onClose }) {
-  const [showTx, setShowTx] = useState(false);
-  const frame = typeof document !== "undefined" ? document.getElementById("phone-frame") : null;
-  const balance = profile.coins ?? 0;
-  const transactions = profile.transactions || [];
-
-  const content = (
-    <ScreenFrame title="Wallet" onClose={onClose}>
-      {/* Balance card */}
-      <div style={{
-        position: "relative", borderRadius: 18, background: C.white, overflow: "hidden",
-        border: `1px dashed ${C.p300}`, boxShadow: "0 2px 12px rgba(0,0,0,0.05)", padding: "18px 18px 4px",
-      }}>
-        <p style={{ fontSize: 14, fontWeight: 600, color: C.sub, margin: 0 }}>Current Balance</p>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0 14px" }}>
-          <span style={{ fontSize: 26 }}>🪙</span>
-          <span style={{ fontSize: 30, fontWeight: 800, color: C.head }}>{balance.toLocaleString("en-IN")}</span>
-        </div>
-        {/* Wallet illustration */}
-        <div style={{
-          position: "absolute", right: -10, top: 28, width: 86, height: 58, borderRadius: "12px 0 0 12px",
-          background: "linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)",
-          boxShadow: "0 6px 16px rgba(245,158,11,0.35)",
-        }}>
-          <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 22, height: 22, borderRadius: "50%", background: "#F59E0B", border: "3px solid #FCD34D" }} />
-        </div>
-        <button
-          onClick={() => setShowTx(true)}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
-            padding: "13px 0", background: "none", border: "none", borderTop: `1px solid ${C.div}`,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
-        >
-          <span style={{ fontSize: 15, fontWeight: 700, color: C.p600 }}>View Transaction History</span>
-          <ChevronRight size={18} color={C.p600} />
-        </button>
-      </div>
-
-      {/* Ways to earn */}
-      <h3 style={{ fontSize: 19, fontWeight: 700, color: C.head, margin: "24px 0 14px" }}>Ways to Earn Coins</h3>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {EARN_WAYS.map(w => {
-          const Icon = w.icon;
-          return (
-            <div key={w.title} style={{
-              display: "flex", gap: 14, padding: "16px", borderRadius: 16, background: C.white,
-              border: `1px solid ${C.div}`, boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-            }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 12, background: C.p100, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <Icon size={21} color={C.p600} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: "0 0 4px" }}>{w.title}</p>
-                <p style={{ fontSize: 13.5, color: C.sub, margin: 0, lineHeight: "19px" }}>{w.desc}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {showTx && <TransactionHistoryScreen transactions={transactions} onClose={() => setShowTx(false)} />}
-    </ScreenFrame>
-  );
-
-  return frame ? createPortal(content, frame) : content;
 }
 
 function initials(name) {
@@ -1144,46 +1069,6 @@ function ContactSupportScreen({ onClose }) {
   return frame ? createPortal(content, frame) : content;
 }
 
-function TransactionHistoryScreen({ transactions, onClose }) {
-  const frame = typeof document !== "undefined" ? document.getElementById("phone-frame") : null;
-
-  const content = (
-    <ScreenFrame title="Transaction History" onClose={onClose}>
-      {transactions.length === 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "90px 24px 0", textAlign: "center" }}>
-          <span style={{ fontSize: 46, filter: "grayscale(1)", opacity: 0.7 }}>🪙</span>
-          <h3 style={{ fontSize: 19, fontWeight: 700, color: C.head, margin: "14px 0 6px" }}>No transactions found</h3>
-          <p style={{ fontSize: 14, color: C.sub, margin: 0 }}>Your transaction history will show up here</p>
-        </div>
-      ) : (
-        <div style={{
-          borderRadius: 16, background: C.white, overflow: "hidden",
-          border: `1px solid ${C.div}`, boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-        }}>
-          {transactions.map((t, i) => {
-            const credit = t.amount >= 0;
-            return (
-              <div key={i} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                borderBottom: i < transactions.length - 1 ? `1px solid ${C.div}` : "none",
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14.5, fontWeight: 600, color: C.head, margin: 0 }}>{t.title}</p>
-                  <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0" }}>{t.date}</p>
-                </div>
-                <span style={{ fontSize: 15, fontWeight: 700, color: credit ? "#16A34A" : "#D92D20" }}>
-                  {credit ? "+" : "−"}🪙{Math.abs(t.amount).toLocaleString("en-IN")}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </ScreenFrame>
-  );
-
-  return frame ? createPortal(content, frame) : content;
-}
 
 const REFER_STEPS = [
   { t: "Share your code", d: "Share your code or link on WhatsApp." },

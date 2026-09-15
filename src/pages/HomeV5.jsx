@@ -6,7 +6,6 @@ import { useDeals } from "../data/deals";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
-import HomeBanners, { BANNERS } from "../components/HomeBanners";
 import { SIX, getSeasonGroups, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
@@ -15,7 +14,7 @@ const HERO_IMGS = [destData.Maldives.hero, destData.Bali.hero, destData.Vietnam.
 const HERO_VIDEO = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
 
 // Fullscreen video player. Tap the backdrop or the close button to dismiss.
-function FullscreenVideo({ src, onClose }) {
+export function FullscreenVideo({ src, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <video src={src} autoPlay controls playsInline onClick={(e) => e.stopPropagation()} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} />
@@ -37,7 +36,7 @@ function SectionTitle({ title, sub }) {
 }
 
 // Circular destination tabs (same set as the main home), shown above the hero.
-function DestCircles() {
+export function DestCircles() {
   return (
     <div className="hs" style={{ gap: 14, padding: `12px ${PAD}px 14px`, background: C.white }}>
       {destinations.map((d, i) => (
@@ -53,7 +52,7 @@ function DestCircles() {
 }
 
 // Traveller moments reels (same as HomeV2's "From the road").
-function TravellerMomentsReels() {
+export function TravellerMomentsReels() {
   return (
     <div style={{ marginTop: 28 }}>
       <div style={{ padding: `0 ${PAD}px`, marginBottom: 12 }}>
@@ -118,7 +117,7 @@ function CoupleFaces() {
 }
 
 // Reviews block (same as HomeV2's "What couples say").
-function LovedByCouples() {
+export function LovedByCouples() {
   return (
     <div style={{ margin: "28px 16px 0" }}>
       <div style={{ marginBottom: 12 }}>
@@ -200,7 +199,7 @@ function LowerSections({ groups, showUsp = true }) {
   );
 }
 
-function AllSixCountries() {
+export function AllSixCountries() {
   return (
     <div style={{ marginTop: 28, background: C.white }}>
       <SectionTitle title="All six countries" sub="Every country, honestly priced." />
@@ -330,16 +329,12 @@ export default function HomeV5({ userState = "new" }) {
       {/* Circular destination tabs, above the hero */}
       <DestCircles />
 
-      {/* Top slot below the circles. Leads see the customisation card here
-          (the marketing banners are hidden for them); everyone else sees the
-          marketing banner carousel. When a lead is no longer being educated,
-          the banners come back. */}
-      {isLead ? (
+      {/* Top slot below the circles. Leads see the customisation card here.
+          Everyone else goes straight to the hero: the marketing banner
+          carousel is off, though HomeBanners and the banner lab still exist
+          if it is ever wanted back. */}
+      {isLead && (
         <CustomiseHeroCard dest={tripDest} dates={tripDates} nights={tripNights} img={tripImg} onOpen={() => navigate(tourTarget)} />
-      ) : (
-        <div style={{ padding: "2px 0 14px" }}>
-          <HomeBanners banners={BANNERS} />
-        </div>
       )}
 
       {/* ─── Cinematic full-bleed hero ─── (hidden for leads: they already
