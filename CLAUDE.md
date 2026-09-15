@@ -22,3 +22,14 @@
 - Parallel screen variants are kept on their own routes (e.g. /v3-/v6, /discover,
   /wf, /compare); nothing is merged onto `/` without explicit approval.
 - Commit or push only when explicitly asked.
+
+## Where the work lives (two people)
+- Kashyap's repo is the one everyone works from: the `kashyap` remote, branch
+  `main`. `jaiki96/30sundays-app` is kept only for history.
+- Never commit straight to `main`. Every piece of work gets its own branch off
+  `kashyap/main`, pushed to `kashyap`, and opened as a pull request for review.
+- Pull `kashyap/main` before starting anything, so two people never build on
+  different bases.
+- New screens keep taking their own route, the way variants always have. Two
+  people mean two designs can be live at once, so never overwrite a screen
+  someone else may be reviewing.
