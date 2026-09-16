@@ -216,6 +216,18 @@ function TripCard({ trip }) {
   );
 }
 
+// A trip and anything that belongs to it, as one block.
+function TripBlock({ trip, below }) {
+  const extra = below ? below(trip) : null;
+  if (!extra) return <TripCard trip={trip} />;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <TripCard trip={trip} />
+      {extra}
+    </div>
+  );
+}
+
 // Helper: get current day number for ongoing trips
 function getCurrentDay(trip) {
   const start = new Date(trip.startDate);
@@ -225,7 +237,7 @@ function getCurrentDay(trip) {
 }
 
 // ─── Main Component ───
-export default function MyTrips({ userState, leadData }) {
+export default function MyTrips({ userState, leadData, below, banner }) {
   const isNew = userState === "new";
   const isLead = userState === "lead";
 
@@ -269,6 +281,8 @@ export default function MyTrips({ userState, leadData }) {
         </button>
       </div>
 
+      {banner}
+
       {!hasTrips ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "60px 24px", textAlign: "center" }}>
           <p style={{ fontSize: 40, marginBottom: 12 }}>🏝️</p>
@@ -291,7 +305,7 @@ export default function MyTrips({ userState, leadData }) {
           {ongoing.length > 0 && (
             <div>
               <SectionLabel icon={MapPin} label="Happening now" color={C.p600} bg={C.p100} />
-              {ongoing.map(trip => <TripCard key={trip.id} trip={trip} />)}
+              {ongoing.map(trip => <TripBlock key={trip.id} trip={trip} below={below} />)}
             </div>
           )}
 
@@ -300,7 +314,7 @@ export default function MyTrips({ userState, leadData }) {
             <div style={{ marginTop: ongoing.length > 0 ? 8 : 0 }}>
               <SectionLabel icon={CalendarCheck} label="Coming up" color="#039855" bg="#ECFDF3" />
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {upcoming.map(trip => <TripCard key={trip.id} trip={trip} />)}
+                {upcoming.map(trip => <TripBlock key={trip.id} trip={trip} below={below} />)}
               </div>
             </div>
           )}
@@ -310,7 +324,7 @@ export default function MyTrips({ userState, leadData }) {
             <div style={{ marginTop: 8 }}>
               <SectionLabel icon={CheckCircle} label="Memories made" color={C.sub} bg={C.bg} />
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {completed.map(trip => <TripCard key={trip.id} trip={trip} />)}
+                {completed.map(trip => <TripBlock key={trip.id} trip={trip} below={below} />)}
               </div>
             </div>
           )}
