@@ -19,6 +19,7 @@ import RouteMap from "../components/JourneyMap";
 import { TransferSection, LeisureCard, ExploreIdeas } from "../components/DayWiseExtras";
 import { buildActivityDetail } from "../data/activityData";
 import { Sparkles } from "lucide-react";
+import TripCommunitySection from "../components/Community/TripCommunitySection";
 
 // ─── Simplified 2-tab bottom nav for trip details ───
 function TripBottomNav() {
@@ -465,23 +466,17 @@ function CoTravelersSection({ trip }) {
 }
 
 // ─── Itinerary at Glance ───
-function ItineraryGlance({ trip, setDetailTab }) {
+function ItineraryGlance({ trip }) {
   const [expanded, setExpanded] = useState(false);
   const days = trip.itineraryDays;
   const visibleDays = expanded ? days : days.slice(0, 2);
 
   return (
     <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid #E0E2EB" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      {/* No "Read more" here. "Show all days" below already opens the rest,
+          and two links to the same place split one action in half. */}
+      <div style={{ marginBottom: 16 }}>
         <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: 0, lineHeight: "28px" }}>Itinerary at glance</h4>
-        {setDetailTab && (
-          <button
-            onClick={() => setDetailTab("daywise")}
-            style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, fontSize: 14, fontWeight: 500, color: "#FD014F" }}
-          >
-            Read more
-          </button>
-        )}
       </div>
       <div style={{ position: "relative", paddingLeft: 24 }}>
         {visibleDays.length > 1 && (
@@ -2127,7 +2122,8 @@ export default function TripDetails() {
           <SectionDivider />
           <CoTravelersSection trip={trip} />
           <SectionDivider />
-          <ItineraryGlance trip={trip} setDetailTab={setDetailTab} />
+          <TripCommunitySection trip={trip} divider={<SectionDivider />} />
+          <ItineraryGlance trip={trip} />
           <SectionDivider />
           <FlightsSection flights={trip.flights} />
           <SectionDivider />

@@ -50,6 +50,29 @@ import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
 import Wallet from "./pages/Wallet";
 import GiftCards from "./pages/GiftCards";
+import CommunityIndex from "./pages/CommunityIndex";
+import CommunityFeed from "./pages/CommunityFeed";
+import CommunityQuestion from "./pages/CommunityQuestion";
+import CommunitySearch from "./pages/CommunitySearch";
+import CommunitySaved from "./pages/CommunitySaved";
+import CommunityChat from "./pages/CommunityChat";
+import CommunityGuidelines from "./pages/CommunityGuidelines";
+import CommunityBookingConfirmed from "./pages/CommunityBookingConfirmed";
+import MyTripsCommunity from "./pages/MyTripsCommunity";
+import CommunityEntries from "./pages/CommunityEntries";
+import LoungeLayouts from "./pages/LoungeLayouts";
+import LoungeGoldCopy from "./pages/LoungeGoldCopy";
+import LoungeSignals from "./pages/LoungeSignals";
+import LoungeParts from "./pages/LoungeParts";
+import LoungeStyles from "./pages/LoungeStyles";
+import LoungeReplyRows from "./pages/LoungeReplyRows";
+import LoungeNative from "./pages/LoungeNative";
+import LoungeMix from "./pages/LoungeMix";
+import LoungeMeta from "./pages/LoungeMeta";
+import LoungeHome from "./pages/LoungeHome";
+import LoungeRooms from "./pages/LoungeRooms";
+import LoungeSwitcher from "./pages/LoungeSwitcher";
+import LoungeDirectory from "./pages/LoungeDirectory";
 import GiftCardBuy from "./pages/GiftCardBuy";
 import GiftCardClaim from "./pages/GiftCardClaim";
 import GiftRegistry from "./pages/GiftRegistry";
@@ -74,6 +97,7 @@ import { DealsProvider } from "./data/deals";
 import { SavesProvider } from "./data/saves";
 import { WishlistProvider } from "./data/wishlist";
 import { GiftingProvider } from "./state/useGifting";
+import { CommunityProvider } from "./state/useCommunity";
 import { LAB_VARIANT } from "./data/labVariant";
 
 // Destination pages: new discover-style layout everywhere except Maldives and
@@ -91,8 +115,9 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
+  const communityPaths = pathname.startsWith("/community") || pathname.startsWith("/lounge-");
   const giftPaths = pathname === "/wallet" || pathname.startsWith("/gift-cards") || pathname.startsWith("/gift/") || pathname.startsWith("/g/") || pathname.startsWith("/registry");
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || communityPaths || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -184,6 +209,31 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/trips/:tripId/payments" element={<PaymentDetails />} />
         <Route path="/account" element={<Account userState={userState} leadData={leadData} setUserState={setUserState} setLeadData={setLeadData} />} />
         <Route path="/wallet" element={<Wallet userState={userState} leadData={leadData} />} />
+        {/* Community: Q&A, the cohort, and the parallel My Trips with the card on it */}
+        <Route path="/lounge" element={<LoungeHome />} />
+        <Route path="/lounge/search" element={<CommunitySearch everywhere />} />
+        <Route path="/lounge-rooms" element={<LoungeRooms />} />
+        <Route path="/lounge-switcher" element={<LoungeSwitcher />} />
+        <Route path="/lounge-index" element={<LoungeDirectory />} />
+        <Route path="/community" element={<CommunityIndex />} />
+        <Route path="/community/booking-confirmed" element={<CommunityBookingConfirmed />} />
+        <Route path="/community/:dest" element={<CommunityFeed />} />
+        <Route path="/community/:dest/search" element={<CommunitySearch />} />
+        <Route path="/community/:dest/saved" element={<CommunitySaved />} />
+        <Route path="/community/:dest/q/:qid" element={<CommunityQuestion />} />
+        <Route path="/community/:dest/chat" element={<CommunityChat />} />
+        <Route path="/community/:dest/guidelines" element={<CommunityGuidelines />} />
+        <Route path="/trips-community" element={<MyTripsCommunity userState={userState} leadData={leadData} />} />
+        <Route path="/community-entries" element={<CommunityEntries />} />
+        <Route path="/lounge-layouts" element={<LoungeLayouts />} />
+        <Route path="/lounge-copy" element={<LoungeGoldCopy />} />
+        <Route path="/lounge-signals" element={<LoungeSignals />} />
+        <Route path="/lounge-parts" element={<LoungeParts />} />
+        <Route path="/lounge-styles" element={<LoungeStyles />} />
+        <Route path="/lounge-rows" element={<LoungeReplyRows />} />
+        <Route path="/lounge-native" element={<LoungeNative />} />
+        <Route path="/lounge-mix" element={<LoungeMix />} />
+        <Route path="/lounge-meta" element={<LoungeMeta />} />
         <Route path="/gift-cards" element={<GiftCards />} />
         <Route path="/gift-cards/buy" element={<GiftCardBuy />} />
         <Route path="/gift/:code" element={<GiftCardClaim />} />
@@ -214,6 +264,7 @@ export default function App() {
     <SavesProvider>
     <WishlistProvider>
     <GiftingProvider>
+    <CommunityProvider>
       <BrowserRouter>
         <AppContent
           userState={userState}
@@ -228,6 +279,7 @@ export default function App() {
           setSelectedHotels={setSelectedHotels}
         />
       </BrowserRouter>
+    </CommunityProvider>
     </GiftingProvider>
     </WishlistProvider>
     </SavesProvider>

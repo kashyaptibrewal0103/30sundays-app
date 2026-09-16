@@ -93,7 +93,8 @@ function StateMenu({ mode, setMode }) {
 export default function VisaSection({ visa, destination, travelers = [] }) {
   const initialMode = !visa ? "notadded" : visa.type === "free_on_arrival" ? "free" : visa.purchased ? "added" : "notadded";
   const [mode, setMode] = useState(initialMode);
-  const [open, setOpen] = useState(true);
+  // Collapsed to start with, so the row reads as one line like the add ons below it.
+  const [open, setOpen] = useState(false);
   if (!visa) return null;
 
   const cardText = { fontSize: 13.5, color: "#535862", lineHeight: "20px", margin: "0 0 4px" };

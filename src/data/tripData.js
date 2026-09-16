@@ -1117,6 +1117,24 @@ export const mockTrips = [
   },
 ];
 
+// ── Trip 5: Bali in November 2026, the Community scenario ──
+// Cloned from the Bali trip already in this list, then moved to November and
+// marked upcoming. Cloning means every screen that reads a trip keeps working,
+// rather than hitting a half filled object.
+const baliNovember = JSON.parse(JSON.stringify(mockTrips.find(t => t.id === "trip-2")));
+Object.assign(baliNovember, {
+  id: "trip-5",
+  tripName: "Priya & Rahul's Bali Trip",
+  status: "upcoming",
+  startDate: fmt(addDays(today, 50)),
+  endDate: fmt(addDays(today, 57)),
+  startDateDisplay: fmtDisplay(addDays(today, 50)),
+  endDateDisplay: fmtDisplay(addDays(today, 57)),
+  leadTraveler: { name: "Priya Sharma", phone: "+91 91234 56780", role: "Lead traveler" },
+  coTravelers: [{ name: "Rahul Sharma", phone: "+91 91234 56781", role: "Co-traveler" }],
+});
+mockTrips.push(baliNovember);
+
 // Helpers
 export function getCountdown(dateStr) {
   const target = new Date(dateStr);
