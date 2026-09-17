@@ -34,6 +34,7 @@ import DayDetailImmersive from "./pages/DayDetailImmersive";
 import GlanceCardLab from "./pages/GlanceCardLab";
 import RatingLab from "./pages/RatingLab";
 import ProfileLab from "./pages/ProfileLab";
+import ActivitiesEduLab from "./pages/ActivitiesEduLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -84,7 +85,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -97,7 +98,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
   // show only the screen, no demo-state switcher.
   // Design labs hide it too, so the cards can be judged without it on top of them.
-  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab";
+  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab";
 
   return (
     <PhoneFrame>
@@ -145,6 +146,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/glance-lab" element={<GlanceCardLab />} />
         <Route path="/rating-lab" element={<RatingLab />} />
         <Route path="/profile-lab" element={<ProfileLab />} />
+        <Route path="/activities-lab" element={<ActivitiesEduLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />

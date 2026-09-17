@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from "reac
 import L from "leaflet";
 import {
   ArrowLeft, Check, Plus, Minus, X as XIcon, ChevronDown, ChevronRight,
-  Sparkles, Play, GripVertical, Map as MapIcon, Heart, Search, Star, Users, MapPin,
+  Sparkles, Play, GripVertical, Map as MapIcon, Search, Star, Users, MapPin,
 } from "lucide-react";
 import { C, allItineraries } from "../data";
 import {
@@ -18,8 +18,8 @@ import {
   getTierFromPrice, MEAL_INFO, MEAL_PREF_KEYS, resorts as maldivesResorts,
 } from "../data/resortData";
 import { useDeals } from "../data/deals";
-import { useSaves } from "../data/saves";
 import LoginV2 from "./LoginV2";
+import NextStepNote from "../components/NextStepNote";
 
 // Steps: 0 Destination · 1 Party · 2 When · 3 Route · 4 Activities.
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
@@ -526,7 +526,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
         )}
         {step === 3 && (isMaldives
           ? <StepResortPref tier={tier} setTier={setTier} pinnedResortId={pinnedResortId} setPinnedResortId={setPinnedResortId} nights={nights} />
-          : (route && <StepRoute dest={dest} nights={targetNights} route={route} setRoute={setRoute} setNights={setNights} editRoute={editRoute} />)
+          : (route && <StepRoute dest={dest} nights={targetNights} route={route} setRoute={setRoute} editRoute={editRoute} />)
         )}
         {step === 4 && (isMaldives
           ? <StepMealPref mealPrefs={mealPrefs} setMealPrefs={setMealPrefs} />
@@ -534,9 +534,12 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
         )}
       </div>
 
-      {/* Footer CTA */}
+      {/* Footer CTA. On the step that actually builds the trip, it says what
+          tapping it produces and that the result can still be changed. */}
       {cta && (
-        <div style={{ flexShrink: 0, padding: "12px 16px calc(12px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.div}`, background: C.white }}>
+        <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, background: C.white }}>
+        {(step === 4 || (step === 3 && skipActivities)) && <NextStepNote />}
+        <div style={{ padding: "12px 16px calc(12px + env(safe-area-inset-bottom))" }}>
           <button
             onClick={cta.enabled ? cta.onClick : undefined}
             disabled={!cta.enabled}
@@ -544,6 +547,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
           >
             {cta.label}
           </button>
+          </div>
         </div>
       )}
 
@@ -680,6 +684,13 @@ function StepParty({ name, setName, party, setParty, onContinue }) {
   // Groups travel as couples: an odd adult count blocks Continue with a note.
   const oddBlocked = isGroup && party.adults % 2 !== 0;
   const [showCountList, setShowCountList] = useState(false);
+  // The name is the only thing on this step nobody can answer for you, so the
+  // cursor starts in it. Leaving it empty says so, rather than leaving a grey
+  // field and a dead Continue button to explain themselves.
+  const nameRef = useRef(null);
+  const [nameTouched, setNameTouched] = useState(false);
+  const nameMissing = nameTouched && !name.trim();
+  useEffect(() => { nameRef.current?.focus(); }, []);
   const COUNT_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12];
   const cards = [
     { key: "couple", emoji: "💑", label: "2 Adults", on: party.couples === 1 && !kidsBlocked && !soloBlocked },
@@ -703,16 +714,26 @@ function StepParty({ name, setName, party, setParty, onContinue }) {
           Your name <span style={{ color: C.p600 }}>*</span>
         </label>
         <input
+          ref={nameRef}
+          data-testid="build-name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          onBlur={() => setNameTouched(true)}
           placeholder="What should we call you?"
           style={{
             width: "100%", boxSizing: "border-box", padding: "14px 16px", borderRadius: 14,
-            border: `1.5px solid ${name.trim() ? C.p600 : C.div}`, fontSize: 15, color: C.head,
-            background: "#FAFAFA", outline: "none", fontFamily: "inherit",
+            border: `1.5px solid ${nameMissing ? "#D92D20" : name.trim() ? C.p600 : C.div}`,
+            fontSize: 15, color: C.head,
+            background: C.white, outline: "none", fontFamily: "inherit",
+            transition: "border-color 0.15s",
           }}
         />
+        {nameMissing && (
+          <p data-testid="build-name-error" style={{ margin: "7px 2px 0", fontSize: 12.5, color: "#D92D20" }}>
+            Please enter your name
+          </p>
+        )}
       </div>
       <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.head, margin: "18px 0 0" }}>
         Select number of travellers
@@ -1175,42 +1196,39 @@ function StepMealPref({ mealPrefs, setMealPrefs }) {
 // Select-only: get to know the regions (intro videos), then pick one of our
 // curated routes for the chosen nights. No manual route editing here. Too few
 // nights → nudge to add some; too many → hand off to the team.
-function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
+function StepRoute({ dest, nights, route, setRoute, editRoute }) {
   const meta = destMeta[dest] || {};
   const minN = meta.minNights || 4;
   const LONG = 14;
   const n = nights || routeNights(route) || meta.defaultNights || 7;
   const areas = destAreas[dest] || [];
 
-  // Regions the couple already saved (hearted) for this destination — pre-selected.
-  const { forDest, toggleRegion } = useSaves();
-  const savedRegions = (forDest(dest).regions || []).filter(c => areas.some(a => a.city === c));
-
   const [cityView, setCityView] = useState(null);
   const [mapOpen, setMapOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   // Default filter = the first 2 areas in curated order, so the auto-picked
   // route (variant #0, same order) is always visible under the default filter.
   const [filterCities, setFilterCities] = useState(() => areas.slice(0, 2).map(a => a.city));
   const [leadSent, setLeadSent] = useState(false);
-  // Region chips can wrap past two rows; collapse the extra rows behind a
-  // "View more" toggle so the routes below stay reachable.
+  // Two rows of region chips are free; a third row is what "View more" is for.
+  // The cap is measured off a real chip, so it holds if the chip size changes.
+  const CHIP_GAP = 8;
   const [regionsExpanded, setRegionsExpanded] = useState(false);
   const regionChipsRef = useRef(null);
   const [regionsOverflow, setRegionsOverflow] = useState(false);
-  const REGION_COLLAPSED_MAX = 40; // one row of chips; more rows collapse behind View more
+  const [twoRows, setTwoRows] = useState(null);
   useEffect(() => {
     const measure = () => {
       const el = regionChipsRef.current;
-      if (el) setRegionsOverflow(el.scrollHeight > REGION_COLLAPSED_MAX + 4);
+      const chip = el?.firstElementChild;
+      if (!el || !chip) return;
+      const cap = chip.offsetHeight * 2 + CHIP_GAP;
+      setTwoRows(cap);
+      setRegionsOverflow(el.scrollHeight > cap + 4);
     };
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, [areas.length]);
-  // Roughly two nights per region is the floor for each stop to feel real.
-  const tooManyRegions = filterCities.length > Math.floor((nights || routeNights(route) || 7) / 2);
-
   const tooShort = n < minN;
   const tooLong = n > LONG;
 
@@ -1231,23 +1249,11 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
   const filtered = filterCities.length
     ? variants.filter(r => r.some(s => filterCities.includes(s.city)))
     : variants;
-  const shownRoutes = filtered.slice(0, 3);
-  const moreRoutes = filtered.slice(3);
+  const shownRoutes = filtered;
 
   const sigOf = (r) => r.map(s => `${s.city}${s.n}`).join("|");
   const selectedSig = sigOf(route);
-  // Wishlisted regions first, then the rest. Frozen per destination so a heart
-  // tap doesn't reshuffle the row mid-interaction.
-  const orderedAreas = useMemo(
-    () => [...areas].sort((a, b) => (savedRegions.includes(b.city) ? 1 : 0) - (savedRegions.includes(a.city) ? 1 : 0)),
-    [dest] // eslint-disable-line react-hooks/exhaustive-deps
-  );
 
-  const bumpNights = (d) => {
-    const nn = Math.max(1, n + d);
-    setNights?.(nn);
-    setRoute(recommendedRoute(dest, nn));
-  };
   const toggleFilterCity = (city) =>
     setFilterCities(f => (f.includes(city) ? f.filter(c => c !== city) : [...f, city]));
 
@@ -1257,6 +1263,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
     return <span style={{ fontSize: 10, fontWeight: 700, color: light ? "#fff" : col, background: light ? "rgba(255,255,255,0.22)" : `${col}14`, padding: "2px 7px", borderRadius: 6 }}>{label}</span>;
   };
 
+  const stepTitle = { ...titleStyle, fontSize: 18, letterSpacing: "-0.3px" };
   const sectionHead = { margin: "26px 0 12px", fontSize: 18, fontWeight: 800, color: C.head, letterSpacing: "-0.3px" };
 
   // One route card, reused for the default 3 and the "more routes" accordion.
@@ -1337,47 +1344,14 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
 
   return (
     <div style={{ padding: "18px 16px 24px" }}>
-      {/* Header: pick where to base yourself first (the region carousel). Each
-          route card below has its own "view on map" link. */}
-      <h1 style={{ ...titleStyle, fontSize: 18, letterSpacing: "-0.3px" }}>{editRoute ? "Change your route" : "Where will you base yourself"}</h1>
-      <p style={{ ...subStyle, marginTop: 4 }}>Explore each region, then choose your route below.</p>
-
-      {/* ── Regions: watch (tap card) and wishlist (heart) only, no selecting here ── */}
-      <div className="hs" style={{ gap: 11, margin: "18px -16px 0", paddingLeft: 16, paddingRight: 16, paddingTop: 3 }}>
-        {orderedAreas.map((a, i) => {
-          const wished = savedRegions.includes(a.city);
-          return (
-            <div key={a.city} style={{ flexShrink: 0, width: 116 }}>
-              <div onClick={() => setCityView(a.city)} style={{ position: "relative", width: "100%", aspectRatio: "9 / 16", borderRadius: 14, overflow: "hidden", background: C.div, cursor: "pointer" }}>
-                <img src={areaImg(dest, a.city, i)} alt={a.city} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 42%, rgba(0,0,0,0.8))" }} />
-                <span style={{ position: "absolute", top: "44%", left: "50%", transform: "translate(-50%,-50%)", width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", border: "1.5px solid rgba(255,255,255,0.7)", display: "grid", placeItems: "center" }}>
-                  <Play size={14} color="#fff" fill="#fff" style={{ marginLeft: 2 }} />
-                </span>
-                <button onClick={(e) => { e.stopPropagation(); toggleRegion(dest, a.city); }} aria-label={wished ? "Saved" : "Save"} style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.92)", border: "none", cursor: "pointer", display: "grid", placeItems: "center", padding: 0 }}>
-                  <Heart size={14} color={C.p600} fill={wished ? C.p600 : "none"} strokeWidth={2.2} />
-                </button>
-                <div style={{ position: "absolute", left: 9, right: 9, bottom: 9 }}>
-                  <span style={{ display: "block", color: "#fff", fontSize: 13.5, fontWeight: 800 }}>{a.city}</span>
-                  <span style={{ display: "block", color: "rgba(255,255,255,0.9)", fontSize: 10.5, fontWeight: 700, marginTop: 1 }}>{CROWD_LABEL[a.crowd] || "Popular"}</span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {tooManyRegions && (
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 12, background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, padding: "10px 12px" }}>
-          <span style={{ fontSize: 12, color: "#9A3412", lineHeight: "16px" }}>⚠️ That's a lot of stops for {n} nights. We'd suggest fewer regions or more nights, so each place gets real time.</span>
-        </div>
-      )}
-
-      {/* ── Section 2: curated routes (or an edge-case nudge) ── */}
+      {/* Two questions, in the order they get answered: which places should be
+          in the trip, then which route through them. */}
       <div ref={routesRef}>
-      <p style={sectionHead}>Choose your route for {n} Night{n > 1 ? "s" : ""}</p>
 
       {tooLong ? (
-        leadSent ? (
+        <>
+          <h1 style={stepTitle}>{editRoute ? "Change your route" : "Choose your route"}</h1>
+          {leadSent ? (
           <div style={{ padding: 16, borderRadius: 14, background: C.sBg || "#ECFDF3", border: `1px solid ${C.sBorder || "#C0E5D5"}` }}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>Thanks, you're in good hands ✨</p>
             <p style={{ margin: "6px 0 0", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>Our trip designers will reach out within 24 hours to craft your {n}-night {dest} journey.</p>
@@ -1390,11 +1364,15 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
               Request a custom plan
             </button>
           </div>
-        )
+          )}
+        </>
       ) : (
         <>
+          {/* ── 1. The places ── */}
+          <h1 style={{ ...stepTitle, margin: "0 0 14px" }}>Pick the places you want</h1>
+
           {/* Region filter pills — multi-select, 2 on by default, drive which routes show */}
-          <div ref={regionChipsRef} style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "0 0 8px", maxHeight: regionsExpanded ? "none" : REGION_COLLAPSED_MAX, overflow: "hidden" }}>
+          <div ref={regionChipsRef} style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "0 0 8px", maxHeight: regionsExpanded || !twoRows ? "none" : twoRows, overflow: "hidden" }}>
             {areas.map(a => {
               const on = filterCities.includes(a.city);
               return (
@@ -1415,22 +1393,9 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
             </button>
           )}
 
-          {/* Below the recommended nights: keep the routes visible, with a soft
-              nudge (and a stepper) to add nights. Sits under the region chips
-              and above the suggested routes. */}
-          {tooShort && (
-            <div style={{ padding: 14, borderRadius: 14, background: C.p100, border: `1px solid ${C.p300}`, margin: "0 0 14px" }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>{dest} shines with at least {minN} nights</p>
-              <p style={{ margin: "6px 0 12px", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>You've picked {n} night{n > 1 ? "s" : ""}. Add a couple more for a fuller trip, or pick a shorter route below.</p>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.white, borderRadius: 12, padding: "8px 12px" }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>{n} night{n > 1 ? "s" : ""}</span>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <button onClick={() => bumpNights(-1)} disabled={n <= 1} style={{ ...roundBtn, opacity: n <= 1 ? 0.3 : 1 }} aria-label="Fewer nights"><Minus size={16} color={C.head} /></button>
-                  <button onClick={() => bumpNights(1)} style={{ ...roundBtn, border: "none", background: C.p600 }} aria-label="More nights"><Plus size={16} color="#fff" /></button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* ── 2. The route ── */}
+          <p style={sectionHead}>{editRoute ? "Change your route" : "Choose your route"}</p>
+
           {shownRoutes.length === 0 ? (
             <p style={{ textAlign: "center", color: C.sub, fontSize: 13, margin: "24px 0" }}>No routes include those regions. Try fewer.</p>
           ) : (
@@ -1439,19 +1404,6 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
             </div>
           )}
 
-          {moreRoutes.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <button onClick={() => setMoreOpen(o => !o)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%", padding: "12px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, fontSize: 13.5, fontWeight: 700, color: C.head, cursor: "pointer", fontFamily: "inherit" }}>
-                {moreOpen ? "Show fewer routes" : `${moreRoutes.length} more route${moreRoutes.length > 1 ? "s" : ""}`}
-                <ChevronDown size={15} color={C.sub} style={{ transform: moreOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
-              </button>
-              {moreOpen && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12, paddingTop: 12, borderTop: `1px dashed ${C.div}` }}>
-                  {moreRoutes.map((r, i) => renderRouteCard(r, i + shownRoutes.length))}
-                </div>
-              )}
-            </div>
-          )}
         </>
       )}
 
