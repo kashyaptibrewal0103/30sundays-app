@@ -6,6 +6,7 @@ import UserToggle from "./components/UserToggle";
 import TripNudge from "./components/TripNudge";
 import CallbackNudge from "./components/CallbackNudge";
 import ProfileGate from "./components/ProfileGate";
+import ProfileDemoSync from "./components/ProfileDemoSync";
 import Home from "./pages/Home";
 import HomeV2 from "./pages/HomeV2";
 import HomeV3 from "./pages/HomeV3";
@@ -103,6 +104,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
 
   return (
     <PhoneFrame>
+      <ProfileDemoSync userState={userState} />
       {!shareLink && <UserToggle userState={userState} setUserState={setUserState} />}
       <Routes>
         <Route path="/" element={<HomeV5 userState={userState} />} />

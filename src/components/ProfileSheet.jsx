@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X as XIcon, Mail, Gift, Heart, Check, Lock } from "lucide-react";
+import { X as XIcon, Mail, Gift, Heart, Check } from "lucide-react";
 import { BRAND, BRAND_TINT, BRAND_SUB, FONT } from "../data/brand";
 import { useProfile, maskDate, dateError, emailError } from "../data/profile";
 import { Field } from "./ProfileFields";
@@ -94,9 +94,12 @@ export default function ProfileSheet({ source = "home", onClose }) {
       }} className="hide-scrollbar">
 
         <div aria-hidden="true" style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: 210,
-          background: `linear-gradient(180deg, ${BRAND_TINT.sunsetFuchsia} 0%, rgba(255,255,255,0) 100%)`,
-          pointerEvents: "none",
+          position: "absolute", top: 0, left: 0, right: 0, height: 250, pointerEvents: "none",
+          background: [
+            `radial-gradient(120% 80% at 88% -10%, ${BRAND.goldenHour}24 0%, transparent 60%)`,
+            `radial-gradient(110% 90% at 8% -20%, ${BRAND.sunsetFuchsia}22 0%, transparent 62%)`,
+            `linear-gradient(180deg, ${BRAND_TINT.sunsetFuchsia}CC 0%, rgba(255,255,255,0) 100%)`,
+          ].join(", "),
         }} />
 
         <div style={{ position: "relative", padding: "10px 22px calc(18px + env(safe-area-inset-bottom))" }}>
@@ -135,40 +138,46 @@ export default function ProfileSheet({ source = "home", onClose }) {
                 margin: 0, fontSize: 24, fontWeight: 600, color: BRAND.tropicalForest,
                 lineHeight: 1.22, letterSpacing: "-0.5px", maxWidth: "88%",
               }}>
-                Let us celebrate <span style={{ color: BRAND.sunsetFuchsia }}>you</span>
+                Let us celebrate{" "}
+                <span style={{ position: "relative", display: "inline-block", color: BRAND.sunsetFuchsia }}>
+                  you
+                  <svg aria-hidden="true" viewBox="0 0 84 10" preserveAspectRatio="none"
+                    style={{ position: "absolute", left: -2, right: -2, bottom: -5, width: "calc(100% + 4px)", height: 7 }}>
+                    <path d="M2 7.2 C 22 2.4, 58 2.0, 82 5.4" fill="none" strokeLinecap="round"
+                      stroke={BRAND.sunsetFuchsia} strokeWidth="3" opacity="0.38" />
+                  </svg>
+                </span>
               </h3>
-              <p style={{ margin: "9px 0 22px", fontSize: 13.5, color: BRAND_SUB, lineHeight: "20px" }}>
-                Add your dates and we will plan something for your birthday and your anniversary.
+              <p style={{ margin: "13px 0 24px", fontSize: 13.5, color: BRAND_SUB, lineHeight: "20px" }}>
+                Complete your profile so that we can surprise you on your special days.
               </p>
 
+              <div style={{ animation: "profRise 0.34s ease-out 0.04s both" }}>
               <Field
                 label="Email ID" testId="sheet-email" icon={Mail} type="email"
                 value={email} onChange={(v) => setEmail(v)} onBlur={blur("email")}
                 placeholder="you@email.com" error={errors.email}
                 locked={isLocked("email")} lockNote="Saved already"
               />
+              </div>
+              <div style={{ animation: "profRise 0.34s ease-out 0.1s both" }}>
               <Field
                 label="Birthday" testId="sheet-dob" icon={Gift} inputMode="numeric" maxLength={10}
                 value={dob} onChange={(v) => setDob(maskDate(v))} onBlur={blur("dob")}
                 placeholder="DD / MM / YYYY" error={errors.dob}
                 locked={isLocked("dob")} lockNote="Saved already"
               />
+              </div>
+              <div style={{ animation: "profRise 0.34s ease-out 0.16s both" }}>
               <Field
                 label="Anniversary" testId="sheet-anniversary" icon={Heart} inputMode="numeric" maxLength={10}
                 value={anniversary} onChange={(v) => setAnniversary(maskDate(v))} onBlur={blur("anniversary")}
                 placeholder="DD / MM / YYYY" error={errors.anniversary}
                 locked={isLocked("anniversary")} lockNote="Saved already"
               />
-
-              <div style={{
-                display: "flex", gap: 8, alignItems: "flex-start",
-                background: "#F7F5F4", borderRadius: 12, padding: "10px 12px", margin: "2px 0 16px",
-              }}>
-                <Lock size={13} color="#8FA3A1" style={{ marginTop: 2, flexShrink: 0 }} />
-                <p style={{ margin: 0, fontSize: 11.5, color: BRAND_SUB, lineHeight: "17px" }}>
-                  Used for your trip updates and your special days. Dates are saved once, so check them before you save.
-                </p>
               </div>
+
+              <div style={{ height: 6 }} />
 
               <button
                 data-testid="profile-sheet-save"
@@ -176,15 +185,17 @@ export default function ProfileSheet({ source = "home", onClose }) {
                 disabled={!canSave}
                 style={{
                   width: "100%", padding: "16px 0", borderRadius: 16, border: "none",
-                  background: canSave ? BRAND.sunsetFuchsia : "#EAE6E3",
+                  background: canSave
+                    ? `linear-gradient(135deg, ${BRAND.sunsetFuchsia} 0%, #D1004A 100%)`
+                    : "#EAE6E3",
                   color: canSave ? "#fff" : "#A6B6B4",
                   fontSize: 15.5, fontWeight: 600, fontFamily: "inherit", letterSpacing: "-0.1px",
                   cursor: canSave ? "pointer" : "not-allowed",
-                  boxShadow: canSave ? `0 8px 22px -8px ${BRAND.sunsetFuchsia}88` : "none",
-                  transition: "background 0.18s ease, color 0.18s ease",
+                  boxShadow: canSave ? `0 10px 26px -10px ${BRAND.sunsetFuchsia}AA` : "none",
+                  transition: "background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
                 }}
               >
-                Save details
+                Update profile
               </button>
               <button
                 data-testid="profile-sheet-later"

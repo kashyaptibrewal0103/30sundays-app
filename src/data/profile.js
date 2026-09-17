@@ -14,11 +14,11 @@ import { createContext, createElement, useCallback, useContext, useMemo, useRef,
 // What the home sheet asks for. Short on purpose.
 export const COLLECT_KEYS = ["email", "dob", "anniversary"];
 
-// Fields that lock once given. A birthday that keeps moving is a birthday we
-// cannot send anything against, and an anniversary is not a thing that gets
-// corrected twice. Name, photo and city stay editable: they are identity, not
-// campaign triggers.
-export const LOCK_KEYS = ["email", "dob", "anniversary", "gender"];
+// The one field that locks once given. A birthday that keeps moving is a
+// birthday we cannot send anything against, and it is the one date nobody has
+// a legitimate reason to change. Everything else stays editable: an email with
+// a typo in it would otherwise kill every invoice and every offer for good.
+export const LOCK_KEYS = ["dob"];
 
 // Only the phone number is mandatory, and it is the one thing nobody can
 // change: it is the account. Everything below is optional.
@@ -31,10 +31,20 @@ export const PROMPT_AFTER_VISITS = 1;
 
 const EMPTY = { name: "", email: "", dob: "", anniversary: "", gender: "", city: "", photo: "" };
 
-// A returning traveller, for reviewing the locked state without typing it in.
+// A returning traveller, for reviewing the filled state without typing it in.
 export const PREFILLED = {
   name: "", email: "kashyap.tibrewal@gmail.com", dob: "01/03/1994",
-  anniversary: "12/05/2019", gender: "Male", city: "Gurugram, India", photo: "",
+  anniversary: "12/05/2019", gender: "Male", photo: "",
+};
+
+// The two scenarios the prototype has to show, hung off the demo state switcher
+// so both are one tap apart: a traveller we hold nothing for, and one who gave
+// their details a while ago. Names match the demo profiles on the account.
+export const DEMO_PROFILE_DETAILS = {
+  new: {},
+  lead: {},
+  customer: { email: "priya.sharma@gmail.com", dob: "02/03/1991", anniversary: "18/11/2018", gender: "Female" },
+  done: { email: "rohan.kapoor@gmail.com", dob: "21/11/1989", anniversary: "07/02/2016", gender: "Male" },
 };
 
 const ProfileCtx = createContext(null);
@@ -79,6 +89,9 @@ export function ProfileProvider({ children }) {
       shouldPrompt: missing.length > 0 && !skipped && visits >= PROMPT_AFTER_VISITS,
       reset: () => { setValues(EMPTY); setSkipped(false); setVisits(0); setEvents([]); },
       prefill: () => { setValues({ ...EMPTY, ...PREFILLED }); setSkipped(true); },
+      // Switching the demo state switches scenario, so the prototype can show
+      // an empty profile and a filled one without anyone typing.
+      seedDemo: (state) => setValues({ ...EMPTY, ...(DEMO_PROFILE_DETAILS[state] || {}) }),
     };
   }, [values, saveProfile, skipped, visits, events, track]);
 

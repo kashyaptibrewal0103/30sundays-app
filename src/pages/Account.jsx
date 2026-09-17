@@ -12,7 +12,7 @@ import {
 import { C } from "../data";
 import RatingSheet from "../components/RatingSheet";
 import EditProfileScreen from "../components/EditProfileScreen";
-import { useProfile, prettyDate, initialsOf } from "../data/profile";
+import { useProfile, initialsOf } from "../data/profile";
 import { useDeals } from "../data/deals";
 import { useWishlist } from "../data/wishlist";
 
@@ -127,7 +127,7 @@ export default function Account({ userState, leadData, setUserState, setLeadData
   const navigate = useNavigate();
   const isLoggedIn = userState !== "new";
   const profile = leadData || DEMO_PROFILES[userState] || null;
-  const { values: pv, missing: pvMissing } = useProfile();
+  const { values: pv } = useProfile();
   const { wished } = useDeals();
   const { counts } = useWishlist();
   const wishlistTotal = Object.values(wished || {}).filter(Boolean).length + (counts?.poiTotal || 0);
@@ -203,9 +203,6 @@ export default function Account({ userState, leadData, setUserState, setLeadData
               <ChevronRight size={18} color={C.inact} />
             </div>
 
-            {/* What we hold, and what is still missing. The gaps are tappable,
-                so the profile screen opens on the thing it opened for. */}
-            <ProfileDetailStrip values={pv} missing={pvMissing} />
           </div>
         ) : (
           <div style={{
@@ -264,7 +261,6 @@ export default function Account({ userState, leadData, setUserState, setLeadData
         <EditProfileScreen
           base={profile}
           onClose={() => setShowDetails(false)}
-          onDelete={handleLogout}
         />
       )}
 
@@ -642,39 +638,6 @@ function Stars({ rating, setRating }) {
           }}>
             <Star size={36} color="#F5A623" fill={on ? "#F5A623" : "none"} strokeWidth={on ? 0 : 1.8} />
           </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// The three details the account has no use without. Filled ones read back,
-// missing ones read as an invitation, and the whole strip opens the profile.
-function ProfileDetailStrip({ values, missing }) {
-  const items = [
-    { key: "email", icon: Mail, label: values.email, add: "Add email" },
-    { key: "dob", icon: Gift, label: prettyDate(values.dob), add: "Add birthday" },
-    { key: "anniversary", icon: Heart, label: prettyDate(values.anniversary), add: "Add anniversary" },
-  ];
-  return (
-    <div style={{
-      display: "flex", flexWrap: "wrap", gap: 7, padding: "0 16px 14px",
-      borderTop: `1px solid ${C.div}`, paddingTop: 12, margin: "0 0 0",
-    }}>
-      {items.map(({ key, icon: Icon, label, add }) => {
-        const has = !missing.includes(key);
-        return (
-          <span key={key} style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            maxWidth: "100%", padding: "6px 10px", borderRadius: 999,
-            fontSize: 11.5, fontWeight: 600, letterSpacing: "-0.1px",
-            background: has ? C.bg : "#fff",
-            border: has ? `1px solid ${C.div}` : `1px dashed ${C.p300}`,
-            color: has ? C.sub : C.p600,
-          }}>
-            <Icon size={12} color={has ? C.inact : C.p600} />
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{has ? label : add}</span>
-          </span>
         );
       })}
     </div>

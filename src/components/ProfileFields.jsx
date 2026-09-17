@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { Lock, ChevronDown, Camera, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Lock, ChevronDown, Pencil, Trash2, Info } from "lucide-react";
 import { BRAND, BRAND_SUB } from "../data/brand";
 import { initialsOf } from "../data/profile";
 
@@ -14,9 +14,13 @@ export const LABEL = { fontSize: 12.5, fontWeight: 500, color: BRAND_SUB, margin
 
 export function Field({
   label, value, onChange, placeholder, type = "text", icon: Icon,
-  locked, lockNote, error, inputMode, maxLength, testId, disabled, disabledNote, autoFocus, onBlur, tag,
+  locked, lockNote, error, inputMode, maxLength, testId, disabled, disabledNote, autoFocus, onBlur, tag, noteIcon,
 }) {
   const readOnly = locked || disabled;
+  // A field that answers when you touch it. The tint tells you where the
+  // cursor is without another label saying so.
+  const [focused, setFocused] = useState(false);
+  const live = focused && !readOnly;
   return (
     <div style={{ marginBottom: 16 }}>
       <label style={{ ...LABEL, display: "flex", alignItems: "center", gap: 7 }}>
@@ -30,17 +34,19 @@ export function Field({
       </label>
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
-        border: `1px solid ${error ? BRAND.sunsetFuchsia : BORDER}`,
+        border: `1px solid ${error ? BRAND.sunsetFuchsia : live ? BRAND.sunsetFuchsia : BORDER}`,
+        boxShadow: live ? `0 0 0 3px ${BRAND.sunsetFuchsia}1A` : "none",
         background: readOnly ? WELL : "#fff",
         borderRadius: 14, padding: "0 14px", height: 50,
-        transition: "border-color 0.15s ease",
+        transition: "border-color 0.16s ease, box-shadow 0.16s ease",
       }}>
         <input
           data-testid={testId}
           type={type}
           value={value}
           onChange={readOnly ? undefined : (e) => onChange(e.target.value)}
-          onBlur={onBlur}
+          onFocus={() => setFocused(true)}
+          onBlur={(e) => { setFocused(false); onBlur?.(e); }}
           placeholder={placeholder}
           readOnly={readOnly}
           autoFocus={autoFocus}
@@ -54,15 +60,24 @@ export function Field({
           }}
         />
         {locked ? <Lock size={15} color="#A6B6B4" />
-          : Icon ? <Icon size={17} color="#A6B6B4" /> : null}
+          : Icon ? <Icon size={17} color={live ? BRAND.sunsetFuchsia : "#A6B6B4"} style={{ transition: "color 0.16s ease" }} /> : null}
       </div>
       {error ? (
         <p style={{ margin: "6px 2px 0", fontSize: 12, color: BRAND.sunsetFuchsia }}>{error}</p>
-      ) : locked && lockNote ? (
-        <p style={{ margin: "6px 2px 0", fontSize: 11.5, color: "#8FA3A1", lineHeight: "16px" }}>{lockNote}</p>
-      ) : disabled && disabledNote ? (
-        <p style={{ margin: "6px 2px 0", fontSize: 11.5, color: "#8FA3A1", lineHeight: "16px" }}>{disabledNote}</p>
+      ) : (locked && lockNote) || (disabled && disabledNote) ? (
+        <Note icon={noteIcon}>{locked ? lockNote : disabledNote}</Note>
       ) : null}
+    </div>
+  );
+}
+
+// A quiet line under a field, for a rule rather than a mistake.
+function Note({ icon, children }) {
+  const NoteIcon = icon === true ? Info : icon;
+  return (
+    <div style={{ display: "flex", gap: 6, alignItems: "flex-start", margin: "6px 2px 0" }}>
+      {NoteIcon && <NoteIcon size={12} color="#A6B6B4" style={{ flexShrink: 0, marginTop: 2 }} />}
+      <p style={{ margin: 0, fontSize: 11.5, color: "#8FA3A1", lineHeight: "16px" }}>{children}</p>
     </div>
   );
 }
@@ -114,7 +129,7 @@ export function SectionCard({ title, sub, children }) {
 
 // The photo. Initials until there is one, a pencil badge either way, and a
 // remove button once a photo exists so a bad pick is one tap to undo.
-export function PhotoPicker({ photo, name, onPick, onRemove, size = 96 }) {
+export function PhotoPicker({ photo, name, onPick, onRemove, placeholder, size = 96 }) {
   const input = useRef(null);
   const read = (e) => {
     const file = e.target.files?.[0];
@@ -129,8 +144,8 @@ export function PhotoPicker({ photo, name, onPick, onRemove, size = 96 }) {
           background: BRAND.coastalMist, display: "grid", placeItems: "center",
           border: `1px solid ${BORDER}`,
         }}>
-          {photo
-            ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }} />
+          {photo || placeholder
+            ? <img src={photo || placeholder} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }} />
             : <span style={{ fontSize: size * 0.32, fontWeight: 600, color: BRAND.tropicalForest, letterSpacing: "0.5px" }}>{initialsOf(name)}</span>}
         </div>
         <button
@@ -143,7 +158,7 @@ export function PhotoPicker({ photo, name, onPick, onRemove, size = 96 }) {
             display: "grid", placeItems: "center", boxShadow: "0 4px 12px -4px rgba(10,22,21,0.3)",
           }}
         >
-          <Camera size={15} color={BRAND.tropicalForest} />
+          <Pencil size={14} color={BRAND.tropicalForest} />
         </button>
         <input ref={input} type="file" accept="image/*" onChange={read} style={{ display: "none" }} />
       </div>
