@@ -1,12 +1,13 @@
 import { useRef, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { C } from "../data";
+import { HOME_LAB_ROUTES } from "../data/homeLabData";
 
 const MOBILE_BREAKPOINT = 768;
 
 // Pages where BottomNav is rendered. Mirror BottomNav.showOn so the scroll
 // container only reserves space when the nav is actually visible.
-const NAV_PATHS = new Set(["/", "/plan", "/trips", "/account"]);
+const NAV_PATHS = new Set(["/", "/plan", "/trips", "/account", ...HOME_LAB_ROUTES]);
 
 export default function PhoneFrame({ children }) {
   const scrollRef = useRef(null);

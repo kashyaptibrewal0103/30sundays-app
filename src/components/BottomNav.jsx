@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { Compass, Map, Briefcase, User } from "lucide-react";
 import { C } from "../data";
+import { HOME_LAB_ROUTES } from "../data/homeLabData";
 
 const tabs = [
   { to: "/",        label: "Explore",  icon: Compass },
@@ -10,7 +11,7 @@ const tabs = [
 ];
 
 // Home + its parallel design variants all map to the Explore tab.
-const HOME_ROUTES = ["/", "/v3", "/v4", "/v5", "/v6"];
+const HOME_ROUTES = ["/", "/v3", "/v4", "/v5", "/v6", ...HOME_LAB_ROUTES];
 // Top-level paths that always show the nav
 const showOn = new Set([...HOME_ROUTES, "/trips", "/account"]);
 

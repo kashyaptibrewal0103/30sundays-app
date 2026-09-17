@@ -136,3 +136,15 @@
   color: #181D27;
 }
 .route-tip.leaflet-tooltip::before { display: none; }
+
+/* The line over the home hero. It arrives from the right, settles, and on the
+   way out slides further left as it fades, so the clip and the words change
+   together instead of cutting. */
+@keyframes heroLineIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes heroLineOut {
+  from { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(-30px); opacity: 0; }
+}

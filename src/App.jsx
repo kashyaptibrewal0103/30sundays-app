@@ -15,6 +15,7 @@ import HomeV5 from "./pages/HomeV5";
 import HomeV5Clone from "./pages/HomeV5Clone";
 import HomeBannerLab from "./pages/HomeBannerLab";
 import HomeV6 from "./pages/HomeV6";
+import { HomeLabIndex, CtaLab, CardsLab, PlansLab, StatesLab, HOME_LAB_PAGES } from "./pages/home_lab";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
@@ -114,6 +115,13 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/v4" element={<HomeV4 userState={userState} />} />
         <Route path="/v5" element={<HomeV2 />} />
         <Route path="/v6" element={<HomeV6 userState={userState} />} />
+        {/* Home page lab: ten takes on everything above Sunday School */}
+        <Route path="/home-lab" element={<HomeLabIndex />} />
+        <Route path="/home-lab/cta" element={<CtaLab />} />
+        <Route path="/home-lab/cards" element={<CardsLab />} />
+        <Route path="/home-lab/plans" element={<PlansLab />} />
+        <Route path="/home-lab/states" element={<StatesLab />} />
+        {HOME_LAB_PAGES.map((Page, i) => <Route key={i} path={`/home-lab/${i + 1}`} element={<Page userState={userState} />} />)}
         <Route path="/discover/:name" element={<Discover />} />
         <Route path="/discover/:name/routes" element={<DiscoverRoutes />} />
         <Route path="/discover-couples/:name" element={<Discover routesBase="/discover-couples" />} />
