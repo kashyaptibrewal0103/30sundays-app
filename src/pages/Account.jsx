@@ -5,12 +5,14 @@ import {
   ChevronRight, Wallet, HelpCircle, FileText, LogOut, User, Heart,
   Bookmark, Users, Lightbulb, Bug, Star, Share2, Shield, MessageCircle,
   Instagram, Youtube, Linkedin, X as XIcon, Send, Check,
-  ArrowLeft, Phone, Mail, Calendar, MapPin, Trash2, AlertTriangle,
+  ArrowLeft, Phone, Mail, Calendar, MapPin, Trash2,
   Gift, Megaphone, Palmtree, UserPlus, Plus, BookUser,
   ChevronDown, CreditCard, Copy, AlertCircle, ReceiptIndianRupee, Download, Clock,
 } from "lucide-react";
 import { C } from "../data";
 import RatingSheet from "../components/RatingSheet";
+import EditProfileScreen from "../components/EditProfileScreen";
+import { useProfile, prettyDate, initialsOf } from "../data/profile";
 import { useDeals } from "../data/deals";
 import { useWishlist } from "../data/wishlist";
 
@@ -125,6 +127,7 @@ export default function Account({ userState, leadData, setUserState, setLeadData
   const navigate = useNavigate();
   const isLoggedIn = userState !== "new";
   const profile = leadData || DEMO_PROFILES[userState] || null;
+  const { values: pv, missing: pvMissing } = useProfile();
   const { wished } = useDeals();
   const { counts } = useWishlist();
   const wishlistTotal = Object.values(wished || {}).filter(Boolean).length + (counts?.poiTotal || 0);
@@ -177,21 +180,32 @@ export default function Account({ userState, leadData, setUserState, setLeadData
               overflow: "hidden",
             }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "18px 16px" }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: "50%", background: C.p100,
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                border: `2px solid ${C.p300}`,
-              }}>
-                <User size={24} color={C.p600} />
-              </div>
+              {pv.photo ? (
+                <img src={pv.photo} alt="" style={{
+                  width: 52, height: 52, borderRadius: "50%", objectFit: "cover", objectPosition: "center top",
+                  flexShrink: 0, border: `2px solid ${C.p300}`,
+                }} />
+              ) : (
+                <div style={{
+                  width: 52, height: 52, borderRadius: "50%", background: C.p100,
+                  display: "grid", placeItems: "center", flexShrink: 0,
+                  border: `2px solid ${C.p300}`, fontSize: 17, fontWeight: 700, color: C.p600,
+                }}>
+                  {initialsOf(pv.name || profile.name)}
+                </div>
+              )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 17, fontWeight: 600, color: C.head, margin: 0 }}>{profile.name}</p>
+                <p style={{ fontSize: 17, fontWeight: 600, color: C.head, margin: 0 }}>{pv.name || profile.name}</p>
                 <p style={{ fontSize: 13, color: C.sub, margin: "3px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {profile.email || formatPhone(profile)}
+                  {formatPhone(profile)}
                 </p>
               </div>
               <ChevronRight size={18} color={C.inact} />
             </div>
+
+            {/* What we hold, and what is still missing. The gaps are tappable,
+                so the profile screen opens on the thing it opened for. */}
+            <ProfileDetailStrip values={pv} missing={pvMissing} />
           </div>
         ) : (
           <div style={{
@@ -247,8 +261,8 @@ export default function Account({ userState, leadData, setUserState, setLeadData
       )}
 
       {showDetails && profile && (
-        <PersonalDetailsScreen
-          profile={profile}
+        <EditProfileScreen
+          base={profile}
           onClose={() => setShowDetails(false)}
           onDelete={handleLogout}
         />
@@ -634,160 +648,37 @@ function Stars({ rating, setRating }) {
   );
 }
 
-function PersonalDetailsScreen({ profile, onClose, onDelete }) {
-  const [confirm, setConfirm] = useState(false);
-  const [form, setForm] = useState({
-    name: profile.name || "",
-    phone: formatPhone(profile),
-    email: profile.email || "",
-    dob: profile.dob || "",
-    city: profile.city || "",
-  });
-  const [saved, setSaved] = useState(false);
-  const frame = typeof document !== "undefined" ? document.getElementById("phone-frame") : null;
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-
-  const setField = (k) => (e) => { setForm(f => ({ ...f, [k]: e.target.value })); setSaved(false); };
-
-  const fields = [
-    { icon: User, key: "name", label: "Full name", type: "text", placeholder: "Your full name" },
-    { icon: Phone, key: "phone", label: "Phone number", type: "tel", placeholder: "+91 00000 00000" },
-    { icon: Mail, key: "email", label: "Email", type: "email", placeholder: "you@email.com" },
-    { icon: Calendar, key: "dob", label: "Date of birth", type: "text", placeholder: "DD MMM YYYY" },
-    { icon: MapPin, key: "city", label: "City of residence", type: "text", placeholder: "City, Country" },
+// The three details the account has no use without. Filled ones read back,
+// missing ones read as an invitation, and the whole strip opens the profile.
+function ProfileDetailStrip({ values, missing }) {
+  const items = [
+    { key: "email", icon: Mail, label: values.email, add: "Add email" },
+    { key: "dob", icon: Gift, label: prettyDate(values.dob), add: "Add birthday" },
+    { key: "anniversary", icon: Heart, label: prettyDate(values.anniversary), add: "Add anniversary" },
   ];
-
-  const content = (
+  return (
     <div style={{
-      position: isMobile ? "fixed" : "absolute", inset: 0, zIndex: 130,
-      background: C.bg, display: "flex", flexDirection: "column",
-      ...(isMobile ? {} : { borderRadius: 44, overflow: "hidden" }),
+      display: "flex", flexWrap: "wrap", gap: 7, padding: "0 16px 14px",
+      borderTop: `1px solid ${C.div}`, paddingTop: 12, margin: "0 0 0",
     }}>
-      {/* Top bar */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 12, padding: "16px",
-        background: C.white, borderBottom: `1px solid ${C.div}`,
-      }}>
-        <button onClick={onClose} aria-label="Back" style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 0 }}>
-          <ArrowLeft size={22} color={C.head} />
-        </button>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Personal details</h2>
-      </div>
-
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
-        {/* Avatar */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "8px 0 20px" }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: "50%", background: C.p100,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            border: `2px solid ${C.p300}`,
+      {items.map(({ key, icon: Icon, label, add }) => {
+        const has = !missing.includes(key);
+        return (
+          <span key={key} style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            maxWidth: "100%", padding: "6px 10px", borderRadius: 999,
+            fontSize: 11.5, fontWeight: 600, letterSpacing: "-0.1px",
+            background: has ? C.bg : "#fff",
+            border: has ? `1px solid ${C.div}` : `1px dashed ${C.p300}`,
+            color: has ? C.sub : C.p600,
           }}>
-            <User size={34} color={C.p600} />
-          </div>
-        </div>
-
-        {/* Editable fields */}
-        <div style={{
-          borderRadius: 16, background: C.white, overflow: "hidden",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: `1px solid ${C.div}`,
-        }}>
-          {fields.map((f, i) => {
-            const Icon = f.icon;
-            return (
-              <label key={f.key} style={{
-                display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", cursor: "text",
-                borderBottom: i < fields.length - 1 ? `1px solid ${C.div}` : "none",
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10, background: C.p100,
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                }}>
-                  <Icon size={17} color={C.p600} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 11.5, color: C.sub, margin: "0 0 1px" }}>{f.label}</p>
-                  <input
-                    type={f.type} value={form[f.key]} onChange={setField(f.key)} placeholder={f.placeholder}
-                    style={{
-                      width: "100%", border: "none", outline: "none", padding: 0, background: "transparent",
-                      fontSize: 15, fontWeight: 500, color: C.head, fontFamily: "inherit",
-                    }}
-                  />
-                </div>
-              </label>
-            );
-          })}
-        </div>
-
-        {/* Save changes */}
-        <button
-          onClick={() => setSaved(true)}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            width: "100%", marginTop: 16, padding: "13px 0", borderRadius: 12, border: "none",
-            background: saved ? "#F6FEF9" : C.p600, color: saved ? "#16A34A" : "#fff",
-            boxShadow: saved ? "none" : "0 4px 16px rgba(227,27,83,0.25)",
-            fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-            ...(saved ? { border: "1px solid #ABEFC6" } : {}),
-          }}
-        >
-          {saved ? <><Check size={17} /> Saved</> : "Save changes"}
-        </button>
-
-        {/* Delete account */}
-        <button
-          onClick={() => setConfirm(true)}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            width: "100%", marginTop: 20, padding: "14px 0", borderRadius: 12,
-            background: C.white, border: "1px solid #FDA29B", cursor: "pointer", fontFamily: "inherit",
-            color: "#D92D20", fontSize: 15, fontWeight: 600,
-          }}
-        >
-          <Trash2 size={17} /> Delete account
-        </button>
-        <p style={{ fontSize: 11.5, color: C.inact, textAlign: "center", margin: "10px 4px 0", lineHeight: "16px" }}>
-          Deleting your account permanently removes your trips, saved itineraries and data.
-        </p>
-      </div>
-
-      {/* Delete confirm */}
-      {confirm && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 140 }}>
-          <div onClick={() => setConfirm(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
-          <div style={{
-            position: "absolute", left: 20, right: 20, top: "50%", transform: "translateY(-50%)",
-            background: C.white, borderRadius: 18, padding: "22px 20px",
-            boxShadow: "0 16px 48px rgba(0,0,0,0.25)", textAlign: "center",
-          }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: "50%", background: "#FEF3F2",
-              border: "1px solid #FDA29B", display: "flex", alignItems: "center",
-              justifyContent: "center", margin: "0 auto 14px",
-            }}>
-              <AlertTriangle size={26} color="#D92D20" />
-            </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: "0 0 6px" }}>Delete account?</h3>
-            <p style={{ fontSize: 13.5, color: C.sub, margin: "0 0 20px", lineHeight: "19px" }}>
-              This is permanent and can't be undone. All your trips and saved data will be erased.
-            </p>
-            <button onClick={onDelete} style={{
-              width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-              background: "#D92D20", color: "#fff", fontSize: 15, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit", marginBottom: 8,
-            }}>Delete my account</button>
-            <button onClick={() => setConfirm(false)} style={{
-              width: "100%", padding: "13px 0", borderRadius: 12, border: `1px solid ${C.div}`,
-              background: C.white, color: C.head, fontSize: 15, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}>Cancel</button>
-          </div>
-        </div>
-      )}
+            <Icon size={12} color={has ? C.inact : C.p600} />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{has ? label : add}</span>
+          </span>
+        );
+      })}
     </div>
   );
-
-  return frame ? createPortal(content, frame) : content;
 }
 
 const EARN_WAYS = [

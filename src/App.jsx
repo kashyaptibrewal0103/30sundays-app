@@ -5,6 +5,7 @@ import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
 import TripNudge from "./components/TripNudge";
 import CallbackNudge from "./components/CallbackNudge";
+import ProfileGate from "./components/ProfileGate";
 import Home from "./pages/Home";
 import HomeV2 from "./pages/HomeV2";
 import HomeV3 from "./pages/HomeV3";
@@ -32,6 +33,7 @@ import DayDetailLab from "./pages/DayDetailLab";
 import DayDetailImmersive from "./pages/DayDetailImmersive";
 import GlanceCardLab from "./pages/GlanceCardLab";
 import RatingLab from "./pages/RatingLab";
+import ProfileLab from "./pages/ProfileLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -65,6 +67,7 @@ import WishlistActivityDetail from "./pages/WishlistActivityDetail";
 import { DealsProvider } from "./data/deals";
 import { SavesProvider } from "./data/saves";
 import { WishlistProvider } from "./data/wishlist";
+import { ProfileProvider } from "./data/profile";
 
 // Destination pages: new discover-style layout everywhere except Maldives and
 // Mauritius, which keep their existing layouts.
@@ -81,7 +84,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -94,7 +97,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
   // show only the screen, no demo-state switcher.
   // Design labs hide it too, so the cards can be judged without it on top of them.
-  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab";
+  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab";
 
   return (
     <PhoneFrame>
@@ -141,6 +144,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/day-media/:variant" element={<DayDetailImmersive />} />
         <Route path="/glance-lab" element={<GlanceCardLab />} />
         <Route path="/rating-lab" element={<RatingLab />} />
+        <Route path="/profile-lab" element={<ProfileLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
@@ -164,6 +168,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/watch/:videoId" element={<WatchDeepLink />} />
       </Routes>
       {showNudge && (leadData?.salesRequest ? <CallbackNudge /> : <TripNudge userState={userState} />)}
+      {showNudge && <ProfileGate userState={userState} />}
       {!hideShell && <BottomNav userState={userState} />}
     </PhoneFrame>
   );
@@ -182,6 +187,7 @@ export default function App() {
     <DealsProvider>
     <SavesProvider>
     <WishlistProvider>
+    <ProfileProvider>
       <BrowserRouter>
         <AppContent
           userState={userState}
@@ -196,6 +202,7 @@ export default function App() {
           setSelectedHotels={setSelectedHotels}
         />
       </BrowserRouter>
+    </ProfileProvider>
     </WishlistProvider>
     </SavesProvider>
     </DealsProvider>
