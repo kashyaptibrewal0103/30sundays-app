@@ -53,7 +53,7 @@ function DestCircles() {
 }
 
 // Traveller moments reels (same as HomeV2's "From the road").
-function TravellerMomentsReels() {
+export function TravellerMomentsReels() {
   return (
     <div style={{ marginTop: 28 }}>
       <div style={{ padding: `0 ${PAD}px`, marginBottom: 12 }}>
@@ -118,7 +118,7 @@ function CoupleFaces() {
 }
 
 // Reviews block (same as HomeV2's "What couples say").
-function LovedByCouples() {
+export function LovedByCouples() {
   return (
     <div style={{ margin: "28px 16px 0" }}>
       <div style={{ marginBottom: 12 }}>
@@ -200,7 +200,7 @@ function LowerSections({ groups, showUsp = true }) {
   );
 }
 
-function AllSixCountries() {
+export function AllSixCountries() {
   return (
     <div style={{ marginTop: 28, background: C.white }}>
       <SectionTitle title="All six countries" sub="Every country, honestly priced." />
