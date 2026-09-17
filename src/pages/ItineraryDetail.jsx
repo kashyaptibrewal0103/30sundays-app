@@ -30,6 +30,7 @@ import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
 import InvitePartnerSection from "../components/InvitePartnerSection";
 import SectionNav from "../components/SectionNav";
+import SaveVersionNote from "../components/SaveVersionNote";
 import { LeisureCard, LeisureStrip, ExploreIdeas } from "../components/DayWiseExtras";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { DayMediaDetail } from "./DayDetailImmersive";
@@ -1504,6 +1505,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </div>
         )}
 
+        {/* What Save actually does, for the people who are not tapping it */}
+        {/* An older version exists once this one has been priced, or once we are
+            past V1. Only then is there something for saving to preserve. */}
+        {inDeal && !validQuote && !fetchingPrice && (
+          <SaveVersionNote hasPrevious={quoted || (version?.num || 1) > 1} />
+        )}
+
         {/* Price + CTA row */}
         <div style={{ background: "rgba(255,255,255,0.97)", backdropFilter: "blur(10px)", padding: "10px 16px 12px", display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", borderTop: `1px solid ${C.div}` }}>
         {fetchingPrice ? (
@@ -1555,7 +1563,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                   <Info size={15} color={C.sub} />
                 </button>
               </div>
-              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact }}>Not saved yet, your consultant can't see this</p>
+              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact }}>Not saved yet</p>
             </>
           )}
         </div>
