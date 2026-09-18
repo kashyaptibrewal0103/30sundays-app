@@ -5,7 +5,8 @@ import { C, destData, destinations, reviews, getCustomerPhotos, couplePhotoNames
 import { useSaves } from "../data/saves";
 import { destHero } from "../data/buildData";
 import { regionsFor, activitiesFor } from "../data/discoverData";
-import { weatherData, seasonLabel } from "../data/weatherData";
+import { weatherData } from "../data/weatherData";
+import MonthWeatherStrip from "../components/MonthWeatherStrip";
 import EduSingleCard from "../components/home_v2/EduSingleCard";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import ItineraryCard from "../components/ItineraryCard";
@@ -267,8 +268,6 @@ function MoreFromDest({ dest, navigate }) {
   const visibleReviews = showAllReviews ? destReviews : destReviews.slice(0, 3);
   const otherDests = destinations.filter(dd => dd.name !== dest);
   const wx = weatherData[dest];
-  const nowMonth = new Date().getMonth();
-  const maxRain = wx ? Math.max(...wx.rain) : 1;
   // Four driest months, in calendar order, for a "best time" note.
   const driest = wx ? wx.rain.map((r, i) => [r, i]).sort((a, b) => a[0] - b[0]).slice(0, 4).map(x => x[1]).sort((a, b) => a - b).map(i => MONTHS[i]) : [];
   const photos = getCustomerPhotos(dest);
@@ -320,42 +319,15 @@ function MoreFromDest({ dest, navigate }) {
         </div>
       </div>
 
-      {/* Weather - typical temperature and rainfall by month */}
+      {/* Weather - how warm, and what the sky does, month by month */}
       {wx && (
         <div style={{ margin: `28px ${PAD}px 0` }}>
           <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>Weather in {dest}</span>
-          <p style={{ fontSize: 12, color: C.sub, marginTop: 2, marginBottom: 14 }}>Typical temperature and rainfall each month</p>
-
-          {/* This month, called out */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.p100, borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: C.p600, margin: 0, letterSpacing: "0.3px" }}>THIS MONTH · {MONTHS[nowMonth].toUpperCase()}</p>
-              <p style={{ fontSize: 13.5, fontWeight: 700, color: C.head, margin: "3px 0 0" }}>{wx.temp[nowMonth]}°C high · {wx.rain[nowMonth]}mm rain <span style={{ color: C.sub, fontWeight: 600 }}>({seasonLabel(wx.rain[nowMonth])})</span></p>
-            </div>
-          </div>
-
-          <div style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.div}`, padding: "14px 10px 12px" }}>
-            <div style={{ display: "flex", gap: 3, alignItems: "flex-end" }}>
-              {MONTHS.map((m, i) => {
-                const isNow = i === nowMonth;
-                const barH = Math.round((wx.rain[i] / maxRain) * 44) + 3;
-                return (
-                  <div key={m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, borderRadius: 8, padding: "4px 0", background: isNow ? C.p100 : "transparent" }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: C.head }}>{wx.temp[i]}°</span>
-                    <div style={{ height: 47, display: "flex", alignItems: "flex-end" }}>
-                      <div style={{ width: 8, height: barH, borderRadius: 3, background: isNow ? C.p600 : "#9DC7F5" }} />
-                    </div>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: isNow ? C.p600 : C.inact }}>{m[0]}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.div}` }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.sub }}><span style={{ width: 8, height: 10, borderRadius: 2, background: "#9DC7F5" }} /> Rainfall (mm)</span>
-              <span style={{ fontSize: 11, color: C.sub }}>Number = daytime high (°C)</span>
-            </div>
-          </div>
-          <p style={{ fontSize: 12, lineHeight: "18px", color: C.head, margin: "10px 2px 0" }}>Driest, sunniest months are {driest.join(", ")}.</p>
+          <p style={{ fontSize: 12, color: C.sub, marginTop: 2, marginBottom: 14 }}>Typical temperature each month</p>
+          <MonthWeatherStrip dest={dest} pad={PAD} />
+          <p style={{ fontSize: 11.5, color: C.inact, margin: "10px 2px 0", lineHeight: "16px" }}>
+            Average low and high, indicative rather than a forecast. Driest months are {driest.join(", ")}.
+          </p>
         </div>
       )}
 

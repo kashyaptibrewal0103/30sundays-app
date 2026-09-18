@@ -26,17 +26,23 @@ export function seasonLabel(rainMm) {
 // What the sky mostly does that month, from its rainfall. Four states, so the
 // icon says something rather than decorating.
 //   sunny        under 50mm, dry
-//   partly       50 to 119mm, a shower here and there
-//   showers      120 to 219mm, wet enough to plan around
-//   rain         220mm and over, properly wet
+//   cloudy       50 to 119mm, a shower here and there
+//   rainy        120 to 219mm, wet enough to plan around
+//   heavy        220mm and over, properly wet
+//
+// The millimetres stay behind the words. A traveller deciding on a month wants
+// to know whether they will be rained on, not by how much.
 export function monthSky(dest, monthIdx) {
   const mm = weatherData[dest]?.rain?.[monthIdx];
   if (mm == null) return "partly";
   if (mm < 50) return "sunny";
-  if (mm < 120) return "partly";
-  if (mm < 220) return "showers";
-  return "rain";
+  if (mm < 120) return "cloudy";
+  if (mm < 220) return "rainy";
+  return "heavy";
 }
+
+// The word on the chip, in the vocabulary people use for weather.
+export const SKY_WORD = { sunny: "Sunny", cloudy: "Cloudy", rainy: "Rainy", heavy: "Heavy rain" };
 
 // The numbers a month is judged on, in one call.
 export function monthWeather(dest, monthIdx) {
@@ -47,6 +53,7 @@ export function monthWeather(dest, monthIdx) {
     low: w.low[monthIdx],
     rain: w.rain[monthIdx],
     sky: monthSky(dest, monthIdx),
+    word: SKY_WORD[monthSky(dest, monthIdx)],
     rainWord: seasonLabel(w.rain[monthIdx]),
   };
 }

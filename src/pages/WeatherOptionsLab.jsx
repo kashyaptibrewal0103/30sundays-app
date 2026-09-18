@@ -29,9 +29,9 @@ const SEASON_COLOR = { peak: C.sText, shoulder: C.wText, off: C.dText };
 
 const SKY = {
   sunny:   { Icon: Sun,          word: "Mostly sunny",  color: "#F5B301" },
-  partly:  { Icon: CloudSun,     word: "Some showers",  color: "#8A94A6" },
-  showers: { Icon: CloudDrizzle, word: "Showers",       color: "#5B8DEF" },
-  rain:    { Icon: CloudRain,    word: "Wet",           color: "#3B6FD4" },
+  cloudy:  { Icon: CloudSun,     word: "Some showers",  color: "#8A94A6" },
+  rainy: { Icon: CloudDrizzle, word: "Showers",       color: "#5B8DEF" },
+  heavy:    { Icon: CloudRain,    word: "Wet",           color: "#3B6FD4" },
 };
 
 const Temps = ({ w, size = 11.5, color = C.sub }) => (

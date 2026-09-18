@@ -1,6 +1,6 @@
-import { Sun, CloudSun, CloudDrizzle, CloudRain } from "lucide-react";
 import { C } from "../data";
 import { monthWeather } from "../data/weatherData";
+import { SKY_STYLE } from "./skyStyle";
 
 // ─── What a month actually feels like ───
 //
@@ -11,17 +11,10 @@ import { monthWeather } from "../data/weatherData";
 //
 // Indicative averages, not a forecast.
 
-const SKY = {
-  sunny:   { Icon: Sun,          color: "#F5B301" },
-  partly:  { Icon: CloudSun,     color: "#8A94A6" },
-  showers: { Icon: CloudDrizzle, color: "#5B8DEF" },
-  rain:    { Icon: CloudRain,    color: "#3B6FD4" },
-};
-
 export default function MonthWeather({ dest, monthIdx, on }) {
   const w = monthWeather(dest, monthIdx);
   if (!w) return null;
-  const { Icon, color } = SKY[w.sky] || SKY.partly;
+  const { Icon, color } = SKY_STYLE[w.sky] || SKY_STYLE.cloudy;
   return (
     <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 6 }}>
       <Icon size={13} color={color} />
