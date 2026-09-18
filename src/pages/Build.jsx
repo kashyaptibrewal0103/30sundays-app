@@ -20,6 +20,7 @@ import {
 import { useDeals } from "../data/deals";
 import LoginV2 from "./LoginV2";
 import NextStepNote from "../components/NextStepNote";
+import MonthWeather from "../components/MonthWeather";
 
 // Steps: 0 Destination · 1 Party · 2 When · 3 Route · 4 Activities.
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
@@ -885,11 +886,12 @@ function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
           const on = openMonth.m === m && openMonth.y === y;
           return (
             <button key={`${m}-${y}`} onClick={() => setOpenMonth({ m, y })} style={{
-              flexShrink: 0, padding: "8px 16px", borderRadius: 12, cursor: "pointer", textAlign: "center",
+              flexShrink: 0, padding: "9px 14px 10px", borderRadius: 12, cursor: "pointer", textAlign: "center",
               border: on ? `2px solid ${C.p600}` : `1px solid ${C.div}`, background: on ? C.p100 : C.white,
             }}>
               <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: on ? C.p600 : C.head }}>{MONTHS[m]}</span>
               <span style={{ display: "block", fontSize: 9.5, fontWeight: 700, color: SEASON_COLOR[r], marginTop: 2 }}>{SEASON_LABEL[r]}</span>
+              <MonthWeather dest={dest} monthIdx={m} on={on} />
             </button>
           );
         })}
@@ -996,11 +998,12 @@ function StepDatesMaldives({ dest, startDate, setStartDate, nights, setNights })
           const on = openMonth.m === m && openMonth.y === y;
           return (
             <button key={`${m}-${y}`} onClick={() => setOpenMonth({ m, y })} style={{
-              flexShrink: 0, padding: "8px 16px", borderRadius: 12, cursor: "pointer", textAlign: "center",
+              flexShrink: 0, padding: "9px 14px 10px", borderRadius: 12, cursor: "pointer", textAlign: "center",
               border: on ? `2px solid ${C.p600}` : `1px solid ${C.div}`, background: on ? C.p100 : C.white,
             }}>
               <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: on ? C.p600 : C.head }}>{MONTHS[m]}</span>
               <span style={{ display: "block", fontSize: 9.5, fontWeight: 700, color: SEASON_COLOR[r], marginTop: 2 }}>{SEASON_LABEL[r]}</span>
+              <MonthWeather dest={dest} monthIdx={m} on={on} />
             </button>
           );
         })}
