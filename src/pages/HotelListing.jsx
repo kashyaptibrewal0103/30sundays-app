@@ -1,23 +1,249 @@
-import { useState, useMemo } from "react";
-import { useParams, useSearchParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, SlidersHorizontal, X as XIcon, ChevronDown, ChevronUp, Search, Check, Home, MoreVertical } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft, Search, X as XIcon, SlidersHorizontal, ChevronDown, ChevronUp,
+  Check, Home, MoreVertical, Star, User, Images, ChevronRight,
+  Car, Utensils, RotateCcw, Ban, LogIn, LogOut,
+} from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
-import { useDeals } from "../data/deals";
 
-// ─── Quick filter chips (floating bar) ───
-const quickFilters = [
-  "5 star", "Free cancellation", "9+ rated", "Swimming pool", "Breakfast included",
+// ─── Change hotel, built like Change day plan ───
+//
+// The old screen was a comparison table pretending to be a list: a thumbnail,
+// six lines of small text, and the hotel you already have pinned to the top in
+// a box of its own. Choosing a stay is the same browse problem a day plan is,
+// so it gets the same shape.
+//
+// Cards lead with their photos, because a hotel is looked at before it is read.
+// Under the photos sits only what a stay is actually compared on: how good it
+// is, what room you get, where it is, whether you can cancel it, how it gets
+// you around, and what it does to the price you already have.
+
+// ─── Sorting: every hotel here is a change to an existing stay, so the money
+// question is never "how much" but "how much more" ───
+const SORTS = [
+  { key: "recommended", label: "Recommended" },
+  { key: "diff_asc", label: "Price difference: low to high" },
+  { key: "diff_desc", label: "Price difference: high to low" },
+  { key: "rating", label: "Rating: high to low" },
+  { key: "distance", label: "Distance: nearest first" },
 ];
 
-// ─── Sort options ───
-const sortOptions = [
-  { label: "Price: Low to High", fn: (a, b) => a.pricePerNight - b.pricePerNight },
-  { label: "Price: High to Low", fn: (a, b) => b.pricePerNight - a.pricePerNight },
-  { label: "Rating: High to Low", fn: (a, b) => b.bookingScore - a.bookingScore },
-  { label: "Distance: Nearest", fn: (a, b) => a.distanceFromCenter - b.distanceFromCenter },
+// The cuts people reach for most, on the bar itself. Each writes the same
+// filter state the sheet does, so the two never disagree.
+const QUICK = [
+  { key: "5 star", label: "5 star" },
+  { key: "9+ rated", label: "9+ rated" },
+  { key: "Free cancellation", label: "Free cancellation" },
+  { key: "Private transfer", label: "Private transfer" },
+  { key: "Early check-in", label: "Early check-in" },
 ];
 
+const mealOptions = ["Only Room", "Breakfast included", "Breakfast + Dinner", "All Inclusive"];
+const filterAmenityOptions = ["Breakfast", "Spa", "Swimming pool", "Gym", "Airport Transfer", "Free WiFi", "Beachfront", "Restaurant", "Bar", "Parking"];
+const roomFacilityOptions = ["Jacuzzi", "Balcony", "Sea View", "Private Pool", "Minibar", "Butler Service"];
+
+// Hotel photos plus every room photo, which is what a traveller means by
+// "show me the pictures".
+const galleryOf = (hotel) => [
+  ...hotel.images.map((im) => im.url),
+  ...hotel.rooms.flatMap((r) => r.images || []),
+].filter((v, i, a) => a.indexOf(v) === i);
+
+// ─── The one number that matters: what this swap does to the trip ───
+function PriceDelta({ delta, nights, fallbackPrice }) {
+  if (delta === null) {
+    return (
+      <span style={{ fontSize: 13, fontWeight: 700, color: C.head }}>
+        ₹{formatHotelPrice(fallbackPrice * nights)}
+      </span>
+    );
+  }
+  if (!delta) {
+    return <span style={{ fontSize: 12.5, fontWeight: 600, color: C.sub }}>No change in price</span>;
+  }
+  const up = delta > 0;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: up ? "#FEF3F2" : "#ECFDF3", color: up ? "#B42318" : "#027A48",
+      borderRadius: 999, padding: "5px 11px",
+      fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap",
+    }}>
+      {up ? "More by" : "Lesser by"} ₹{formatHotelPrice(Math.abs(delta))}
+    </span>
+  );
+}
+
+// The two chips a hotel is judged on, in the shape Change day plan uses: white
+// fill, the colour carried by a hairline border and the text.
+//
+// Stars are ours, the score is Booking.com's, so the score keeps their mark and
+// takes its colour from how good it is, the way a day rating does.
+function StarChip({ stars }) {
+  const col = "#E8940B";
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0,
+      padding: "3px 9px", borderRadius: 20, background: C.white,
+      border: `1px solid ${col}55`, fontSize: 11.5, fontWeight: 700, color: col, whiteSpace: "nowrap",
+    }}>
+      <Star size={11} color={col} fill={col} strokeWidth={0} />
+      {stars} star
+    </span>
+  );
+}
+
+function ScoreChip({ score }) {
+  const col = score >= 9 ? "#027A48" : score >= 8 ? "#0E9384" : "#B54708";
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0,
+      padding: "3px 9px", borderRadius: 20, background: C.white,
+      border: `1px solid ${col}55`, fontSize: 11.5, fontWeight: 700, color: col, whiteSpace: "nowrap",
+    }}>
+      <span style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: 14, height: 14, borderRadius: 3, background: "#003580", color: "#fff",
+        fontSize: 10, fontWeight: 700,
+      }}>B</span>
+      {score} Rated
+    </span>
+  );
+}
+
+function Fact({ icon: Icon, children, muted = false }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0, fontSize: 12, color: muted ? C.inact : C.sub, whiteSpace: "nowrap" }}>
+      <Icon size={12.5} color={C.inact} />
+      {children}
+    </span>
+  );
+}
+
+// ─── One hotel ──────────────────────────────────────────────────────────────
+function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
+  const photos = galleryOf(hotel);
+  const strip = photos.slice(0, 6);
+
+  return (
+    <div
+      data-testid={`hotel-option-${hotel.id}`}
+      onClick={() => onOpen(hotel)}
+      role="button"
+      style={{
+        borderRadius: 14, overflow: "hidden", background: C.white, cursor: "pointer",
+        border: `1px solid ${C.div}`, boxShadow: "0 1px 4px rgba(24,30,76,0.05)",
+      }}
+    >
+      {/* Photos: swipe through a few here, tap for all of them */}
+      <div style={{ position: "relative", height: 168, background: C.div }}>
+        <div className="hide-scrollbar" style={{ display: "flex", height: "100%", overflowX: "auto", gap: 2 }}>
+          {strip.map((src, i) => (
+            <div
+              key={i}
+              onClick={(e) => { e.stopPropagation(); onGallery(hotel, i); }}
+              style={{ flexShrink: 0, height: "100%", width: "86%" }}
+            >
+              <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+          ))}
+        </div>
+        <button
+          data-testid={`gallery-${hotel.id}`}
+          onClick={(e) => { e.stopPropagation(); onGallery(hotel, 0); }}
+          style={{
+            position: "absolute", right: 9, bottom: 9, display: "inline-flex", alignItems: "center", gap: 5,
+            background: "rgba(12,16,40,0.78)", borderRadius: 6, padding: "4px 9px", border: "none",
+            cursor: "pointer", fontFamily: "inherit",
+            backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+          }}
+        >
+          <Images size={11} color="#fff" />
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fff" }}>{photos.length} photos</span>
+        </button>
+      </div>
+
+      <div style={{ padding: "10px 12px 11px", display: "flex", flexDirection: "column", gap: 7 }}>
+        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.3 }}>{hotel.name}</p>
+
+        {/* How good it is */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <StarChip stars={hotel.stars} />
+          <ScoreChip score={hotel.bookingScore} />
+        </div>
+
+        {/* What you get, and where it puts you */}
+        <p style={{ margin: 0, fontSize: 12.5, color: C.sub, lineHeight: 1.35 }}>
+          {hotel.roomType} · {hotel.neighbourhood}, {hotel.distanceFromCenter} km from city centre
+        </p>
+
+        {/* What is and is not included: a figure per fact, spaced apart, so the
+            row reads as facts and not as a sentence run on from the line above */}
+        <div style={{ display: "flex", gap: "5px 16px", flexWrap: "wrap" }}>
+          {hotel.mealPlan !== "Only Room" && <Fact icon={Utensils}>{hotel.mealPlan}</Fact>}
+          <Fact icon={Car}>{hotel.sharedTransfers ? "Shared transfer" : "Private transfer"}</Fact>
+          <Fact icon={hotel.freeCancellation ? RotateCcw : Ban} muted={!hotel.freeCancellation}>
+            {hotel.freeCancellation ? "Refundable" : "Non-refundable"}
+          </Fact>
+          {hotel.earlyCheckIn && <Fact icon={LogIn}>Early check-in</Fact>}
+          {hotel.lateCheckOut && <Fact icon={LogOut}>Late checkout</Fact>}
+        </div>
+
+        {/* The whole card opens the hotel, and the chevron is what says so */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderTop: `1px solid ${C.div}`, paddingTop: 9, marginTop: 1 }}>
+          <PriceDelta delta={priceDelta} nights={nights} fallbackPrice={hotel.pricePerNight} />
+          <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Every photo, full bleed ───────────────────────────────────────────────
+function Gallery({ hotel, startAt, onClose }) {
+  const photos = galleryOf(hotel);
+  const [idx, setIdx] = useState(startAt);
+
+  useEffect(() => {
+    const el = document.getElementById(`gal-${startAt}`);
+    el?.scrollIntoView({ block: "nearest", inline: "start" });
+  }, [startAt]);
+
+  return (
+    <div data-testid="hotel-gallery" style={{ position: "absolute", inset: 0, zIndex: 200, background: "#0B0E1A", display: "flex", flexDirection: "column" }}>
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
+        <button onClick={onClose} aria-label="Close gallery" style={{
+          width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.14)",
+          display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0,
+        }}>
+          <XIcon size={17} color="#fff" />
+        </button>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hotel.name}</p>
+          <p style={{ margin: 0, fontSize: 11.5, color: "rgba(255,255,255,0.6)" }}>{idx + 1} of {photos.length}</p>
+        </div>
+      </div>
+      <div
+        className="hide-scrollbar"
+        onScroll={(e) => {
+          const w = e.currentTarget.clientWidth || 1;
+          setIdx(Math.round(e.currentTarget.scrollLeft / w));
+        }}
+        style={{ flex: 1, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}
+      >
+        {photos.map((src, i) => (
+          <div key={i} id={`gal-${i}`} style={{ flexShrink: 0, width: "100%", height: "100%", scrollSnapAlign: "start", display: "grid", placeItems: "center" }}>
+            <img src={src} alt="" style={{ width: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── The screen ─────────────────────────────────────────────────────────────
 export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const { itineraryId, stayIndex } = useParams();
   const [params] = useSearchParams();
@@ -27,6 +253,82 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const versionId = params.get("versionId");
   const dealQS = dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : "";
   const backToItinerary = `/itinerary/${itineraryId}${dealId && versionId ? `?dealId=${dealId}&versionId=${versionId}` : ""}`;
+
+  const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmSelf, setConfirmSelf] = useState(false);
+  const [showSheet, setShowSheet] = useState(false);
+  const [sheetTab, setSheetTab] = useState("Filters");
+  const [gallery, setGallery] = useState(null);
+  const [filters, setFilters] = useState({
+    quick: new Set(),
+    stars: new Set(),
+    minRating: 0,
+    meals: new Set(),
+    landmarks: new Set(),
+    amenities: new Set(),
+    roomFacilities: new Set(),
+    sort: "recommended",
+  });
+
+  const itinerary = allItineraries.find(i => String(i.id) === String(itineraryId));
+  const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
+
+  const allHotels = useMemo(
+    () => (stayInfo ? generateHotelsForCity(stayInfo.city, itinerary.dest, stayInfo.checkIn, stayInfo.checkOut, stayInfo.nights) : []),
+    [stayInfo, itinerary],
+  );
+
+  // The stay you already have is not an option to change to, so it is not in
+  // the list. It is only the price everything else is measured against.
+  const currentHotel = allHotels.find(h => h.id === currentHotelId);
+  const nights = stayInfo?.nights || 1;
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let list = allHotels.filter(h => h.id !== currentHotelId).filter(h => {
+      if (q && !h.name.toLowerCase().includes(q) && !h.neighbourhood.toLowerCase().includes(q)) return false;
+      for (const f of filters.quick) {
+        if (f === "5 star" && h.stars !== 5) return false;
+        if (f === "9+ rated" && h.bookingScore < 9) return false;
+        if (f === "Free cancellation" && !h.freeCancellation) return false;
+        if (f === "Private transfer" && h.sharedTransfers) return false;
+        if (f === "Early check-in" && !h.earlyCheckIn) return false;
+      }
+      if (filters.stars.size && !filters.stars.has(h.stars)) return false;
+      if (filters.minRating > 0 && h.bookingScore < filters.minRating) return false;
+      if (filters.meals.size && !h.rooms.some(r => filters.meals.has(r.mealPlan))) return false;
+      if (filters.landmarks.size && !filters.landmarks.has(h.neighbourhood)) return false;
+      if (filters.amenities.size && ![...filters.amenities].every(a => h.amenities.includes(a))) return false;
+      if (filters.roomFacilities.size && ![...filters.roomFacilities].every(f => h.rooms.some(r => r.amenities.includes(f)))) return false;
+      return true;
+    });
+
+    const delta = (h) => currentHotel ? (h.pricePerNight - currentHotel.pricePerNight) * nights : h.pricePerNight * nights;
+    if (filters.sort === "diff_asc") list = [...list].sort((a, b) => delta(a) - delta(b));
+    else if (filters.sort === "diff_desc") list = [...list].sort((a, b) => delta(b) - delta(a));
+    else if (filters.sort === "rating") list = [...list].sort((a, b) => b.bookingScore - a.bookingScore);
+    else if (filters.sort === "distance") list = [...list].sort((a, b) => a.distanceFromCenter - b.distanceFromCenter);
+    else list = [...list].sort((a, b) => (b.bookingScore + b.stars / 2) - (a.bookingScore + a.stars / 2));
+    return list;
+  }, [allHotels, currentHotelId, currentHotel, nights, query, filters]);
+
+  // Escape closes what is on top, the way a full screen should.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      if (gallery) setGallery(null);
+      else if (showSheet) setShowSheet(false);
+      else navigate(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [gallery, showSheet, navigate]);
+
+  if (!itinerary || !stayInfo) {
+    return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Stay not found</div>;
+  }
 
   // Customer opts to arrange this stay themselves → mark it and return.
   const bookStayMyself = () => {
@@ -40,398 +342,170 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     navigate(backToItinerary);
   };
 
-  const dealsCtx = useDeals();
-  const itinerary = allItineraries.find(i => i.id === Number(itineraryId)) || dealsCtx.findCustomItinerary(Number(itineraryId), versionId);
-  const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
-
-  // Filter/sort state
-  const [activeQuickFilters, setActiveQuickFilters] = useState(new Set());
-  const [showCurrent, setShowCurrent] = useState(false); // expandable "current hotel" bar
-  const [menuOpen, setMenuOpen] = useState(false); // header kebab menu
-  const [confirmSelf, setConfirmSelf] = useState(false); // self-book confirm modal
-  const [showSheet, setShowSheet] = useState(false);
-  const [sheetTab, setSheetTab] = useState("Filters");
-  const [sortIdx, setSortIdx] = useState(0);
-  const [sicTipId, setSicTipId] = useState(null); // which card's SIC tooltip is open
-  const [filters, setFilters] = useState({
-    budget: null, // [lo, hi] per night; null = untouched
-    stars: new Set(),
-    minRating: 0,
-    meals: new Set(),
-    landmarks: new Set(),
-    amenities: new Set(),
-    roomFacilities: new Set(),
-    freeCancellation: false,
+  const toggleQuick = (key) => setFilters(prev => {
+    const quick = new Set(prev.quick);
+    quick.has(key) ? quick.delete(key) : quick.add(key);
+    return { ...prev, quick };
+  });
+  const toggleFilter = (key, value) => setFilters(prev => {
+    const next = new Set(prev[key]);
+    next.has(value) ? next.delete(value) : next.add(value);
+    return { ...prev, [key]: next };
   });
 
-  if (!itinerary || !stayInfo) {
-    return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Stay not found</div>;
-  }
-
-  const allHotels = generateHotelsForCity(stayInfo.city, itinerary.dest, stayInfo.checkIn, stayInfo.checkOut, stayInfo.nights);
-
-  // Get current hotel price for delta calculation
-  const currentHotel = allHotels.find(h => h.id === currentHotelId);
-  const currentPrice = currentHotel ? currentHotel.pricePerNight : allHotels[0]?.pricePerNight || 0;
-
-  // Apply filters
-  const filtered = useMemo(() => {
-    let result = [...allHotels];
-
-    // Quick filters
-    if (activeQuickFilters.size > 0) {
-      result = result.filter(h => {
-        for (const f of activeQuickFilters) {
-          if (f === "5 star" && h.stars !== 5) return false;
-          if (f === "9+ rated" && h.bookingScore < 9) return false;
-          if (f === "Free cancellation" && !h.freeCancellation) return false;
-          if (f === "Swimming pool" && !h.amenities.includes("Swimming pool")) return false;
-          if (f === "Breakfast included" && !h.amenities.includes("Breakfast")) return false;
-        }
-        return true;
-      });
-    }
-
-    // Budget filter (per-night price range)
-    if (filters.budget) {
-      result = result.filter(h => h.pricePerNight >= filters.budget[0] && h.pricePerNight <= filters.budget[1]);
-    }
-
-    // Star filter
-    if (filters.stars.size > 0) {
-      result = result.filter(h => filters.stars.has(h.stars));
-    }
-
-    // Rating filter
-    if (filters.minRating > 0) {
-      result = result.filter(h => h.bookingScore >= filters.minRating);
-    }
-
-    // Meals filter (any room offers a selected plan)
-    if (filters.meals.size > 0) {
-      result = result.filter(h => h.rooms.some(r => filters.meals.has(r.mealPlan)));
-    }
-
-    // Nearby landmark filter
-    if (filters.landmarks.size > 0) {
-      result = result.filter(h => filters.landmarks.has(h.neighbourhood));
-    }
-
-    // Hotel facilities filter
-    if (filters.amenities.size > 0) {
-      result = result.filter(h => {
-        for (const a of filters.amenities) {
-          if (!h.amenities.includes(a)) return false;
-        }
-        return true;
-      });
-    }
-
-    // Room facilities filter (every selected facility offered by some room)
-    if (filters.roomFacilities.size > 0) {
-      result = result.filter(h => [...filters.roomFacilities].every(f => h.rooms.some(r => r.amenities.includes(f))));
-    }
-
-    // Free cancellation
-    if (filters.freeCancellation) {
-      result = result.filter(h => h.freeCancellation);
-    }
-
-    // Sort, always put current hotel first
-    const sortFn = sortOptions[sortIdx].fn;
-    result.sort((a, b) => {
-      if (a.id === currentHotelId) return -1;
-      if (b.id === currentHotelId) return 1;
-      return sortFn(a, b);
-    });
-
-    return result;
-  }, [allHotels, activeQuickFilters, filters, sortIdx, currentHotelId]);
-
-  const toggleQuickFilter = (f) => {
-    setActiveQuickFilters(prev => {
-      const next = new Set(prev);
-      next.has(f) ? next.delete(f) : next.add(f);
-      return next;
-    });
-  };
-
-  const toggleFilter = (key, value) => {
-    setFilters(prev => {
-      const next = { ...prev, [key]: new Set(prev[key]) };
-      next[key].has(value) ? next[key].delete(value) : next[key].add(value);
-      return next;
-    });
-  };
-
-  const filterAmenityOptions = ["Breakfast", "Spa", "Swimming pool", "Gym", "Airport Transfer", "Free WiFi", "Beachfront", "Restaurant", "Bar", "Parking"];
-  const roomFacilityOptions = ["Jacuzzi", "Balcony", "Sea View", "Private Pool", "Minibar", "Butler Service"];
-  const mealOptions = ["Only Room", "Breakfast included", "Breakfast + Dinner", "All Inclusive"];
   const landmarkOptions = [...new Set(allHotels.map(h => h.neighbourhood))];
-
-  // Budget slider bounds from the city's actual prices, rounded to ₹500
-  const priceBounds = [
-    Math.floor(Math.min(...allHotels.map(h => h.pricePerNight)) / 500) * 500,
-    Math.ceil(Math.max(...allHotels.map(h => h.pricePerNight)) / 500) * 500,
-  ];
-  const budgetValue = filters.budget || priceBounds;
-
-  // Count of sheet filters in effect (drives the badge on the sliders button)
   const activeFilterCount =
-    (filters.budget ? 1 : 0) + filters.stars.size + (filters.minRating > 0 ? 1 : 0) +
-    filters.meals.size + filters.landmarks.size + filters.amenities.size +
-    filters.roomFacilities.size + (filters.freeCancellation ? 1 : 0);
+    filters.quick.size + filters.stars.size + (filters.minRating > 0 ? 1 : 0) +
+    filters.meals.size + filters.landmarks.size + filters.amenities.size + filters.roomFacilities.size;
 
-  const clearAllFilters = () => setFilters({
-    budget: null, stars: new Set(), minRating: 0, meals: new Set(),
-    landmarks: new Set(), amenities: new Set(), roomFacilities: new Set(), freeCancellation: false,
-  });
+  const clearAllFilters = () => setFilters(prev => ({
+    quick: new Set(), stars: new Set(), minRating: 0, meals: new Set(),
+    landmarks: new Set(), amenities: new Set(), roomFacilities: new Set(), sort: prev.sort,
+  }));
+
+  const openHotel = (hotel) =>
+    navigate(`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(hotel.id)}?current=${encodeURIComponent(currentHotelId || "")}${dealQS}`);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.white, position: "relative" }}>
-      {/* ═══ Full scrollable content ═══ */}
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.bg, position: "relative", overflow: "hidden" }}>
+      {/* ═══ Header: where this stay is, how long it runs, how much choice ═══ */}
+      <div style={{ flexShrink: 0, background: C.white, borderBottom: `1px solid ${C.div}`, padding: "13px 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={() => navigate(-1)} aria-label="Back" style={{
+            width: 34, height: 34, borderRadius: "50%", border: "none", background: C.bg,
+            display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0,
+          }}>
+            <ArrowLeft size={18} color={C.head} />
+          </button>
 
-        {/* ═══ Header (scrolls with content) ═══ */}
-        <div style={{ background: "linear-gradient(180deg, #FFEBF1 0%, #FFFFFF 100%)", padding: "10px 16px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* History-aware back: returns to wherever the user came from
-                (hotel detail via its Change hotel ingress, or the itinerary) */}
-            <button onClick={() => navigate(-1)} aria-label="Back" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, flexShrink: 0, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-              <ArrowLeft size={20} color={C.head} />
-            </button>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <h1 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>{stayInfo.city} hotels</h1>
-                <span style={{ fontSize: 13, color: C.sub }}>({filtered.length})</span>
-              </div>
-              <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>
-                {stayInfo.checkIn} – {stayInfo.checkOut} &bull; 1 Room &bull; 👤 2
+          {searching ? (
+            <input
+              autoFocus
+              data-testid="hotel-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Search hotels in ${stayInfo.city}`}
+              style={{
+                flex: 1, minWidth: 0, border: `1px solid ${C.div}`, borderRadius: 999,
+                padding: "9px 14px", fontSize: 13.5, fontFamily: "inherit", color: C.head, outline: "none",
+              }}
+            />
+          ) : (
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, display: "flex", alignItems: "baseline", gap: 7, whiteSpace: "nowrap", overflow: "hidden" }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: C.head }}>{stayInfo.city}</span>
+                <span style={{ fontSize: 12, color: C.inact }}>{shown.length} options</span>
+              </p>
+              <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {stayInfo.checkIn} - {stayInfo.checkOut} · 1 room ·{" "}
+                <User size={11} color={C.sub} style={{ display: "inline", verticalAlign: "-1px", marginRight: 1 }} /> 2
               </p>
             </div>
-            {/* Overflow menu — secondary action (book this stay yourself) */}
-            <div style={{ position: "relative", flexShrink: 0 }}>
-              <button onClick={() => setMenuOpen(o => !o)} aria-label="More options" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.6)", cursor: "pointer" }}>
-                <MoreVertical size={20} color={C.head} />
-              </button>
-              {menuOpen && (
-                <>
-                  <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-                  <div style={{ position: "absolute", top: 42, right: 0, zIndex: 41, width: 220, background: C.white, borderRadius: 12, border: `1px solid ${C.div}`, boxShadow: "0 8px 28px rgba(0,0,0,0.16)", overflow: "hidden" }}>
-                    <button onClick={() => { setMenuOpen(false); setConfirmSelf(true); }} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 14px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-                      <Home size={17} color={C.sub} style={{ flexShrink: 0 }} />
-                      <span style={{ fontSize: 13.5, fontWeight: 600, color: C.head }}>Book this stay myself</span>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+          )}
 
-        {/* ═══ Current hotel - expandable, so the user knows what they're changing ═══ */}
-        {currentHotel && (
-          <div style={{ margin: "0 16px 4px", border: `1px solid ${C.div}`, borderRadius: 12, overflow: "hidden", background: C.white }}>
-            <button
-              onClick={() => setShowCurrent(s => !s)}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
-                background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-              }}
-            >
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, flexShrink: 0 }}>Changing</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: C.head, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {currentHotel.name}
-              </span>
-              {showCurrent ? <ChevronUp size={16} color={C.sub} style={{ flexShrink: 0 }} /> : <ChevronDown size={16} color={C.sub} style={{ flexShrink: 0 }} />}
+          <button
+            data-testid="toggle-search"
+            onClick={() => { setSearching(s => !s); if (searching) setQuery(""); }}
+            style={{
+              flexShrink: 0, width: 34, height: 34, borderRadius: "50%", border: "none", background: C.bg,
+              display: "grid", placeItems: "center", cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            {searching ? <XIcon size={16} color={C.head} /> : <Search size={16} color={C.head} />}
+          </button>
+
+          {/* Secondary action: arrange this stay yourself */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <button onClick={() => setMenuOpen(o => !o)} aria-label="More options" style={{
+              width: 32, height: 32, borderRadius: 10, border: "none", background: "none",
+              display: "grid", placeItems: "center", cursor: "pointer",
+            }}>
+              <MoreVertical size={19} color={C.head} />
             </button>
-
-            {showCurrent && (
-              <div style={{ display: "flex", gap: 12, padding: "0 12px 12px" }}>
-                <div style={{ width: 76, height: 76, borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
-                  <img src={currentHotel.images[0].url} alt={currentHotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            {menuOpen && (
+              <>
+                <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                <div style={{ position: "absolute", top: 40, right: 0, zIndex: 41, width: 220, background: C.white, borderRadius: 12, border: `1px solid ${C.div}`, boxShadow: "0 8px 28px rgba(0,0,0,0.16)", overflow: "hidden" }}>
+                  <button onClick={() => { setMenuOpen(false); setConfirmSelf(true); }} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 14px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+                    <Home size={17} color={C.sub} style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 13.5, fontWeight: 600, color: C.head }}>Book this stay myself</span>
+                  </button>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#181E4C", margin: "0 0 3px", lineHeight: 1.3 }}>{currentHotel.name}</p>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <Star size={13} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "#4EAC7E" }}>{currentHotel.stars} star hotel</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff", fontSize: 12, fontWeight: 700 }}>B</span>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: C.head }}>{currentHotel.bookingScore} Rated</span>
-                    </div>
-                  </div>
-                  <p style={{ fontSize: 12, color: C.sub, margin: "0 0 2px" }}>{currentHotel.roomType} · {currentHotel.bedSummary}</p>
-                  <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>{currentHotel.rooms?.[0]?.mealPlan || "Breakfast included"}</p>
-                </div>
-              </div>
+              </>
             )}
           </div>
-        )}
-
-        {/* ═══ Hotel List ═══ */}
-        <div style={{ padding: "16px 16px 0" }}>
-          {filtered.length === 0 && (
-            <div style={{ padding: "40px 0", textAlign: "center" }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: C.head }}>No hotels match your filters</p>
-              <p style={{ fontSize: 13, color: C.sub }}>Try adjusting your filters to see more options</p>
-            </div>
-          )}
-          {filtered.map((hotel, i) => {
-            const isCurrent = hotel.id === currentHotelId;
-            const priceDelta = hotel.pricePerNight - currentPrice;
-
-            return (
-              <Link
-                key={hotel.id}
-                to={`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(hotel.id)}?current=${encodeURIComponent(currentHotelId || "")}${dealQS}`}
-                style={{ textDecoration: "none", color: "inherit", display: "block" }}
-              >
-                <div style={isCurrent ? {
-                  display: "flex", gap: 14, padding: "12px", margin: "4px 0",
-                  border: `1.5px solid ${C.sBorder || "#C0E5D5"}`, background: C.sBg || "#ECFDF3", borderRadius: 12,
-                } : {
-                  display: "flex", gap: 14, padding: "16px 0",
-                  borderBottom: i < filtered.length - 1 ? `1px solid ${C.div}` : "none",
-                }}>
-                  {/* Hotel Image */}
-                  <div style={{ width: 120, height: 100, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
-                    <img src={hotel.images[0].url} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  </div>
-
-                  {/* Hotel Details */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {isCurrent && (
-                      <span style={{
-                        display: "inline-block", fontSize: 11, fontWeight: 600, color: C.sText || "#027A48",
-                        background: "#fff", border: `1px solid ${C.sBorder || "#C0E5D5"}`, borderRadius: 20, padding: "2px 8px", marginBottom: 4,
-                      }}>
-                        Currently Selected ✓
-                      </span>
-                    )}
-
-                    <p style={{ fontSize: 14, fontWeight: 700, color: "#181E4C", margin: "0 0 3px", lineHeight: 1.3,
-                      overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                      {hotel.name}
-                    </p>
-
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        {Array.from({ length: hotel.stars }).map((_, s) => (
-                          <Star key={s} size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
-                        ))}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <span style={{
-                          display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff",
-                          fontSize: 11, fontWeight: 700,
-                        }}>B</span>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: C.head }}>{hotel.bookingScore} Rated</span>
-                      </div>
-                    </div>
-
-                    <p style={{ fontSize: 12, color: C.sub, margin: "0 0 4px" }}>{hotel.roomType} : {hotel.bedSummary}</p>
-
-                    {/* Price delta */}
-                    <p style={{ fontSize: 13, margin: "0 0 4px" }}>
-                      {isCurrent ? (
-                        <span style={{ fontWeight: 600, color: C.sub }}>Current selection</span>
-                      ) : priceDelta === 0 ? (
-                        <span style={{ fontWeight: 600, color: C.sub }}>No price change</span>
-                      ) : (
-                        <>
-                          <span style={{ fontWeight: 700, color: C.head }}>
-                            {priceDelta > 0 ? "+" : "−"} ₹ {formatHotelPrice(Math.abs(priceDelta) * stayInfo.nights)}
-                          </span>
-                        </>
-                      )}
-                    </p>
-
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
-                        <MapPin size={10} color={C.inact} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: 11, color: C.inact, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hotel.neighbourhood}</span>
-                      </div>
-                      {hotel.sharedTransfers && (
-                        <span style={{ position: "relative", display: "inline-flex", flexShrink: 0 }}>
-                          <button
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSicTipId(t => t === hotel.id ? null : hotel.id); }}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}
-                          >
-                            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".3px", color: C.sText || "#027A48" }}>SIC</span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: C.sText || "#027A48" }}>ⓘ</span>
-                          </button>
-                          {sicTipId === hotel.id && (
-                            <>
-                              <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSicTipId(null); }} style={{ position: "fixed", inset: 0, zIndex: 59 }} />
-                              <span style={{ position: "absolute", bottom: "calc(100% + 6px)", right: 0, zIndex: 60, width: 210, background: "#181D27", color: "#fff", fontSize: 10.5, lineHeight: "14px", borderRadius: 8, padding: "8px 10px", boxShadow: "0 4px 16px rgba(0,0,0,0.25)", fontWeight: 400, letterSpacing: 0 }}>
-                                This hotel's area is served by shared coaches (SIC), so you can pick a shared or private transfer.
-                              </span>
-                            </>
-                          )}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Policy tags: refundability always, checkin/checkout perks when included */}
-                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: hotel.freeCancellation ? (C.sText || "#027A48") : C.inact }}>
-                        {hotel.freeCancellation ? "Free cancellation" : "Non-refundable"}
-                      </span>
-                      {(hotel.earlyCheckIn || hotel.lateCheckOut) && (
-                        <>
-                          <span style={{ fontSize: 11, color: C.inact }}>·</span>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: C.sText || "#027A48" }}>
-                            {hotel.earlyCheckIn && hotel.lateCheckOut
-                              ? "Early check-in + late checkout"
-                              : hotel.earlyCheckIn ? "Early check-in included" : "Late checkout included"}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
         </div>
       </div>
 
-      {/* ═══ Floating Filter Bar at Bottom (same pattern as trip Listing) ═══ */}
+      {/* ═══ The list ═══ */}
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(112px + env(safe-area-inset-bottom))" }}>
+        {shown.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 20px" }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.head }}>Nothing matches those filters</p>
+            <p style={{ margin: "6px 0 16px", fontSize: 13, color: C.sub, lineHeight: "19px" }}>
+              Try clearing a filter, or search for a hotel you had in mind.
+            </p>
+            <button onClick={() => { clearAllFilters(); setQuery(""); }} style={{
+              padding: "10px 18px", borderRadius: 999, border: `1px solid ${C.div}`, background: C.white,
+              fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
+            }}>Clear filters</button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {shown.map(h => (
+              <HotelCard
+                key={h.id}
+                hotel={h}
+                nights={nights}
+                priceDelta={currentHotel ? (h.pricePerNight - currentHotel.pricePerNight) * nights : null}
+                onOpen={openHotel}
+                onGallery={(hotel, at) => setGallery({ hotel, at })}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ Floating bar: quick chips, a separator, one control for the rest ═══ */}
       <div style={{
         position: "absolute", bottom: 12, left: 12, right: 12, zIndex: 10,
-        background: "rgba(255,255,255,0.92)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+        background: "rgba(255,255,255,0.94)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
         borderRadius: 16, padding: "8px 10px",
         boxShadow: "0 4px 24px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)",
         display: "flex", alignItems: "center", gap: 8,
       }}>
-        {/* Scrollable quick chips */}
         <div className="hs" style={{ flex: 1, gap: 6, paddingBottom: 0, minWidth: 0 }}>
-          {quickFilters.map(f => (
-            <button
-              key={f}
-              onClick={() => toggleQuickFilter(f)}
-              style={{
-                flexShrink: 0, border: activeQuickFilters.has(f) ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
-                borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
-                background: activeQuickFilters.has(f) ? "#FFEBF1" : C.white,
-                fontSize: 12, fontWeight: 500, color: activeQuickFilters.has(f) ? "#FD014F" : C.head,
-              }}
-            >
-              {f}
-            </button>
-          ))}
+          {QUICK.map(q => {
+            const on = filters.quick.has(q.key);
+            return (
+              <button
+                key={q.key}
+                data-testid={`quick-${q.key}`}
+                onClick={() => toggleQuick(q.key)}
+                style={{
+                  flexShrink: 0, borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
+                  border: on ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
+                  background: on ? "#FFEBF1" : C.white,
+                  fontSize: 12, fontWeight: 500, color: on ? "#FD014F" : C.head, whiteSpace: "nowrap",
+                }}
+              >
+                {q.label}
+              </button>
+            );
+          })}
         </div>
-        {/* Fixed separator + filter icon */}
         <div style={{ width: 1, height: 24, background: C.div, flexShrink: 0 }} />
-        <button onClick={() => { setSheetTab("Filters"); setShowSheet(true); }} style={{
-          position: "relative", width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-          background: activeFilterCount > 0 ? "#FFEBF1" : "transparent", border: activeFilterCount > 0 ? "1.5px solid #FD014F" : `1px solid ${C.div}`,
-          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-        }}>
+        <button
+          data-testid="open-filters"
+          onClick={() => { setSheetTab("Filters"); setShowSheet(true); }}
+          aria-label="Sorting and filters"
+          style={{
+            position: "relative", width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+            background: activeFilterCount > 0 ? "#FFEBF1" : "transparent",
+            border: activeFilterCount > 0 ? "1.5px solid #FD014F" : `1px solid ${C.div}`,
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+          }}
+        >
           <SlidersHorizontal size={14} color={activeFilterCount > 0 ? "#FD014F" : C.sub} />
           {activeFilterCount > 0 && (
             <div style={{ position: "absolute", top: -6, right: -6, width: 16, height: 16, borderRadius: "50%", background: "#FD014F", color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{activeFilterCount}</div>
@@ -439,152 +513,122 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
         </button>
       </div>
 
-      {/* ═══ Filters / Sort Bottom Sheet (tabbed, same pattern as trip Listing) ═══ */}
+      {/* ═══ Sorting and filters, one tabbed sheet ═══ */}
       {showSheet && (
         <div style={{ position: "absolute", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setShowSheet(false)} />
-          <div style={{ position: "relative", background: C.white, borderRadius: "20px 20px 0 0", zIndex: 1, height: "70%", display: "flex", flexDirection: "column" }}>
-            {/* Sticky header with 50-50 tabs */}
+          <div style={{ position: "relative", background: C.white, borderRadius: "20px 20px 0 0", zIndex: 1, height: "72%", display: "flex", flexDirection: "column" }}>
             <div style={{ flexShrink: 0, padding: "14px 20px 0", display: "flex", alignItems: "flex-start" }}>
               <div style={{ flex: 1, display: "flex" }}>
                 {["Filters", "Sort"].map(tab => (
                   <button key={tab} onClick={() => setSheetTab(tab)} style={{
                     flex: 1, fontSize: 15, fontWeight: sheetTab === tab ? 600 : 500, color: sheetTab === tab ? C.head : C.inact,
                     background: "none", border: "none", cursor: "pointer", padding: "0 0 12px", fontFamily: "inherit",
-                    borderBottom: sheetTab === tab ? "2px solid #FD014F" : "2px solid transparent",
-                    textAlign: "center",
+                    borderBottom: sheetTab === tab ? "2px solid #FD014F" : "2px solid transparent", textAlign: "center",
                   }}>{tab}</button>
                 ))}
               </div>
-              <button onClick={() => setShowSheet(false)} style={{ width: 28, height: 28, borderRadius: "50%", background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginLeft: 4 }}>
+              <button onClick={() => setShowSheet(false)} aria-label="Close" style={{ width: 28, height: 28, borderRadius: "50%", background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginLeft: 4 }}>
                 <XIcon size={14} color={C.sub} />
               </button>
             </div>
 
-            {/* Sort tab */}
             {sheetTab === "Sort" && (
-            <div style={{ flex: 1, overflowY: "auto", padding: "8px 20px 24px" }} className="hide-scrollbar">
-              {sortOptions.map((opt, i) => (
-                <button
-                  key={opt.label}
-                  onClick={() => { setSortIdx(i); setShowSheet(false); }}
-                  style={{
-                    display: "block", width: "100%", textAlign: "left", padding: "12px 0",
-                    background: "none", border: "none", borderBottom: i < sortOptions.length - 1 ? `1px solid ${C.div}` : "none",
-                    fontSize: 14, color: i === sortIdx ? "#FD014F" : C.head, fontWeight: i === sortIdx ? 600 : 400,
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}
-                >
-                  {opt.label} {i === sortIdx && "✓"}
-                </button>
-              ))}
-            </div>
+              <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 24px" }}>
+                {SORTS.map((opt, i) => (
+                  <button
+                    key={opt.key}
+                    data-testid={`sort-${opt.key}`}
+                    onClick={() => { setFilters(prev => ({ ...prev, sort: opt.key })); setShowSheet(false); }}
+                    style={{
+                      display: "block", width: "100%", textAlign: "left", padding: "12px 0",
+                      background: "none", border: "none",
+                      borderBottom: i < SORTS.length - 1 ? `1px solid ${C.div}` : "none",
+                      fontSize: 14, color: filters.sort === opt.key ? "#FD014F" : C.head,
+                      fontWeight: filters.sort === opt.key ? 600 : 400, cursor: "pointer", fontFamily: "inherit",
+                    }}
+                  >
+                    {opt.label} {filters.sort === opt.key && "✓"}
+                  </button>
+                ))}
+              </div>
             )}
 
-            {/* Filters tab */}
             {sheetTab === "Filters" && (
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 24px" }} className="hide-scrollbar">
+              <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "16px 20px 24px" }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Hotel category</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                  {[3, 4, 5].map(s => (
+                    <FilterChip key={s} label={`${s} star`} on={filters.stars.has(s)} onClick={() => toggleFilter("stars", s)} />
+                  ))}
+                </div>
 
-            {/* Budget */}
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 4px" }}>
-              Budget <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>per night</span>
-            </p>
-            <DualRange
-              min={priceBounds[0]}
-              max={priceBounds[1]}
-              step={500}
-              value={budgetValue}
-              onChange={(v) => setFilters(prev => ({ ...prev, budget: v }))}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>₹{formatHotelPrice(budgetValue[0])}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>₹{formatHotelPrice(budgetValue[1])}</span>
-            </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Booking.com rating</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                  {[8, 8.5, 9].map(r => (
+                    <FilterChip key={r} label={`${r}+`} on={filters.minRating === r} onClick={() => setFilters(prev => ({ ...prev, minRating: prev.minRating === r ? 0 : r }))} />
+                  ))}
+                </div>
 
-            {/* Star category */}
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Star Category</p>
-            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              {[3, 4, 5].map(s => (
-                <FilterChip key={s} label={`${s} ★`} on={filters.stars.has(s)} onClick={() => toggleFilter("stars", s)} />
-              ))}
-            </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Meals</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                  {mealOptions.map(m => (
+                    <FilterChip key={m} label={m} on={filters.meals.has(m)} onClick={() => toggleFilter("meals", m)} />
+                  ))}
+                </div>
 
-            {/* Booking.com rating */}
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Booking.com Rating</p>
-            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              {[8, 8.5, 9].map(r => (
-                <FilterChip key={r} label={`${r}+`} on={filters.minRating === r} onClick={() => setFilters(prev => ({ ...prev, minRating: prev.minRating === r ? 0 : r }))} />
-              ))}
-            </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Nearby landmarks</p>
+                <SearchableCheckList
+                  options={landmarkOptions}
+                  selected={filters.landmarks}
+                  onToggle={(l) => toggleFilter("landmarks", l)}
+                  placeholder="Search landmarks"
+                />
 
-            {/* Meals */}
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Meals</p>
-            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              {mealOptions.map(m => (
-                <FilterChip key={m} label={m} on={filters.meals.has(m)} onClick={() => toggleFilter("meals", m)} />
-              ))}
-            </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Hotel facilities</p>
+                <SearchableCheckList
+                  options={filterAmenityOptions}
+                  selected={filters.amenities}
+                  onToggle={(a) => toggleFilter("amenities", a)}
+                  placeholder="Search hotel facilities"
+                />
 
-            {/* Nearby landmarks */}
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Nearby Landmarks</p>
-            <SearchableCheckList
-              options={landmarkOptions}
-              selected={filters.landmarks}
-              onToggle={(l) => toggleFilter("landmarks", l)}
-              placeholder="Search landmarks"
-            />
+                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Room facilities</p>
+                <SearchableCheckList
+                  options={roomFacilityOptions}
+                  selected={filters.roomFacilities}
+                  onToggle={(f) => toggleFilter("roomFacilities", f)}
+                  placeholder="Search room facilities"
+                />
+              </div>
+            )}
 
-            {/* Hotel facilities */}
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Hotel Facilities</p>
-            <SearchableCheckList
-              options={filterAmenityOptions}
-              selected={filters.amenities}
-              onToggle={(a) => toggleFilter("amenities", a)}
-              placeholder="Search hotel facilities"
-            />
-
-            {/* Room facilities */}
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Room Facilities</p>
-            <SearchableCheckList
-              options={roomFacilityOptions}
-              selected={filters.roomFacilities}
-              onToggle={(f) => toggleFilter("roomFacilities", f)}
-              placeholder="Search room facilities"
-            />
-
-            {/* Free cancellation */}
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Cancellation</p>
-            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              <FilterChip label="Free cancellation" on={filters.freeCancellation} onClick={() => setFilters(prev => ({ ...prev, freeCancellation: !prev.freeCancellation }))} />
-            </div>
-
-            {/* Apply */}
-            <button
-              onClick={() => setShowSheet(false)}
-              style={{
-                width: "100%", height: 48, borderRadius: 9999, border: "none",
-                background: "#FD014F", color: "#fff", fontSize: 15, fontWeight: 700,
-                cursor: "pointer", fontFamily: "inherit", marginTop: 8,
-              }}
-            >
-              Apply Filters
-            </button>
-            {activeFilterCount > 0 && (
+            <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, padding: "10px 20px calc(12px + env(safe-area-inset-bottom))", display: "flex", alignItems: "center", gap: 12 }}>
               <button
                 onClick={clearAllFilters}
                 style={{
-                  width: "100%", padding: "12px 0", background: "none", border: "none",
-                  fontSize: 13, fontWeight: 600, color: C.sub, cursor: "pointer", fontFamily: "inherit",
+                  background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 13.5, fontWeight: 600, color: activeFilterCount ? C.head : C.inact,
+                  textDecoration: "underline", textUnderlineOffset: 3, flexShrink: 0,
+                }}
+              >Reset all</button>
+              <button
+                data-testid="apply-filters"
+                onClick={() => setShowSheet(false)}
+                style={{
+                  flex: 1, padding: "13px 0", borderRadius: 12, border: "none",
+                  background: C.p600, color: "#fff", fontSize: 14.5, fontWeight: 700,
+                  cursor: "pointer", fontFamily: "inherit",
                 }}
               >
-                Clear all filters
+                Show {shown.length} {shown.length === 1 ? "hotel" : "hotels"}
               </button>
-            )}
             </div>
-            )}
           </div>
         </div>
       )}
+
+      {gallery && <Gallery hotel={gallery.hotel} startAt={gallery.at} onClose={() => setGallery(null)} />}
 
       {/* ═══ Self-book confirmation ═══ */}
       {confirmSelf && (
@@ -639,7 +683,6 @@ export function SearchableCheckList({ options, selected, onToggle, placeholder }
 
   return (
     <div style={{ marginBottom: 16 }}>
-      {/* Search box */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px", height: 36, borderRadius: 10, border: "1.5px solid #E9EAEB", marginBottom: 6 }}>
         <Search size={14} color="#A4A7AE" style={{ flexShrink: 0 }} />
         <input
@@ -655,7 +698,6 @@ export function SearchableCheckList({ options, selected, onToggle, placeholder }
         )}
       </div>
 
-      {/* Rows */}
       {visible.map(o => {
         const on = selected.has(o);
         return (
@@ -684,7 +726,6 @@ export function SearchableCheckList({ options, selected, onToggle, placeholder }
         <p style={{ fontSize: 12, color: "#A4A7AE", margin: "6px 2px" }}>No matches</p>
       )}
 
-      {/* Show more / less */}
       {hiddenCount > 0 && !expanded && (
         <button onClick={() => setExpanded(true)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: "#FD014F", padding: "6px 2px" }}>
           Show {hiddenCount} more <ChevronDown size={14} />
@@ -695,28 +736,6 @@ export function SearchableCheckList({ options, selected, onToggle, placeholder }
           Show less <ChevronUp size={14} />
         </button>
       )}
-    </div>
-  );
-}
-
-// ─── Dual-thumb budget slider (thumb styles in index.css under .dual-range) ───
-function DualRange({ min, max, step, value, onChange }) {
-  const [lo, hi] = value;
-  const pct = (v) => ((v - min) / (max - min || 1)) * 100;
-  return (
-    <div className="dual-range" style={{ position: "relative", height: 28, margin: "6px 0 2px" }}>
-      <div style={{ position: "absolute", top: 12, left: 0, right: 0, height: 4, borderRadius: 4, background: "#E9EAEB" }} />
-      <div style={{ position: "absolute", top: 12, left: `${pct(lo)}%`, width: `${pct(hi) - pct(lo)}%`, height: 4, borderRadius: 4, background: "#FD014F" }} />
-      <input
-        type="range" min={min} max={max} step={step} value={lo}
-        onChange={(e) => onChange([Math.min(Number(e.target.value), hi - step), hi])}
-        aria-label="Minimum budget"
-      />
-      <input
-        type="range" min={min} max={max} step={step} value={hi}
-        onChange={(e) => onChange([lo, Math.max(Number(e.target.value), lo + step)])}
-        aria-label="Maximum budget"
-      />
     </div>
   );
 }

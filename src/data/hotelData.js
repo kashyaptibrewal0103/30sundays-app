@@ -131,9 +131,6 @@ const mealPlans = [
   "Only Room", "Breakfast included", "Breakfast + Dinner", "All Inclusive",
 ];
 
-// ─── Image category tags ───
-const imageCategories = ["Room", "Bathroom", "Pool", "Reception", "Restaurant", "Exterior", "Lobby", "Spa", "Beach", "Garden"];
-
 // ─── Room type templates ───
 const roomTemplates = [
   { name: "Sheraton Club Double Room", bedType: "1 Double bed", size: 30, amenities: ["Jacuzzi"] },
@@ -155,59 +152,40 @@ const allAmenities = [
   "Bar", "Room Service", "Concierge", "Laundry", "Parking",
 ];
 
-// ─── Hotel image pools (reuse CDN images by destination) ───
-const hotelImagePools = {
-  Bali: [
-    `${CDN}/bali/bali_swing_experience_1.jpg`,
-    `${CDN}/bali/tree_house_nusa_penida_3.jpg`,
-    `${CDN}/bali/tegallalang_rice_fields_4.jpg`,
-    `${CDN}/bali/banyumala_waterfall_56.jpg`,
-    `${CDN}/bali/handara_gate_63.jpg`,
-    `${CDN}/bali/kelingking_beach_65.jpg`,
-  ],
-  Vietnam: [
-    `${CDN}/vietnam/kissing_bridge_495.jpg`,
-    `${CDN}/vietnam/xuong_island_496.jpg`,
-    `${CDN}/vietnam/fingernail_island_497.jpg`,
-    `${CDN}/vietnam/nem_cuon_cooking_class_ha_long_bay_498.jpg`,
-    `${CDN}/vietnam/sunrise_tai_chi_ha_long_bay_499.jpg`,
-    `${CDN}/vietnam/kayaking_halong_bay_500.jpg`,
-    `${CDN}/vietnam/sapa_valley_501.jpg`,
-    `${CDN}/vietnam/hoi_an_memories_show_502.jpg`,
-  ],
-  Thailand: [
-    `${CDN}/thailand/pileh_lagoon_439.jpg`,
-    `${CDN}/thailand/big_buddha_temple_koh_samui_459.jpg`,
-    `${CDN}/thailand/long_beach_koh_phi_phi_468.jpg`,
-    `${CDN}/thailand/angel_waterfall_park_493.jpg`,
-    `${CDN}/thailand/dolphin_show_phuket_494.jpg`,
-    `${CDN}/Thailand/Activities/Safari%20World.jpeg`,
-  ],
-  Maldives: [
-    `${CDN}/hotels/maldives/hero-images/11_hero.webp`,
-    `${CDN}/hotels/maldives/hero-images/12_hero.webp`,
-    `${CDN}/hotels/maldives/hero-images/13_hero.webp`,
-    `${CDN}/hotels/maldives/hero-images/15_hero.webp`,
-    `${CDN}/hotels/maldives/hero-images/16_hero.webp`,
-    `${CDN}/hotels/maldives/hero-images/18_hero.webp`,
-  ],
-  "Sri Lanka": [
-    `${CDN}/srilanka/taprobane_island_viewpoint_SLA00057.jpg`,
-    `${CDN}/srilanka/hummanaya_blowhole_SLA00058.jpg`,
-    `${CDN}/srilanka/snorkelling_south_coast_SLA00059.jpg`,
-    `${CDN}/srilanka/hot_air_balloon_flight_sigiriya_SLA00062.jpg`,
-    `${CDN}/srilanka/cinnamon_island_bentota_SLA00063.jpg`,
-    `${CDN}/srilanka/galle_lighthouse_SLA00066.jpg`,
-  ],
-  "New Zealand": [
-    `${CDN}/new_zealand/moke_lake_NZA00054.jpg`,
-    `${CDN}/new_zealand/lake_taupo_NZA00055.jpg`,
-    `${CDN}/new_zealand/huka_falls_NZA00056.jpg`,
-    `${CDN}/new_zealand/te_anau_NZA00060.jpg`,
-    `${CDN}/new_zealand/lake_matheson_NZA00064.jpg`,
-    `${CDN}/new_zealand/lake_hawea_NZA00066.jpg`,
-  ],
+
+// ─── Hotel photographs ───
+//
+// A hotel card used to borrow the destination's scenery: rice terraces and
+// temples, which say nothing about the stay. What a traveller wants to see
+// before they swap a hotel is the room they would sleep in and the places they
+// would spend the day, so the photos are now grouped by what they show and
+// dealt out in that order: room first, then the pool and the grounds, a
+// bathroom, somewhere to eat.
+const U = (id) => `https://images.unsplash.com/photo-${id}?w=800&q=75&auto=format&fit=crop`;
+
+const HOTEL_PHOTOS = {
+  Room: [
+    "1582719478250-c89cae4dc85b", "1590490360182-c33d57733427", "1631049307264-da0ec9d70304",
+    "1611892440504-42a792e24d32", "1618773928121-c32242e63f39", "1595576508898-0ad5c879a061",
+    "1602002418082-a4443e081dd1", "1578683010236-d716f9a3f461",
+  ].map(U),
+  Bathroom: [
+    "1584622650111-993a426fbf0a", "1552321554-5fefe8c9ef14",
+    "1620626011761-996317b8d101", "1584622781564-1d987f7333c1",
+  ].map(U),
+  Pool: [
+    "1571896349842-33c89424de2d", "1520250497591-112f2f40a3f4", "1540541338287-41700207dee6",
+    "1582719508461-905c673771fd", "1542314831-068cd1dbfeeb", "1551882547-ff40c63fe5fa",
+  ].map(U),
+  Exterior: [
+    "1566073771259-6a8506099945", "1564501049412-61c2a3083791", "1596436889106-be35e843f974",
+    "1445019980597-93fa8acb246c", "1571003123894-1f0594d2b5d9", "1584132967334-10e028bd69f7",
+  ].map(U),
+  Restaurant: ["1414235077428-338989a2e8c0", "1551632436-cbf8dd35adfa"].map(U),
 };
+
+// What each of a hotel's eight photos shows, in the order they are swiped.
+const PHOTO_ORDER = ["Room", "Pool", "Room", "Exterior", "Bathroom", "Restaurant", "Room", "Pool"];
 
 const pick = (arr, i) => arr[Math.abs(i) % arr.length];
 
@@ -228,7 +206,6 @@ export function generateHotelsForCity(city, destination, checkIn, checkOut, nigh
   const rand = seededRandom(seed);
 
   const names = hotelNames[destination] || hotelNames.Bali;
-  const imgs = hotelImagePools[destination] || hotelImagePools.Bali;
   const cityNeighbourhoods = neighbourhoods[destination]?.[city] || ["City Centre", "Old Town", "Beach Area"];
 
   const count = 6 + Math.floor(rand() * 5); // 6-10 hotels
@@ -261,15 +238,11 @@ export function generateHotelsForCity(city, destination, checkIn, checkOut, nigh
     // Distance from city center (0.5 - 8 km)
     const distanceFromCenter = Math.round((0.5 + hotelSeed() * 7.5) * 10) / 10;
 
-    // Hotel images with categories (8 per hotel)
-    const hotelImages = [];
-    const imgCategoryAssignment = ["Exterior", "Room", "Pool", "Room", "Restaurant", "Bathroom", "Lobby", "Spa"];
-    for (let j = 0; j < 8; j++) {
-      hotelImages.push({
-        url: pick(imgs, i * 8 + j),
-        category: imgCategoryAssignment[j] || pick(imageCategories, i + j),
-      });
-    }
+    // Hotel images: the room first, then the places a stay is actually spent
+    const hotelImages = PHOTO_ORDER.map((category, j) => ({
+      url: pick(HOTEL_PHOTOS[category], i * 3 + j),
+      category,
+    }));
 
     // Amenities (5-8 amenities per hotel)
     const amenityCount = 5 + Math.floor(hotelSeed() * 4);
@@ -317,11 +290,13 @@ export function generateHotelsForCity(city, destination, checkIn, checkOut, nigh
       const roomPrice = Math.round((basePrice * priceMultiplier) / 100) * 100;
       const taxPerNight = Math.round(roomPrice * 0.03); // ~3% tax
 
-      // Room images (4 per room)
-      const roomImages = [];
-      for (let j = 0; j < 4; j++) {
-        roomImages.push(pick(imgs, i * 10 + r * 4 + j + 3));
-      }
+      // Room images (4 per room): the room, its bathroom, and a look outside
+      const roomImages = [
+        pick(HOTEL_PHOTOS.Room, i * 2 + r * 3),
+        pick(HOTEL_PHOTOS.Room, i * 2 + r * 3 + 1),
+        pick(HOTEL_PHOTOS.Bathroom, i + r),
+        pick(HOTEL_PHOTOS.Exterior, i * 2 + r + 2),
+      ];
 
       // Meal plan (deterministic per room)
       const mealIdx = Math.floor(hotelSeed() * mealPlans.length);
