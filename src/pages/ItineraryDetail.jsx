@@ -331,7 +331,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // trip's own, else the demo date. The header range and every day's own date
   // are both read off it, so they cannot disagree.
   const DEMO_START = "2027-03-31";
-  const tripStart = exploreStart || (it.custom && it.startDate) || DEMO_START;
+  // The dates on the version win. Without them the screen fell back to a fixed
+  // demo date, so a plan whose card said 13 Nov opened on 31 Mar, and a trip
+  // repriced for new dates showed the old ones.
+  const tripStart = exploreStart || travelDates?.fromDate || (it.custom && it.startDate) || DEMO_START;
   const dateLabel = (() => {
     const st = new Date(tripStart);
     const en = new Date(st); en.setDate(en.getDate() + (it.nights || 0));

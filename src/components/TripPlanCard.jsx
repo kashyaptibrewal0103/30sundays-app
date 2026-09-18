@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown, ArrowRight, User, Baby, Heart, ArrowLeftRight } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { useDeals } from "../data/deals";
+import PlanRef from "./PlanRef";
 
 // Wishlist toggle shown on every version row (prototype: local state only).
 function WishHeart({ on, onToggle }) {
@@ -63,7 +64,7 @@ function ActionLink({ quote }) {
 // ONE card template per deal. Header (destination, version, status) + the
 // itinerary facts (route with nights, dates, travellers, generated-on) + the
 // price(s) with their action. Maldives shows one priced row per property.
-export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved }) {
+export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId, pastNote }) {
   const [open, setOpen] = useState(false);
   const { isWished, toggleWish } = useDeals();
   const navigate = useNavigate();
@@ -139,15 +140,17 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved }) {
     </div>
   );
 
-  // Lost / expired → muted summary in the "older plans" accordion.
+  // Lost / expired → muted summary in the "past plans" accordion. The price is
+  // the one it was quoted at, so it carries the date it was quoted on.
   if (lost) {
     return (
-      <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", background: C.white, opacity: 0.62 }}>
+      <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", background: C.white, opacity: 0.72 }}>
         {Header}
         <div onClick={() => onStartNew?.()} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "11px 12px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
-          <span style={{ fontSize: 12.5, color: C.sub }}>This vacation is closed</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.p600 }}>Start again →</span>
+          <span style={{ fontSize: 12.5, color: C.sub, minWidth: 0 }}>{pastNote || "This plan is closed"}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.p600, flexShrink: 0 }}>Plan this again →</span>
         </div>
+        {planId && <PlanRef id={planId} />}
       </div>
     );
   }
@@ -212,6 +215,7 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved }) {
           })}
         </>
       )}
+
     </div>
   );
 }

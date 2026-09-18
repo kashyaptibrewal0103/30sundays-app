@@ -8,7 +8,7 @@ import { allItineraries } from "../data";
 // stale after QUOTE_VALID_DAYS and surface as Expired.
 
 const KEY = "30s_deals_v1";
-const SEED_KEY = "30s_deals_seeded_v10";
+const SEED_KEY = "30s_deals_seeded_v12";
 export const QUOTE_VALID_DAYS = 7;
 
 const DAY = 86400000;
@@ -103,14 +103,42 @@ function demoDeals() {
     ],
   };
 
-  // 7. Lost vacation — sinks to the older-plans accordion.
+  // 7. A past enquiry across two countries. Both deals came out of one
+  //    conversation, so they share an enquiry id and group as one past plan.
+  //    Vietnam's travel dates have gone by; Thailand's have not, which is the
+  //    difference that decides what "Plan this again" has to ask for.
   const dealLost = {
-    id: "demo_lost", status: "lost", itineraryId: 12, dest: "Vietnam", title: routeTitle(12), img: byId(12)?.img,
-    customItinerary: null, createdAt: now - 30 * DAY,
-    versions: [ver("demo_lost_v1", 12, { num: 1, status: "quote", ageDays: 30, pdfAgo: 24 })],
+    id: "demo_lost", status: "lost", enquiryId: "enq_104829371045", planId: "104829371045",
+    itineraryId: 12, dest: "Vietnam", title: routeTitle(12), img: byId(12)?.img,
+    customItinerary: null, createdAt: now - 190 * DAY,
+    versions: [{ ...ver("demo_lost_v1", 12, { num: 1, status: "quote", ageDays: 190, pdfAgo: 186 }),
+      planId: "104829371061",
+      customizations: { travelDates: td(-120, byId(12)?.nights || 7), selectedDayOptions: {}, selectedHotels: {} } }],
+  };
+  const dealLost2 = {
+    id: "demo_lost_2", status: "lost", enquiryId: "enq_104829371045", planId: "104829371045",
+    itineraryId: 13, dest: "Thailand", title: routeTitle(13), img: byId(13)?.img,
+    customItinerary: null, createdAt: now - 188 * DAY,
+    versions: [
+      { ...ver("demo_lost2_v1", 13, { num: 1, status: "quote", ageDays: 188, pdfAgo: 185 }),
+        planId: "104829371078",
+        customizations: { travelDates: td(96, byId(13)?.nights || 7), selectedDayOptions: {}, selectedHotels: {} } },
+      { ...ver("demo_lost2_v2", 13, { num: 2, status: "quote", ageDays: 183, priceAdj: 5000, pdfAgo: 180 }),
+        planId: "104829371092",
+        customizations: { travelDates: td(96, byId(13)?.nights || 7), selectedDayOptions: {}, selectedHotels: {} } },
+    ],
+  };
+  // 8. An older enquiry, one country, dates long gone.
+  const dealLost3 = {
+    id: "demo_lost_3", status: "lost", enquiryId: "enq_998210473326", planId: "998210473326",
+    itineraryId: 100, dest: "Bali", title: routeTitle(100), img: byId(100)?.img,
+    customItinerary: null, createdAt: now - 415 * DAY,
+    versions: [{ ...ver("demo_lost3_v1", 100, { num: 1, status: "quote", ageDays: 415, pdfAgo: 410 }),
+      planId: "998210473341",
+      customizations: { travelDates: td(-350, byId(100)?.nights || 7), selectedDayOptions: {}, selectedHotels: {} } }],
   };
 
-  return [dealDraft, dealBali, dealVietnam, dealThailand, dealMau, dealMal, dealLost];
+  return [dealDraft, dealBali, dealVietnam, dealThailand, dealMau, dealMal, dealLost, dealLost2, dealLost3];
 }
 
 function load() {

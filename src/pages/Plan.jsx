@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, Search, Heart, MapPin, Sparkles, Plus, Bell, Phone } from "lucide-react";
 import { C, destinations, allItineraries } from "../data";
 import TripPlanCard from "../components/TripPlanCard";
+import PastPlans from "../components/PastPlans";
 import DatePicker from "../components/DatePicker";
 import LoginV2 from "./LoginV2";
 import { useDeals } from "../data/deals";
@@ -432,7 +433,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
             </div>
           </div>
 
-          {/* Content — active vacations first, then a collapsed "older plans" accordion */}
+          {/* Content — live vacations first, then past enquiries, collapsed */}
           <div style={{ flex: 1, overflowY: "auto", padding: "8px 16px 80px" }} className="hide-scrollbar">
             {activeCards.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -447,27 +448,8 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
               </div>
             )}
 
-            {/* Older / closed plans — collapsed accordion at the bottom */}
-            {older.length > 0 && (
-              <div style={{ marginTop: 22, borderTop: `1px solid ${C.div}`, paddingTop: 14 }}>
-                <button
-                  onClick={() => setShowOlder(o => !o)}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "4px 2px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>
-                    Older plans <span style={{ color: C.inact }}>({older.length})</span>
-                  </span>
-                  <ChevronDown size={16} color={C.sub} style={{ transition: "transform 0.2s", transform: showOlder ? "rotate(180deg)" : "none" }} />
-                </button>
-                {showOlder && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-                    {[...older].sort((a, b) => recency(b.versions || []) - recency(a.versions || [])).map(deal => (
-                      <TripPlanCard key={deal.id} deal={deal} onOpen={(v) => openVersion(deal, v)} onStartNew={() => navigate("/build")} onSaved={showSavedToast} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Enquiries that did not go ahead, grouped by enquiry */}
+            <PastPlans deals={older} />
           </div>
           </>
           ); })()}
