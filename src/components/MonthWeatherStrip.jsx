@@ -15,22 +15,35 @@ import { SKY_STYLE } from "./skyStyle";
 // tapped through.
 
 export default function MonthWeatherStrip({ dest, pad = 16 }) {
-  const now = new Date().getMonth();
+  const today = new Date();
+  const now = today.getMonth();
+  const thisYear = today.getFullYear();
   if (!monthWeather(dest, 0)) return null;
+
+  // The next twelve months from this one, not January to December. Nobody
+  // planning in September is deciding about last February, and a strip that
+  // opens on the month you are in needs no scrolling to be useful.
+  const run = Array.from({ length: 12 }, (_, k) => {
+    const abs = now + k;
+    return { i: abs % 12, year: thisYear + Math.floor(abs / 12), first: k === 0 };
+  });
 
   return (
     <div className="hide-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: `0 -${pad}px`, padding: `0 ${pad}px 4px` }}>
-      {MONTHS.map((m, i) => {
+      {run.map(({ i, year, first }) => {
         const w = monthWeather(dest, i);
         const { Icon, color } = SKY_STYLE[w.sky] || SKY_STYLE.cloudy;
-        const isNow = i === now;
+        const isNow = first;
+        // January carries its year, so a month that has rolled over is not read
+        // as one that has already passed.
+        const label = i === 0 && !first ? `${MONTHS[i]} '${String(year).slice(2)}` : MONTHS[i];
         return (
-          <div key={m} data-testid={`wx-strip-${i}`} style={{
+          <div key={`${i}-${year}`} data-testid={`wx-strip-${i}`} style={{
             flexShrink: 0, minWidth: 82, padding: "10px 12px 11px", borderRadius: 13, textAlign: "center",
             border: `1px solid ${isNow ? C.p300 : C.div}`,
             background: isNow ? `${C.p100}88` : C.white,
           }}>
-            <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: isNow ? C.p600 : C.head }}>{m}</span>
+            <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: isNow ? C.p600 : C.head }}>{label}</span>
             <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, margin: "7px 0 5px" }}>
               <Icon size={14} color={color} />
               <span style={{ fontSize: 11, fontWeight: 600, color: C.sub, whiteSpace: "nowrap" }}>{w.word}</span>
