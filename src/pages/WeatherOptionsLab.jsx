@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Sun, CloudSun, CloudDrizzle, CloudRain, Info } from "lucide-react";
 import { C } from "../data";
+import { SEASON_LABEL, SEASON_COLOR } from "../components/seasonStyle";
 import { monthRating, MONTHS } from "../data/buildData";
 import { monthWeather } from "../data/weatherData";
 
@@ -24,8 +25,7 @@ const OPTIONS = [
   { key: "D", name: "In the trip summary", note: "Weather for the dates actually chosen, next to the nights. Quiet, but only answers after the choice." },
 ];
 
-const SEASON_LABEL = { peak: "Peak season", shoulder: "Shoulder", off: "Off-season" };
-const SEASON_COLOR = { peak: C.sText, shoulder: C.wText, off: C.dText };
+
 
 const SKY = {
   sunny:   { Icon: Sun,          word: "Mostly sunny",  color: "#F5B301" },

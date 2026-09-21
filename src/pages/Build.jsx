@@ -7,6 +7,7 @@ import {
   Sparkles, Play, GripVertical, Map as MapIcon, Search, Star, Users, MapPin,
 } from "lucide-react";
 import { C, allItineraries } from "../data";
+import { SEASON_LABEL, SEASON_COLOR } from "../components/seasonStyle";
 import {
   BUILD_DESTS, destMeta, destAreas, MONTHS, monthRating,
   areaImg, destHero, topActivities, recommendedRoute, routeNights,
@@ -827,8 +828,7 @@ function Stepper({ label, value, onChange, min = 0, last }) {
 }
 
 // ════════════════════ Step 2: When & how long ════════════════════
-const SEASON_LABEL = { peak: "Peak season", shoulder: "Shoulder", off: "Off-season" };
-const SEASON_COLOR = { peak: C.sText, shoulder: C.wText, off: C.dText };
+
 
 function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
   const today = new Date();
