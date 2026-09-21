@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Lock, ChevronDown, Pencil, Trash2, Info } from "lucide-react";
+import { Lock, ChevronDown, Pencil, Trash2, Info, UserRound } from "lucide-react";
 import { BRAND, BRAND_SUB } from "../data/brand";
 import { initialsOf } from "../data/profile";
 
@@ -129,52 +129,77 @@ export function SectionCard({ title, sub, children }) {
 
 // The photo. Initials until there is one, a pencil badge either way, and a
 // remove button once a photo exists so a bad pick is one tap to undo.
-export function PhotoPicker({ photo, name, onPick, onRemove, placeholder, size = 96 }) {
+export function PhotoPicker({ photo, name, onPick, onRemove, placeholder, size = 52 }) {
   const input = useRef(null);
   const read = (e) => {
     const file = e.target.files?.[0];
     if (file) onPick(URL.createObjectURL(file), file.name);
     e.target.value = "";
   };
+  const src = photo || placeholder;
+  // initialsOf falls back to "?", which is a worse empty state than a figure.
+  const initials = name?.trim() ? initialsOf(name) : "";
+
+  // A row, not a portrait. The photo is the least important thing on this
+  // screen: the birthday and the anniversary are what we are here for. A 96px
+  // circle centred above the fields made it the headline and pushed the fields
+  // that matter below the fold.
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-      <div style={{ position: "relative", width: size, height: size }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
         <div style={{
           width: size, height: size, borderRadius: "50%", overflow: "hidden",
           background: BRAND.coastalMist, display: "grid", placeItems: "center",
           border: `1px solid ${BORDER}`,
         }}>
-          {photo || placeholder
-            ? <img src={photo || placeholder} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }} />
-            : <span style={{ fontSize: size * 0.32, fontWeight: 600, color: BRAND.tropicalForest, letterSpacing: "0.5px" }}>{initialsOf(name)}</span>}
+          {src
+            ? <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }} />
+            : initials
+              ? <span style={{ fontSize: size * 0.34, fontWeight: 600, color: BRAND.tropicalForest, letterSpacing: "0.5px" }}>{initials}</span>
+              // No photo and no name yet: a figure, not an empty circle.
+              : <UserRound size={size * 0.46} color={BRAND_SUB} strokeWidth={1.6} />}
         </div>
         <button
           data-testid="profile-photo-edit"
           onClick={() => input.current?.click()}
-          aria-label="Change profile photo"
+          aria-label={src ? "Change profile photo" : "Add profile photo"}
           style={{
-            position: "absolute", right: -2, bottom: -2, width: 32, height: 32, borderRadius: "50%",
+            position: "absolute", right: -3, bottom: -3, width: 22, height: 22, borderRadius: "50%",
             background: "#fff", border: `1px solid ${BORDER}`, cursor: "pointer",
-            display: "grid", placeItems: "center", boxShadow: "0 4px 12px -4px rgba(10,22,21,0.3)",
+            display: "grid", placeItems: "center", boxShadow: "0 2px 6px -2px rgba(10,22,21,0.3)",
           }}
         >
-          <Pencil size={14} color={BRAND.tropicalForest} />
+          <Pencil size={11} color={BRAND.tropicalForest} />
         </button>
         <input ref={input} type="file" accept="image/*" onChange={read} style={{ display: "none" }} />
       </div>
-      {photo && (
+
+      <div style={{ minWidth: 0 }}>
         <button
-          data-testid="profile-photo-remove"
-          onClick={onRemove}
+          data-testid="profile-photo-action"
+          onClick={() => input.current?.click()}
           style={{
-            background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
-            fontSize: 12.5, fontWeight: 600, color: BRAND_SUB,
-            display: "inline-flex", alignItems: "center", gap: 5, padding: 4,
+            background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
+            fontSize: 13, fontWeight: 600, color: BRAND.sunsetFuchsia, display: "block",
           }}
         >
-          <Trash2 size={13} /> Remove photo
+          {src ? "Change photo" : "Add a photo"}
         </button>
-      )}
+        {photo ? (
+          <button
+            data-testid="profile-photo-remove"
+            onClick={onRemove}
+            style={{
+              background: "none", border: "none", padding: "3px 0 0", cursor: "pointer", fontFamily: "inherit",
+              fontSize: 12, color: BRAND_SUB, display: "inline-flex", alignItems: "center", gap: 4,
+            }}
+          >
+            <Trash2 size={12} /> Remove
+          </button>
+        ) : (
+          <p style={{ margin: "2px 0 0", fontSize: 12, color: BRAND_SUB }}>Optional</p>
+        )}
+      </div>
     </div>
   );
 }

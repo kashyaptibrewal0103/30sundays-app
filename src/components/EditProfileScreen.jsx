@@ -18,7 +18,6 @@ import { Field, SelectField, SectionCard, PhotoPicker } from "./ProfileFields";
 const GENDERS = ["Female", "Male", "Prefer not to say"];
 // A stand-in portrait so the photo slot reads as a photo slot. Replaced by
 // whatever the traveller uploads, and by their real picture once we hold one.
-const PLACEHOLDER_PHOTO = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=240&h=240&q=80&auto=format&fit=crop";
 
 export default function EditProfileScreen({ base, onClose }) {
   const { values, saveProfile, isLocked, track } = useProfile();
@@ -89,9 +88,8 @@ export default function EditProfileScreen({ base, onClose }) {
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 120px" }} className="hide-scrollbar">
         <SectionCard title="Basic information">
-          <div style={{ margin: "0 0 22px" }}>
+          <div style={{ margin: "0 0 16px" }}>
             <PhotoPicker
-              placeholder={PLACEHOLDER_PHOTO}
               photo={form.photo}
               name={form.name}
               onPick={(url, fileName) => { set("photo")(url); track("profile_photo_added", { source: "profile", file: fileName }); }}
