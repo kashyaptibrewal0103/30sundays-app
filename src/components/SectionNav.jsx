@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { C } from "../data";
+import { BRAND } from "../data/brand";
 
 // ─── Section nav for a long screen ───
 //
@@ -181,10 +182,10 @@ export default function SectionNav({ sections, elFor, onJump }) {
                   display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0,
                   height: 34, padding: "0 13px", borderRadius: 999, cursor: "pointer",
                   fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap",
-                  border: `1px solid ${on ? C.p600 : C.div}`,
-                  background: on ? C.p600 : C.white,
+                  border: `1px solid ${on ? BRAND.sunsetFuchsiaSoft : C.div}`,
+                  background: on ? BRAND.sunsetFuchsiaSoft : C.white,
                   color: on ? "#fff" : C.sub,
-                  boxShadow: on ? "0 6px 14px -8px rgba(227,27,83,0.75)" : "none",
+                  boxShadow: on ? "0 6px 14px -8px rgba(248,113,159,0.85)" : "none",
                   transition: "background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease",
                 }}
               >
@@ -200,7 +201,7 @@ export default function SectionNav({ sections, elFor, onJump }) {
           aria-hidden="true"
           style={{
             position: "absolute", left: 0, bottom: 0, height: 2,
-            width: `${progress * 100}%`, background: C.p600,
+            width: `${progress * 100}%`, background: BRAND.sunsetFuchsiaSoft,
           }}
         />
       </div>

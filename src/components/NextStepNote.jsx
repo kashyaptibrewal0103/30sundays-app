@@ -9,12 +9,12 @@ import { C } from "../data";
 // they could still change it afterwards.
 //
 // So both are said in plain words, directly above the button, where the
-// hesitation happens. Two short lines rather than a paragraph, because this is
-// read in the second before a tap, not studied.
+// hesitation happens. Six words a line, because this is read in the second
+// before a tap, not studied.
 
 const POINTS = [
-  { icon: FileText, text: "You get a full day-by-day plan you can download as a PDF" },
-  { icon: Pencil, text: "Nothing is final. Change any day, hotel or activity later" },
+  { icon: FileText, text: "A day-by-day plan, yours as a PDF" },
+  { icon: Pencil, text: "Nothing is final. Change it anytime" },
 ];
 
 export default function NextStepNote() {
@@ -25,7 +25,7 @@ export default function NextStepNote() {
       borderBottom: `1px solid ${C.div}`,
     }}>
       <p style={{ margin: "0 0 7px", fontSize: 12.5, fontWeight: 700, color: C.head }}>
-        Next: we build your itinerary
+        Next: your itinerary
       </p>
       {POINTS.map(({ icon: Icon, text }) => (
         <div key={text} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 4 }}>

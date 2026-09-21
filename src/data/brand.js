@@ -15,6 +15,10 @@ export const BRAND = {
   goldenHour: "#FDA201",
   // The warm off-white behind everything. Cards, wells, avatar circles.
   coastalMist: "#EAE6E3",
+  // The softer pink the marketing films tag their titles with (the "Bali" label
+  // on a reel cover). Lighter than the CTA pink, so it can fill a chip without
+  // competing with the button the screen is actually asking you to press.
+  sunsetFuchsiaSoft: "#F8719F",
 };
 
 // Tints of the brand colours, for backgrounds that sit under brand-coloured

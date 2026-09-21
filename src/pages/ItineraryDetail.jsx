@@ -1512,7 +1512,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         {/* An older version exists once this one has been priced, or once we are
             past V1. Only then is there something for saving to preserve. */}
         {inDeal && !validQuote && !fetchingPrice && (
-          <SaveVersionNote hasPrevious={quoted || (version?.num || 1) > 1} />
+          <SaveVersionNote
+            hasPrevious={quoted || (version?.num || 1) > 1}
+            scope={`${dealId || it.id}_${versionId || version?.id || "v"}`}
+          />
         )}
 
         {/* Price + CTA row */}
