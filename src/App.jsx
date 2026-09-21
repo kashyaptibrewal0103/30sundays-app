@@ -5,6 +5,8 @@ import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
 import TripNudge from "./components/TripNudge";
 import CallbackNudge from "./components/CallbackNudge";
+import ProfileGate from "./components/ProfileGate";
+import ProfileDemoSync from "./components/ProfileDemoSync";
 import Home from "./pages/Home";
 import HomeV2 from "./pages/HomeV2";
 import HomeV3 from "./pages/HomeV3";
@@ -13,6 +15,7 @@ import HomeV5 from "./pages/HomeV5";
 import HomeV5Clone from "./pages/HomeV5Clone";
 import HomeBannerLab from "./pages/HomeBannerLab";
 import HomeV6 from "./pages/HomeV6";
+import { HomeLabIndex, CtaLab, CardsLab, PlansLab, StatesLab, HOME_LAB_PAGES } from "./pages/home_lab";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
@@ -32,6 +35,9 @@ import DayDetailLab from "./pages/DayDetailLab";
 import DayDetailImmersive from "./pages/DayDetailImmersive";
 import GlanceCardLab from "./pages/GlanceCardLab";
 import RatingLab from "./pages/RatingLab";
+import ProfileLab from "./pages/ProfileLab";
+import ActivitiesEduLab from "./pages/ActivitiesEduLab";
+import SaveVersionLab from "./pages/SaveVersionLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -108,6 +114,7 @@ import { WishlistProvider } from "./data/wishlist";
 import { GiftingProvider } from "./state/useGifting";
 import { CommunityProvider } from "./state/useCommunity";
 import { LAB_VARIANT } from "./data/labVariant";
+import { ProfileProvider } from "./data/profile";
 
 // Destination pages: new discover-style layout everywhere except Maldives and
 // Mauritius, which keep their existing layouts.
@@ -126,7 +133,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
   const communityPaths = pathname.startsWith("/community") || pathname.startsWith("/lounge-");
   const giftPaths = pathname === "/wallet" || pathname.startsWith("/gift-cards") || pathname.startsWith("/gift/") || pathname.startsWith("/g/") || pathname.startsWith("/registry");
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || communityPaths || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || communityPaths || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -150,10 +157,11 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
   // show only the screen, no demo-state switcher.
   // Design labs hide it too, so the cards can be judged without it on top of them.
-  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab";
+  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab";
 
   return (
     <PhoneFrame>
+      <ProfileDemoSync userState={userState} />
       {!shareLink && <UserToggle userState={userState} setUserState={setUserState} />}
       <Routes>
         <Route path="/" element={<HomeV5 userState={userState} />} />
@@ -163,6 +171,13 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/v4" element={<HomeV4 userState={userState} />} />
         <Route path="/v5" element={<HomeV2 />} />
         <Route path="/v6" element={<HomeV6 userState={userState} />} />
+        {/* Home page lab: ten takes on everything above Sunday School */}
+        <Route path="/home-lab" element={<HomeLabIndex />} />
+        <Route path="/home-lab/cta" element={<CtaLab />} />
+        <Route path="/home-lab/cards" element={<CardsLab />} />
+        <Route path="/home-lab/plans" element={<PlansLab />} />
+        <Route path="/home-lab/states" element={<StatesLab />} />
+        {HOME_LAB_PAGES.map((Page, i) => <Route key={i} path={`/home-lab/${i + 1}`} element={<Page userState={userState} />} />)}
         <Route path="/discover/:name" element={<Discover />} />
         <Route path="/discover/:name/routes" element={<DiscoverRoutes />} />
         <Route path="/discover-couples/:name" element={<Discover routesBase="/discover-couples" />} />
@@ -198,6 +213,9 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/day-media/:variant" element={<DayDetailImmersive />} />
         <Route path="/glance-lab" element={<GlanceCardLab />} />
         <Route path="/rating-lab" element={<RatingLab />} />
+        <Route path="/profile-lab" element={<ProfileLab />} />
+        <Route path="/activities-lab" element={<ActivitiesEduLab />} />
+        <Route path="/save-lab" element={<SaveVersionLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
@@ -263,6 +281,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/watch/:videoId" element={<WatchDeepLink />} />
       </Routes>
       {showNudge && (leadData?.salesRequest ? <CallbackNudge /> : <TripNudge userState={userState} />)}
+      {showNudge && <ProfileGate userState={userState} />}
       {!hideShell && <BottomNav userState={userState} />}
     </PhoneFrame>
   );
@@ -281,6 +300,7 @@ export default function App() {
     <DealsProvider>
     <SavesProvider>
     <WishlistProvider>
+    <ProfileProvider>
     <GiftingProvider>
     <CommunityProvider>
       <BrowserRouter>
@@ -299,6 +319,7 @@ export default function App() {
       </BrowserRouter>
     </CommunityProvider>
     </GiftingProvider>
+    </ProfileProvider>
     </WishlistProvider>
     </SavesProvider>
     </DealsProvider>
