@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Search, X as XIcon, ArrowLeft } from "lucide-react";
 import { CC } from "../components/Community/tokens";
 import { useCommunity } from "../state/useCommunity";
-import { getDest, roomOrder, canPost } from "../data/communityData";
+import { getDest, roomOrder, canPost, track } from "../data/communityData";
 import { Screen, Body } from "../components/Gift/GiftUI";
 import { PAD, QuestionCard, Toast } from "../components/Community/CommunityUI";
 import { AskSheet } from "./CommunityFeed";
@@ -71,6 +71,18 @@ export default function CommunitySearch({ everywhere }) {
     [all, answersFor],
   );
 
+  // Fired on a settled term rather than a keystroke, and it carries whether
+  // the search found nothing, which is the cheapest seeding brief there is.
+  useEffect(() => {
+    if (needle.length < 2) return undefined;
+    const t = setTimeout(() => {
+      track("community_search_run", {
+        scope: everywhere ? "all" : dest, term: needle, resultCount: results.length,
+      });
+    }, 700);
+    return () => clearTimeout(t);
+  }, [needle, results.length, everywhere, dest]);
+
   const searching = needle.length >= 2;
   const shown = searching ? results : mostAnswered;
 
@@ -130,12 +142,20 @@ export default function CommunitySearch({ everywhere }) {
 
           {shown.length > 0 ? (
             <div style={{ padding: `0 ${PAD}px`, display: "flex", flexDirection: "column", gap: 8 }}>
-              {shown.map(q => (
+              {shown.map((q, rank) => (
                 <QuestionCard
                   key={`${roomOf(q)}-${q.id}`} q={q}
                   room={everywhere ? (getDest(roomOf(q)).short || getDest(roomOf(q)).name) : null}
                   answerCount={answersFor(q).length}
-                  onClick={() => navigate(`/community/${roomOf(q)}/q/${q.id}`)}
+                  onClick={() => {
+                    if (searching) {
+                      track("community_search_result_opened", {
+                        questionId: q.id, rank: rank + 1, term: needle,
+                        scope: everywhere ? "all" : dest,
+                      });
+                    }
+                    navigate(`/community/${roomOf(q)}/q/${q.id}?src=search`);
+                  }}
                 />
               ))}
             </div>
@@ -143,8 +163,14 @@ export default function CommunitySearch({ everywhere }) {
             <Nothing
               term={term} name={d.name} everywhere={everywhere}
               canAsk={canPost(dest)}
-              onWiden={() => navigate(`/lounge/search?q=${encodeURIComponent(term.trim())}`)}
-              onAsk={() => setAsk(true)}
+              onWiden={() => {
+                track("community_search_no_results_action", { action: "widen", term: needle });
+                navigate(`/lounge/search?q=${encodeURIComponent(term.trim())}`);
+              }}
+              onAsk={() => {
+                track("community_search_no_results_action", { action: "ask", term: needle });
+                setAsk(true);
+              }}
             />
           )}
         </div>
@@ -152,7 +178,7 @@ export default function CommunitySearch({ everywhere }) {
 
       {ask && (
         <AskSheet
-          dest={dest} destName={d.name} seedTitle={term}
+          dest={dest} destName={d.name} seedTitle={term} source="failed_search"
           onClose={() => setAsk(false)}
           onPosted={(q) => { setAsk(false); navigate(`/community/${dest}/q/${q.id}`); }}
         />

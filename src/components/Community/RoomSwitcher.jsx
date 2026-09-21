@@ -1,7 +1,7 @@
 import { ChevronRight, ChevronDown, Check, Plane } from "lucide-react";
 import { CC } from "./tokens";
 import { Sheet } from "../Gift/GiftUI";
-import { getDest, roomOrder } from "../../data/communityData";
+import { getDest, roomOrder, track } from "../../data/communityData";
 
 // The room name in the bar, and the sheet it opens.
 //
@@ -44,7 +44,7 @@ export function SwitcherSheet({ current, onPick, onAll, onClose }) {
     const d = getDest(id);
     const here = id === current;
     return (
-      <button key={id} onClick={() => (here ? onClose() : onPick(id))} style={{
+      <button key={id} onClick={() => { if (here) return onClose(); track("community_room_switched", { from: current, to: id }); return onPick(id); }} style={{
         display: "flex", alignItems: "center", gap: 11, width: "100%",
         padding: "12px 2px", background: "none", border: "none",
         borderBottom: `1px solid ${CC.line}`, cursor: "pointer",

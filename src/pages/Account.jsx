@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
-  ChevronRight, Wallet, HelpCircle, FileText, LogOut, User, Heart,
+  MessagesSquare, ChevronRight, Wallet, HelpCircle, FileText, LogOut, User, Heart,
   Bookmark, Users, Lightbulb, Bug, Star, Share2, Shield, MessageCircle,
   Instagram, Youtube, Linkedin, X as XIcon, Send, Check,
   ArrowLeft, Phone, Mail, Calendar, MapPin, Trash2, AlertTriangle,
@@ -10,6 +10,7 @@ import {
   ChevronDown, CreditCard, Copy, AlertCircle, ReceiptIndianRupee, Download, Clock,
 } from "lucide-react";
 import { C } from "../data";
+import { track as communityTrack } from "../data/communityData";
 import RatingSheet from "../components/RatingSheet";
 import { useDeals } from "../data/deals";
 import { useWishlist } from "../data/wishlist";
@@ -152,6 +153,12 @@ export default function Account({ userState, leadData, setUserState, setLeadData
 
   // Single settings list (matches the app): TCS certificate sits above Logout.
   const mainList = [
+    // The Lounge's permanent door. Everything else that opens it hangs off a
+    // trip, so somebody between trips has no way in without this row.
+    { icon: MessagesSquare, label: "Sunday Lounge", onClick: () => {
+      communityTrack("community_lounge_entry_tapped", { surface: "account_row" });
+      navigate("/lounge");
+    } },
     { icon: Wallet, label: "Wallet", onClick: () => navigate("/wallet") },
     { icon: Gift, label: "Gift cards", onClick: () => navigate("/gift-cards") },
     { icon: HeartHandshake, label: "Gift registry", onClick: () => navigate("/registry") },

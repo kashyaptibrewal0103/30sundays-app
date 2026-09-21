@@ -66,7 +66,8 @@ export default function CommunityBookingConfirmed() {
               <Point icon={BadgeCheck} text="Every answer carries a verified trip stamp" />
             </div>
 
-            <Primary onClick={() => { track("community_joined", { dest, from: "booking" }); navigate(`/community/${dest}`); }}>
+            <Primary onClick={() => { track("community_lounge_entry_tapped", { surface: "booking_confirmation", dest });
+              track("community_joined", { dest, from: "booking" }); navigate(`/community/${dest}`); }}>
               Take me in
             </Primary>
             <button onClick={() => setSkipped(true)} style={{

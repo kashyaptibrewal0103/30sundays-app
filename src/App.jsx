@@ -73,6 +73,14 @@ import LoungeHome from "./pages/LoungeHome";
 import LoungeRooms from "./pages/LoungeRooms";
 import LoungeSwitcher from "./pages/LoungeSwitcher";
 import LoungeDirectory from "./pages/LoungeDirectory";
+import LoungePaused from "./pages/LoungePaused";
+import LoungePending from "./pages/LoungePending";
+import CommunityNotifications from "./pages/CommunityNotifications";
+import CommunityNotifySettings from "./pages/CommunityNotifySettings";
+import CommunityProfile from "./pages/CommunityProfile";
+import CommunityMyPosts from "./pages/CommunityMyPosts";
+import CommunitySuggest from "./pages/CommunitySuggest";
+import LoungeRules from "./pages/LoungeRules";
 import GiftCardBuy from "./pages/GiftCardBuy";
 import GiftCardClaim from "./pages/GiftCardClaim";
 import GiftRegistry from "./pages/GiftRegistry";
@@ -87,6 +95,7 @@ import Discover from "./pages/Discover";
 import DiscoverRoutes from "./pages/DiscoverRoutes";
 import RoutesCouples from "./pages/RoutesCouples";
 import DiscoverWF from "./pages/DiscoverWF";
+import CityDetail from "./pages/CityDetail";
 import WishlistWF from "./pages/WishlistWF";
 import RoutesWF from "./pages/RoutesWF";
 import CompareVersions from "./pages/CompareVersions";
@@ -166,6 +175,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/resort/:resortId" element={<ResortDetail />} />
         <Route path="/maldives-quote" element={<MaldivesQuote />} />
         <Route path="/destination/:name" element={<DestinationLayout />} />
+        <Route path="/destination/:destSlug/city/:citySlug" element={<CityDetail leadData={leadData} />} />
         <Route path="/old-bali-page" element={<Destination name="Bali" />} />
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />
@@ -212,9 +222,17 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         {/* Community: Q&A, the cohort, and the parallel My Trips with the card on it */}
         <Route path="/lounge" element={<LoungeHome />} />
         <Route path="/lounge/search" element={<CommunitySearch everywhere />} />
+        <Route path="/lounge/notifications" element={<CommunityNotifications />} />
+        <Route path="/lounge/settings" element={<CommunityNotifySettings />} />
+        <Route path="/lounge/profile" element={<CommunityProfile />} />
+        <Route path="/lounge/my-posts" element={<CommunityMyPosts />} />
+        <Route path="/lounge/suggest" element={<CommunitySuggest />} />
+        <Route path="/lounge-rules" element={<LoungeRules />} />
         <Route path="/lounge-rooms" element={<LoungeRooms />} />
         <Route path="/lounge-switcher" element={<LoungeSwitcher />} />
         <Route path="/lounge-index" element={<LoungeDirectory />} />
+        <Route path="/lounge-paused" element={<LoungePaused />} />
+        <Route path="/lounge-pending" element={<LoungePending />} />
         <Route path="/community" element={<CommunityIndex />} />
         <Route path="/community/booking-confirmed" element={<CommunityBookingConfirmed />} />
         <Route path="/community/:dest" element={<CommunityFeed />} />

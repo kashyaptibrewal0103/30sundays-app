@@ -20,7 +20,14 @@ import { GuidelinesNote, GuidelinesPointer } from "../components/Community/Guide
 import { sortQuestions } from "../components/Community/FeedFilters";
 import { FiltersChipsAndSliders } from "../components/Community/SortFilterVariants";
 import { HelpComposer } from "../components/Community/HelpVariants";
-import { AnswerSheet, ImageAttach, FailedNote, FlaggedSheet, BlockedSheet } from "../components/Community/PostSheets";
+import { AnswerSheet, ImageAttach, FailedNote } from "../components/Community/PostSheets";
+import { PendingEdge } from "../components/Community/PendingVariants";
+import {
+  PausedScreen, PausedMarker, PausedSheetBody, AppealBody, AppealSent,
+} from "../components/Community/PausedVariants";
+import { ComposeRules, ConsentNote } from "../components/Community/FirstPost";
+import { EditSheet } from "./CommunityQuestion";
+import { useDwell } from "../components/Community/useDwell";
 import { SwitcherTitle, SwitcherSheet } from "../components/Community/RoomSwitcher";
 
 // The Q&A feed is where Community starts. A plain bar at the top, the group
@@ -39,9 +46,18 @@ export default function CommunityFeed() {
   const [switcher, setSwitcher] = useState(false);
 
   const {
-    questionsFor, answersFor, answeredCount, unreadFor,
+    liveQuestionsFor, pendingFor, answersFor, answeredCount, unreadFor,
     rulesSeen, seeRules, helpSeen, seeHelp, reports,
+    posting, canPostNow, pausedSeen, seePausedScreen, appeal, likes,
+    editQuestion, deleteQuestion,
   } = useCommunity();
+  // A post of this traveller's that is being checked, or held, or refused.
+  // Both icons work throughout: an edit restarts the check on the new words.
+  const [editingPending, setEditingPending] = useState(null);
+  // Posting paused is an account state, so it shows in every room. In full the
+  // first time, then a marker.
+  const [pausedSheet, setPausedSheet] = useState(null);   // "why" | "appeal" | "sent"
+  const [appealText, setAppealText] = useState("");
   const [ask, setAsk] = useState(false);
   const [toast, setToast] = useState(null);
   // Shown once, the moment the rules note is closed, so the rules are never
@@ -54,16 +70,17 @@ export default function CommunityFeed() {
   const [limit, setLimit] = useState(PAGE);
   const foot = useRef(null);
 
-  const [sort, setSort] = useState("recent");
+  const [sort, setSort] = useState("top");
   const [tag, setTag] = useState(null);
   const [helpWith, setHelpWith] = useState(null);   // the question being answered
 
   const d = getDest(dest);
-  const all = questionsFor(dest);
+  const all = liveQuestionsFor(dest);
+  const pending = pendingFor(dest);
   // Reported posts leave the reporter's own feed, and nobody else's.
   const visible = all.filter(q => !reports[q.id]);
   const byTag = tag ? visible.filter(q => (q.tags || []).includes(tag)) : visible;
-  const questions = view === "empty" ? [] : sortQuestions(byTag, sort, answersFor);
+  const questions = view === "empty" ? [] : sortQuestions(byTag, sort, answersFor, (q) => (likes[q.id] ? 1 : 0) + (q.likes || 0));
   const page = questions.slice(0, limit);
   const more = questions.length > limit;
 
@@ -79,6 +96,14 @@ export default function CommunityFeed() {
   const open = d.cohort?.state === "open";
   const writable = canPost(dest);
   const backTo = from === "trip" && d.tripId ? `/trips/${d.tripId}` : "/lounge";
+
+  // One pair per room view. The close carries how long it was open and how far
+  // it was read, which is the only honest way to measure reading.
+  useDwell(
+    "room",
+    { dest, roomType: d.everyone ? "general" : "destination", readOnly: !writable, source: from || "direct" },
+    () => ({ cardsSeen: Math.min(limit, questions.length), questionCount: questions.length }),
+  );
 
   useEffect(() => {
     const mark = foot.current;
@@ -155,6 +180,13 @@ export default function CommunityFeed() {
               <ReadOnlyNote />
             )}
 
+            {/* A cancelled booking reads nothing like three blocked posts, so
+                it never borrows that copy. No reason is given, and none is
+                needed: they know why. */}
+            {writable && posting === "cancelled" && (
+              <CancelledNote />
+            )}
+
             {writable && !rulesSeen[dest] && (
               <GuidelinesNote
                 onReadMore={() => navigate(`/community/${dest}/guidelines`)}
@@ -183,21 +215,57 @@ export default function CommunityFeed() {
 
             {writable && !helpSeen[dest] && needsHelp && (
               <div style={{ padding: `0 ${PAD}px 14px` }}>
+                <HelpPromptSeen dest={dest} questionId={needsHelp.id} />
                 <HelpComposer
                   q={needsHelp}
-                  onAnswer={() => setHelpWith(needsHelp)}
+                  onAnswer={() => {
+                    track("community_help_prompt_tapped", { dest, questionId: needsHelp.id });
+                    setHelpWith(needsHelp);
+                  }}
                   onClose={() => seeHelp(dest)}
                 />
+              </div>
+            )}
+
+            {writable && posting !== "unlocked" && pausedSeen && (
+              <div style={{ padding: `0 ${PAD}px 12px` }}>
+                <PausedMarker onOpen={() => setPausedSheet("why")} />
               </div>
             )}
 
             <SectionHead>Questions</SectionHead>
 
             <FiltersChipsAndSliders
-              sort={sort} onSort={(v) => { setSort(v); setLimit(PAGE); }}
-              tags={tagsFor(dest)} tag={tag} onTag={(v) => { setTag(v); setLimit(PAGE); }}
+              sort={sort}
+              onSort={(v) => { setSort(v); setLimit(PAGE); track("community_sort_changed", { dest, sort: v }); }}
+              tags={tagsFor(dest)} tag={tag}
+              onTag={(v) => {
+                setTag(v); setLimit(PAGE);
+                if (v) {
+                  track("community_tag_filter_used", {
+                    dest, tag: v, resultCount: visible.filter(q => (q.tags || []).includes(v)).length,
+                  });
+                }
+              }}
               counts={tagCounts} matches={questions.length}
             />
+
+            {/* A post of this traveller's that is still being checked, or held,
+                or refused. Nobody else can see these. */}
+            {pending.length > 0 && (
+              <div style={{
+                padding: `0 ${PAD}px 10px`, display: "flex", flexDirection: "column", gap: 8,
+              }}>
+                {pending.map(q => (
+                  <PendingEdge
+                    key={q.id} state={q.status} reason={q.rule?.what || ""}
+                    title={q.title} body={q.body}
+                    onEdit={() => setEditingPending(q)}
+                    onDelete={() => { deleteQuestion(q.id); setToast("Deleted"); }}
+                  />
+                ))}
+              </div>
+            )}
 
             {questions.length === 0 ? (
               <EmptyFeed name={d.name} onAsk={() => setAsk(true)} />
@@ -208,6 +276,7 @@ export default function CommunityFeed() {
                     <QuestionCard
                       key={q.id} q={q}
                       answerCount={answersFor(q).length}
+                      likeCount={(q.likes || 0) + (likes[q.id] ? 1 : 0)}
                       onClick={() => navigate(`/community/${dest}/q/${q.id}`)}
                     />
                   ))}
@@ -233,7 +302,7 @@ export default function CommunityFeed() {
       {/* Not a fixed bar. A row pinned across the bottom spent its width on
           two counts that are already on the screen, and it took a strip of the
           list with it. One action, in the corner a thumb reaches first. */}
-      {!loading && !helpWith && writable && (
+      {!loading && !helpWith && writable && canPostNow && (
         <button
           onClick={() => setAsk(true)}
           style={{
@@ -248,6 +317,43 @@ export default function CommunityFeed() {
         >
           <Plus size={18} /> Ask
         </button>
+      )}
+
+      {/* Posting is off. The screen says so in full the first time, and leaves a
+          marker in every room after that. Reading, liking, saving and reporting
+          all carry on. */}
+      {!loading && writable && posting === "paused" && !pausedSeen && (
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 120, background: CC.white,
+          display: "flex", alignItems: "center",
+        }}>
+          <div style={{ width: "100%" }}>
+            <PausedScreen
+              onAppeal={() => { seePausedScreen(); setAppealText(""); setPausedSheet("appeal"); }}
+              onRead={seePausedScreen}
+            />
+          </div>
+        </div>
+      )}
+
+      {pausedSheet === "why" && (
+        <Sheet title="Posting is paused" onClose={() => setPausedSheet(null)}>
+          <PausedSheetBody
+            onAppeal={() => { setAppealText(""); setPausedSheet("appeal"); }}
+            onClose={() => setPausedSheet(null)}
+          />
+        </Sheet>
+      )}
+      {pausedSheet === "appeal" && (
+        <Sheet title="Tell us we got it wrong" onClose={() => setPausedSheet(null)}>
+          <AppealBody
+            text={appealText} setText={setAppealText}
+            onSend={() => { appeal(appealText); setPausedSheet("sent"); }}
+          />
+        </Sheet>
+      )}
+      {pausedSheet === "sent" && (
+        <Sheet title="" onClose={() => setPausedSheet(null)}><AppealSent /></Sheet>
       )}
 
       {/* Posting drops the question into the list it belongs to rather than
@@ -277,6 +383,18 @@ export default function CommunityFeed() {
         />
       )}
 
+      {editingPending && (
+        <EditSheet
+          q={editingPending}
+          onClose={() => setEditingPending(null)}
+          onSave={({ title, body }) => {
+            editQuestion(editingPending.id, { title, body });
+            setEditingPending(null);
+            setToast("Checking it again");
+          }}
+        />
+      )}
+
       {toast && <Toast onDone={() => setToast(null)}>{toast}</Toast>}
     </Screen>
   );
@@ -290,6 +408,34 @@ function RoomBand({ d }) {
     }}>
       <p style={{ margin: 0, fontSize: 13, color: CC.body, lineHeight: "19px" }}>
         {d.about}
+      </p>
+    </div>
+  );
+}
+
+// The strip is the supply lever, so shown over tapped is the number that
+// matters. One impression per room visit, not one per render.
+function HelpPromptSeen({ dest, questionId }) {
+  useEffect(() => {
+    track("community_help_prompt_shown", { dest, questionId });
+  }, [dest, questionId]);
+  return null;
+}
+
+function CancelledNote() {
+  return (
+    <div style={{
+      background: CC.well, borderBottom: `1px solid ${CC.line}`, padding: `14px ${PAD}px`,
+    }}>
+      <p style={{
+        margin: 0, display: "flex", alignItems: "center", gap: 7,
+        fontSize: 13.5, fontWeight: 700, color: CC.ink,
+      }}>
+        <Lock size={14} color={CC.body} /> Posting is paused
+      </p>
+      <p style={{ margin: "5px 0 0", fontSize: 13, color: CC.body, lineHeight: "19px" }}>
+        You can still read everything here, and everything you posted before is
+        still up. Posting comes back when you next book.
       </p>
     </div>
   );
@@ -455,40 +601,65 @@ function FeedSkeleton() {
 
 /* ─────────────────────── Ask a question ─────────────────────── */
 
-export function AskSheet({ dest, destName, rooms, seedTitle = "", onClose, onPosted }) {
-  const { askQuestion, addStrike } = useCommunity();
+export function AskSheet({ dest, destName, rooms, seedTitle = "", source = "button", onClose, onPosted }) {
+  const { askQuestion, composeRulesSeen, seeComposeRules, consentSeen, seeConsent } = useCommunity();
   const [room, setRoom] = useState(dest);
   // A search that found nothing has already had the question typed into it.
   const [title, setTitle] = useState(seedTitle.trim());
   const [body, setBody] = useState("");
-  const [image, setImage] = useState(null);
+  const [images, setImages] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [flag, setFlag] = useState(null);
-  const [blocked, setBlocked] = useState(false);
   const [failed, setFailed] = useState(false);
 
   // The detail is optional, so only the question itself gates posting.
   const ready = title.trim().length > 4;
 
+  // Opened, and then either posted or walked away from. The gap between the two
+  // is where asking actually breaks down.
+  const startedAt = useRef(Date.now());
+  const posted = useRef(false);
+  const draft = useRef({ title: "", body: "" });
+  draft.current = { title, body };
+  useEffect(() => {
+    track("community_ask_started", { dest, source });
+    return () => {
+      if (posted.current) return;
+      track("community_ask_abandoned", {
+        dest, source,
+        hadTitle: draft.current.title.trim().length > 0,
+        hadBody: draft.current.body.trim().length > 0,
+        secondsSpent: Math.round((Date.now() - startedAt.current) / 1000),
+      });
+    };
+  }, [dest, source]);
+
+  // Nothing is refused in here any more. The question lands in the room and
+  // the check runs behind it, so the only failure left is the network.
   const submit = () => {
-    const hit = checkPost(`${title} ${body}`);
-    if (hit) {
-      const n = addStrike();
-      track("community_post_flagged", { rule: hit.id, offence: n });
-      if (n >= 2) setBlocked(hit); else setFlag(hit);
-      return;
-    }
+    // Posting is the agreement. The note above says what becomes public, and
+    // this is the moment it applies, so it is marked as shown here.
+    if (!consentSeen) seeConsent();
     setBusy(true);
     setTimeout(() => {
       setBusy(false);
       // A failure is one toggle away, so the state can be shown on demand.
-      if (window.__communityFailNext) { window.__communityFailNext = false; setFailed(true); return; }
-      onPosted(askQuestion({ dest: room, title, body, image, tag: tagForPost(`${title} ${body}`, room) }));
+      if (window.__communityFailNext) {
+        window.__communityFailNext = false;
+        track("community_post_failed", { kind: "question", recovered: false });
+        setFailed(true);
+        return;
+      }
+      posted.current = true;
+      onPosted(askQuestion({
+        dest: room, title, body, images, tag: tagForPost(`${title} ${body}`, room),
+      }));
     }, 700);
   };
 
-  if (blocked) return <BlockedSheet rule={blocked} onClose={onClose} />;
-  if (flag) return <FlaggedSheet rule={flag} onEdit={() => setFlag(null)} onClose={onClose} />;
+  // The five rules, once, before this traveller's first post anywhere.
+  if (!composeRulesSeen) {
+    return <ComposeRules onGotIt={seeComposeRules} onClose={onClose} />;
+  }
 
   return (
     <Sheet
@@ -499,7 +670,9 @@ export function AskSheet({ dest, destName, rooms, seedTitle = "", onClose, onPos
       onClose={onClose}
       footer={
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <Primary onClick={submit} disabled={!ready || busy}>{busy ? "Posting..." : "Post question"}</Primary>
+          <Primary onClick={submit} disabled={!ready || busy}>
+            {busy ? "Posting..." : "Post question"}
+          </Primary>
           <Secondary onClick={onClose}>Cancel</Secondary>
         </div>
       }
@@ -541,7 +714,10 @@ export function AskSheet({ dest, destName, rooms, seedTitle = "", onClose, onPos
             placeholder="We land at 7pm and our first two nights are in Ubud..." />
         </Field>
 
-        <ImageAttach image={image} setImage={setImage} />
+        <ImageAttach images={images} setImages={setImages} />
+
+        {/* Said once, in plain words, before anything of theirs is public. */}
+        {!consentSeen && <ConsentNote />}
       </div>
     </Sheet>
   );

@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import {
   Briefcase, CheckCircle2, BellRing, Home, MessageCircleQuestion, MessagesSquare,
-  Search, Bookmark, ShieldCheck, Plane, Lock, Users, Inbox, Loader, WifiOff,
+  Search, Bookmark, ShieldCheck, Plane, Lock, Users, Inbox, Loader, WifiOff, Bell,
   ShieldAlert, ChevronRight, RotateCcw, Layers, ArrowRightLeft, HelpCircle,
+  User, FileText, Lightbulb,
 } from "lucide-react";
 import { CC } from "../components/Community/tokens";
 import { useCommunity } from "../state/useCommunity";
@@ -18,12 +19,24 @@ import { PAD, SectionBar, SectionHead } from "../components/Community/CommunityU
 
 export default function LoungeDirectory() {
   const navigate = useNavigate();
-  const { resetCommunity, strikes } = useCommunity();
+  const { resetCommunity, strikes, setCancelled } = useCommunity();
 
   const go = (to) => () => navigate(to);
   // Arms the next post to fail once, so the failure state can be seen without
   // unplugging anything.
   const failNext = () => { window.__communityFailNext = true; navigate("/community/thailand"); };
+  // Two states that take three blocked posts or a cancellation to reach by
+  // hand. The switch is the only honest way to show them in a prototype.
+  const pauseNow = () => {
+    try {
+      const raw = JSON.parse(localStorage.getItem("30s_community_v2") || "{}");
+      localStorage.setItem("30s_community_v2", JSON.stringify({
+        ...raw, strikes: 3, posting: "paused", pausedSeen: false,
+      }));
+    } catch { /* noop */ }
+    window.location.href = "/community/thailand";
+  };
+  const cancelNow = () => { setCancelled(true); navigate("/community/thailand"); };
 
   return (
     <Screen>
@@ -87,7 +100,7 @@ export default function LoungeDirectory() {
             <Row icon={MessageCircleQuestion} title="A destination room"
               desc="Month band, group chat, filters, questions"
               onClick={go("/community/thailand")} />
-            <Row icon={Plane} tint={CC.tealTint} iconColor={CC.teal} title="Travelling from India"
+            <Row icon={Plane} tint={CC.tealTint} iconColor={CC.teal} title="General Queries"
               desc="Visas, passports, forex. Anyone who booked can answer"
               onClick={go("/community/india")} />
             <Row icon={MessagesSquare} title="A question thread"
@@ -108,9 +121,24 @@ export default function LoungeDirectory() {
             <Row icon={Bookmark} title="Saved questions"
               desc="Whatever this traveller bookmarked"
               onClick={go("/community/thailand/saved")} />
+            <Row icon={Bell} title="Notifications"
+              desc="Answers, moderation outcomes, appeals"
+              onClick={go("/lounge/notifications")} />
             <Row icon={ShieldCheck} title="Guidelines"
-              desc="The rules, reachable from every room"
-              onClick={go("/community/thailand/guidelines")} last />
+              desc="The rules, now a row on the Lounge home"
+              onClick={go("/community/thailand/guidelines")} />
+            <Row icon={User} title="Your profile"
+              desc="Photo, one line about you, delete everything you wrote"
+              onClick={go("/lounge/profile")} />
+            <Row icon={Bell} title="Notification settings"
+              desc="What reaches you, and muted questions"
+              onClick={go("/lounge/settings")} />
+            <Row icon={FileText} title="Your posts"
+              desc="Every question and answer this traveller wrote"
+              onClick={go("/lounge/my-posts")} />
+            <Row icon={Lightbulb} title="Suggest a change"
+              desc="A feature, a rule, or something broken, sent to the team"
+              onClick={go("/lounge/suggest")} last />
           </Group>
 
           <SectionBar />
@@ -141,7 +169,16 @@ export default function LoungeDirectory() {
               onClick={go("/community/thailand?state=loading")} />
             <Row icon={WifiOff} tint={CC.goldTint} iconColor={CC.goldInk} title="A post that fails"
               desc="Arms the next post to fail once"
-              onClick={failNext} last />
+              onClick={failNext} />
+            <Row icon={Bell} title="Notifications"
+              desc="Everything that happened to this traveller's posts"
+              onClick={go("/lounge/notifications")} />
+            <Row icon={Lock} tint={CC.pinkTint} iconColor={CC.pink} title="Posting paused"
+              desc="Three blocked posts. Reading, liking and saving carry on"
+              onClick={pauseNow} />
+            <Row icon={Lock} title="A cancelled booking"
+              desc="Posting off, reading on, no reason given"
+              onClick={cancelNow} last />
           </Group>
 
           <SectionBar />

@@ -13,38 +13,87 @@ import { QuoteBlock } from "./CommunityUI";
 // composer and the thread opens the feed's sheets. Keeping them in a page made
 // the two import each other, which leaves one of them undefined at start up.
 
-export function ImageAttach({ image, setImage }) {
+// Up to four photos per post. The spec's number, and the one a packing or a
+// hotel answer actually needs.
+export const MAX_IMAGES = 4;
+
+export function ImageAttach({ images = [], setImages }) {
   const [id] = useState(() => `att_${Math.random().toString(36).slice(2, 8)}`);
-  if (image) {
+  const full = images.length >= MAX_IMAGES;
+
+  const add = (files) => {
+    const room = MAX_IMAGES - images.length;
+    [...files].slice(0, room).forEach(f => {
+      const r = new FileReader();
+      r.onload = () => setImages(prev => (prev.length >= MAX_IMAGES ? prev : [...prev, r.result]));
+      r.readAsDataURL(f);
+    });
+  };
+
+  return (
+    <div>
+      {images.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+          {images.map((src, i) => (
+            <div key={i} style={{ position: "relative", width: 76 }}>
+              <img src={src} alt="" style={{
+                width: 76, height: 76, objectFit: "cover", borderRadius: 12, display: "block",
+              }} />
+              <button
+                onClick={() => setImages(prev => prev.filter((_, n) => n !== i))}
+                aria-label="Remove photo"
+                style={{
+                  position: "absolute", top: -7, right: -7, width: 24, height: 24, borderRadius: "50%",
+                  background: CC.ink, border: "none", cursor: "pointer", display: "grid", placeItems: "center",
+                }}
+              ><XIcon size={13} color="#fff" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!full && (
+        <>
+          <label htmlFor={id} style={{
+            display: "inline-flex", alignItems: "center", gap: 8, minHeight: 48, padding: "0 14px",
+            borderRadius: 999, border: `1px dashed ${CC.line}`, cursor: "pointer", alignSelf: "flex-start",
+            fontSize: 13, fontWeight: 600, color: CC.ink,
+          }}>
+            <ImagePlus size={16} /> {images.length ? "Add another" : "Add a photo"}
+            <span style={{ color: CC.soft, fontWeight: 500 }}>
+              {images.length ? `${MAX_IMAGES - images.length} left` : "up to 4"}
+            </span>
+          </label>
+          <input id={id} type="file" accept="image/*" multiple style={{ display: "none" }}
+            onChange={(e) => { add(e.target.files || []); e.target.value = ""; }} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// A row of photos on a post. One fills the width, several share it.
+export function ImageRow({ images = [] }) {
+  if (!images.length) return null;
+  if (images.length === 1) {
     return (
-      <div style={{ position: "relative", width: 84 }}>
-        <img src={image} alt="" style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 12, display: "block" }} />
-        <button onClick={() => setImage(null)} aria-label="Remove photo" style={{
-          position: "absolute", top: -7, right: -7, width: 24, height: 24, borderRadius: "50%",
-          background: CC.ink, border: "none", cursor: "pointer", display: "grid", placeItems: "center",
-        }}><XIcon size={13} color="#fff" /></button>
-      </div>
+      <img src={images[0]} alt="" style={{
+        width: "100%", maxHeight: 220, objectFit: "cover", borderRadius: 12,
+        display: "block", marginTop: 10,
+      }} />
     );
   }
   return (
-    <>
-      <label htmlFor={id} style={{
-        display: "inline-flex", alignItems: "center", gap: 8, minHeight: 48, padding: "0 14px",
-        borderRadius: 999, border: `1px dashed ${CC.line}`, cursor: "pointer", alignSelf: "flex-start",
-        fontSize: 13, fontWeight: 600, color: CC.ink,
-      }}>
-        <ImagePlus size={16} /> Add a photo
-        <span style={{ color: CC.soft, fontWeight: 500 }}>optional</span>
-      </label>
-      <input id={id} type="file" accept="image/*" style={{ display: "none" }}
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          const r = new FileReader();
-          r.onload = () => setImage(r.result);
-          r.readAsDataURL(f);
+    <div style={{
+      display: "grid", gridTemplateColumns: `repeat(${Math.min(images.length, 2)}, 1fr)`,
+      gap: 6, marginTop: 10,
+    }}>
+      {images.map((src, i) => (
+        <img key={i} src={src} alt="" style={{
+          width: "100%", height: 108, objectFit: "cover", borderRadius: 10, display: "block",
         }} />
-    </>
+      ))}
+    </div>
   );
 }
 
@@ -143,13 +192,13 @@ export function BlockedSheet({ rule, onClose }) {
 //
 // So: no scrim, no captured scroll, one line high until there is something to
 // say, and it grows from there.
-export function AnswerSheet({ questionId, quote, onClose, onPosted }) {
-  const { postAnswer, addStrike } = useCommunity();
+export function AnswerSheet({
+  questionId, questionTitle, quote, isFirstAnswer, hoursSinceAsked, onClose, onPosted,
+}) {
+  const { postAnswer } = useCommunity();
   const [body, setBody] = useState("");
-  const [image, setImage] = useState(null);
+  const [images, setImages] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [flag, setFlag] = useState(null);
-  const [blocked, setBlocked] = useState(false);
   const [failed, setFailed] = useState(false);
   const field = useRef(null);
 
@@ -165,25 +214,30 @@ export function AnswerSheet({ questionId, quote, onClose, onPosted }) {
 
   useEffect(() => { field.current?.focus(); }, []);
 
+  // Opened, then either posted or left. A reply is counted separately from an
+  // answer, because they are different acts on the same screen.
+  useEffect(() => {
+    track("community_answer_started", { questionId, isReply: !!quote });
+  }, [questionId, quote]);
+
+  // The answer lands in the thread and the check runs behind it, so the only
+  // failure left in here is the network.
   const submit = () => {
-    const hit = checkPost(body);
-    if (hit) {
-      const n = addStrike();
-      track("community_post_flagged", { rule: hit.id, offence: n });
-      if (n >= 2) setBlocked(hit); else setFlag(hit);
-      return;
-    }
     setBusy(true);
     setTimeout(() => {
       setBusy(false);
-      if (window.__communityFailNext) { window.__communityFailNext = false; setFailed(true); return; }
-      postAnswer(questionId, { body, image });
+      if (window.__communityFailNext) {
+        window.__communityFailNext = false;
+        track("community_post_failed", { kind: quote ? "reply" : "answer", recovered: false });
+        setFailed(true);
+        return;
+      }
+      postAnswer(questionId, {
+        body, images, questionTitle, isFirstAnswer, hoursSinceAsked, isReply: !!quote,
+      });
       onPosted();
     }, 700);
   };
-
-  if (blocked) return <BlockedSheet rule={blocked} onClose={onClose} />;
-  if (flag) return <FlaggedSheet rule={flag} onEdit={() => setFlag(null)} onClose={onClose} />;
 
   return (
     <div style={{
@@ -217,20 +271,32 @@ export function AnswerSheet({ questionId, quote, onClose, onPosted }) {
         </div>
       )}
 
-      {image && (
-        <div style={{ position: "relative", width: 56, marginBottom: 8 }}>
-          <img src={image} alt="" style={{
-            width: 56, height: 56, objectFit: "cover", borderRadius: 10, display: "block",
-          }} />
-          <button onClick={() => setImage(null)} aria-label="Remove photo" style={{
-            position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: "50%",
-            background: CC.ink, border: "none", cursor: "pointer", display: "grid", placeItems: "center",
-          }}><XIcon size={12} color="#fff" /></button>
+      {images.length > 0 && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+          {images.map((src, i) => (
+            <div key={i} style={{ position: "relative", width: 56 }}>
+              <img src={src} alt="" style={{
+                width: 56, height: 56, objectFit: "cover", borderRadius: 10, display: "block",
+              }} />
+              <button
+                onClick={() => setImages(prev => prev.filter((_, n) => n !== i))}
+                aria-label="Remove photo"
+                style={{
+                  position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: "50%",
+                  background: CC.ink, border: "none", cursor: "pointer",
+                  display: "grid", placeItems: "center",
+                }}
+              ><XIcon size={12} color="#fff" /></button>
+            </div>
+          ))}
         </div>
       )}
 
       <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-        <PhotoButton onPick={setImage} />
+        <PhotoButton
+          disabled={images.length >= MAX_IMAGES}
+          onPick={(src) => setImages(prev => (prev.length >= MAX_IMAGES ? prev : [...prev, src]))}
+        />
 
         <textarea
           ref={field}
@@ -259,15 +325,16 @@ export function AnswerSheet({ questionId, quote, onClose, onPosted }) {
 
 // Icon only, 40px. The old dashed pill said "optional" in words and took a row
 // of its own to do it.
-function PhotoButton({ onPick }) {
+function PhotoButton({ onPick, disabled }) {
   const [id] = useState(() => `att_${Math.random().toString(36).slice(2, 8)}`);
   return (
     <>
-      <label htmlFor={id} aria-label="Add a photo" style={{
+      <label htmlFor={disabled ? undefined : id} aria-label="Add a photo" style={{
         width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: CC.well,
-        cursor: "pointer", display: "grid", placeItems: "center",
+        cursor: disabled ? "default" : "pointer", display: "grid", placeItems: "center",
+        opacity: disabled ? 0.45 : 1,
       }}><ImagePlus size={19} color={CC.body} /></label>
-      <input id={id} type="file" accept="image/*" style={{ display: "none" }}
+      <input id={id} type="file" accept="image/*" multiple style={{ display: "none" }}
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (!f) return;

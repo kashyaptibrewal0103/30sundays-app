@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { CornerUpLeft, Pencil, Trash2, Bookmark, Share2, MoreHorizontal, Flag, Lock } from "lucide-react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { CornerUpLeft, Pencil, Trash2, Bookmark, Share2, MoreHorizontal, Flag, Lock, BellOff, Bell } from "lucide-react";
 import { CC } from "../components/Community/tokens";
 import { useCommunity } from "../state/useCommunity";
 import { ME, getDest, checkPost, track, canPost, shortMonth } from "../data/communityData";
@@ -10,6 +10,8 @@ import {
   IconAction, ClampText,
 } from "../components/Community/CommunityUI";
 import { AnswerSheet } from "../components/Community/PostSheets";
+import { PendingEdge } from "../components/Community/PendingVariants";
+import { useDwell } from "../components/Community/useDwell";
 import { ReportSheet, ReportSent, ReportedNote } from "../components/Community/ReportFlow";
 
 // One question, its answers, and a way to add another. The accepted answer is
@@ -17,11 +19,12 @@ import { ReportSheet, ReportSent, ReportedNote } from "../components/Community/R
 
 export default function CommunityQuestion() {
   const { dest = "bali", qid } = useParams();
+  const [params] = useSearchParams();
   const navigate = useNavigate();
   const {
     findQuestion, answersFor, likes, bookmarks, reports,
-    toggleLike, toggleBookmark, reportPost,
-    editQuestion, deleteQuestion, editAnswer, deleteAnswer,
+    toggleLike, toggleBookmark, reportPost, mutedQuestions, toggleMute,
+    editQuestion, deleteQuestion, editAnswer, deleteAnswer, pendingAnswersFor, canPostNow,
   } = useCommunity();
 
   const [compose, setCompose] = useState(null); // null | { quote }
@@ -68,6 +71,17 @@ export default function CommunityQuestion() {
   // what travellers add goes under a heading that says what it is.
   const official = d.everyone ? ordered.filter(a => a.author?.ops) : [];
   const rest = d.everyone ? ordered.filter(a => !a.author?.ops) : ordered;
+
+  // One pair per thread view. The close says whether the answers were read,
+  // which is the only way to judge whether an answer was any good.
+  useDwell(
+    "question",
+    {
+      questionId: q.id, dest, tag: (q.tags || [])[0] || null,
+      answerCount: ordered.length, source: params.get("src") || "feed",
+    },
+    () => ({ answersSeen: ordered.length, reachedEnd: false }),
+  );
 
   const renderAnswer = (a) => (reports[a.id] ? (
     <ReportedNote key={a.id} />
@@ -141,6 +155,17 @@ export default function CommunityQuestion() {
             />
           </div>
 
+          {/* An answer of this traveller's that is still being checked, or held,
+              or refused. Nobody else can see it. */}
+          {pendingAnswersFor(q.id).map(a => (
+            <PendingEdge
+              key={a.id} state={a.status} reason={a.rule?.what || ""}
+              title={a.body} body="" answerTo={q.title}
+              onEdit={() => setEditAns(a)}
+              onDelete={() => { deleteAnswer(q.id, a.id); setToast("Deleted"); }}
+            />
+          ))}
+
           {/* Answers */}
           {ordered.length === 0 ? (
             <EmptyAnswers writable={writable} />
@@ -179,10 +204,21 @@ export default function CommunityQuestion() {
 
       {compose ? (
         <AnswerSheet
-          questionId={q.id} quote={compose.quote}
+          questionId={q.id} questionTitle={q.title} quote={compose.quote}
+          isFirstAnswer={ordered.length === 0}
+          hoursSinceAsked={Math.round((q.minsAgo ?? 0) / 60)}
           onClose={() => setCompose(null)}
           onPosted={() => { setCompose(null); setToast("Your answer is up"); }}
         />
+      ) : !canPostNow ? (
+        <div style={{
+          flexShrink: 0, borderTop: `1px solid ${CC.line}`, background: CC.well,
+          padding: `14px ${PAD}px calc(16px + env(safe-area-inset-bottom))`, textAlign: "center",
+        }}>
+          <p style={{ fontSize: 13, color: CC.body, margin: 0 }}>
+            Posting is paused. You can still read everything.
+          </p>
+        </div>
       ) : readOnly ? (
         <div style={{
           flexShrink: 0, borderTop: `1px solid ${CC.line}`, background: CC.well,
@@ -214,15 +250,27 @@ export default function CommunityQuestion() {
       {menu && (
         <MoreMenu
           onClose={() => setMenu(false)}
-          items={q.mine ? [
-            { icon: Pencil, label: "Edit question", onClick: () => setEditing(true) },
-            { icon: Trash2, label: "Delete question", danger: true, onClick: () => setConfirmGone(true) },
-          ] : [
+          items={[
+            // A busy thread is the commonest reason somebody turns everything
+            // off. Stopping one question is the smaller, better answer.
             {
-              icon: Flag, danger: true, done: !!reports[q.id],
-              label: reports[q.id] ? "Reported" : "Report this question",
-              onClick: reports[q.id] ? undefined : () => setReport({ id: q.id, what: "question" }),
+              icon: mutedQuestions[q.id] ? Bell : BellOff,
+              label: mutedQuestions[q.id] ? "Turn notifications back on" : "Mute this question",
+              onClick: () => {
+                toggleMute(q.id, q.title);
+                setToast(mutedQuestions[q.id] ? "Notifications back on" : "Muted, you can undo this in settings");
+              },
             },
+            ...(q.mine ? [
+              { icon: Pencil, label: "Edit question", onClick: () => setEditing(true) },
+              { icon: Trash2, label: "Delete question", danger: true, onClick: () => setConfirmGone(true) },
+            ] : [
+              {
+                icon: Flag, danger: true, done: !!reports[q.id],
+                label: reports[q.id] ? "Reported" : "Report this question",
+                onClick: reports[q.id] ? undefined : () => setReport({ id: q.id, what: "question" }),
+              },
+            ]),
           ]}
         />
       )}
@@ -328,7 +376,7 @@ function EditAnswerSheet({ answer, onClose, onSave }) {
 }
 
 
-function EditSheet({ q, onClose, onSave }) {
+export function EditSheet({ q, onClose, onSave }) {
   const [title, setTitle] = useState(q.title || "");
   const [body, setBody] = useState(q.body || "");
   const ready = title.trim().length > 4;

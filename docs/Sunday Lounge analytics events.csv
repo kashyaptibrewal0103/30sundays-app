@@ -1,0 +1,39 @@
+﻿#,Event,Fires when,Key properties,What it answers,Metric it serves,Phase,In the prototype
+1,lounge_entry_shown,"An entry point scrolls into view: the trip card, the account row, the booking invite","surface, dest, hasUnread",How many people are offered the Lounge at all,"Reach, the top of the funnel",1,Fires
+2,lounge_entry_tapped,Any of those entry points is tapped,"surface, dest",Which door works. Tapped over shown is the only conversion number the module has,Reach,1,Fires
+3,room_opened,A room screen mounts,"dest, roomType, readOnly, questionCount, source","How often rooms are opened, and whether read-only rooms get opened at all",Weekly reading,1,Fires
+4,room_closed,The room screen unmounts,"dest, dwellMs, maxScrollPercent, cardsSeen",Whether a room is read or bounced. Dwell and depth in one event rather than two,"Weekly reading, room quality",1,Fires
+5,question_opened,A thread opens,"questionId, dest, tag, answerCount, source (feed, search, notification, saved, deeplink)","What people actually read, and what brought them to it",Weekly reading,1,Fires
+6,question_closed,The thread closes,"questionId, dwellMs, answersSeen, reachedEnd",Whether the answer was read or the page was glanced at,"Answer quality, weekly reading",1,Fires
+7,answer_expanded,A clamped answer is opened with Read more,"answerId, questionId",Whether long answers are worth their length,Answer quality,1,Fires
+8,ask_started,The composer opens,"dest, source (button, empty state, failed search)","How many people intend to ask, against how many finish",Weekly posting,1,Fires
+9,ask_abandoned,The composer closes with nothing posted,"dest, hadTitle, secondsSpent","Where asking breaks down: the rules sheet, the blank body, second thoughts",Weekly posting,1,Fires
+10,question_asked,A question is posted,"dest, tag, imageCount, titleLength, source","Posting volume, and what subjects arrive",Weekly posting,1,Fires
+11,answer_started,The answer composer opens,"questionId, source (thread, feed prompt)",Whether the prompt to answer works,Supply,1,Fires
+12,answer_posted,An answer is posted,"questionId, isFirstAnswer, hoursSinceAsked, imageCount, isOps","Answer time, and whether travellers or only our team are answering","Median answer time, the headline metric",1,Fires
+13,reply_posted,A reply is posted on an answer,"answerId, questionId",Whether threads become conversations or stay one-shot,Depth of engagement,1,Fires
+14,post_liked,A like is added or removed,"targetType (question, answer), targetId, on",What people found useful without writing anything. Also feeds the default sort,"Answer quality, sort",1,Fires
+15,question_saved,A question is bookmarked or unbookmarked,"questionId, on","What people expect to need later, which is a seeding brief",Content value,1,Fires
+16,help_prompt_shown,The unanswered strip appears,"questionId, dest",Whether the supply lever is being seen,Supply,1,Fires
+17,help_prompt_tapped,Somebody answers from that strip,"questionId, dest",Whether it works. Shown over tapped is the whole story,Supply,1,Fires
+18,tag_filter_used,A subject chip is chosen,"dest, tag, resultCount","Which subjects people hunt for, and whether the archive has them",Content gaps,1,Fires
+19,sort_changed,The sort is changed from the default,"dest, sort","Whether the score default holds, or people reach for newest",Sort validation,1,Fires
+20,search_run,"A search settles, 700ms after the last keystroke","scope, term, resultCount","What people look for, and what the archive does not have","Content gaps, the cheapest seeding brief",2,Fires
+21,search_result_opened,A result is opened,"questionId, rank, term",Whether search answers the question or just returns rows,Search quality,2,Fires
+22,search_no_results_action,Widen or Ask is taken from an empty search,"action, term",Whether a failed search converts into a question,Supply,2,Fires
+23,post_resolved,The check finishes on a post,"kind, outcome (live, flagged, blocked), rule, checkSeconds","How much is caught, by which rule, and how long the traveller waited","Moderation load, trust",1,Fires
+24,post_edited_after_outcome,A held or refused post is edited and rechecked,"kind, previousOutcome, previousRule",Whether naming the reason actually gets it fixed,Moderation quality,1,Fires
+25,posting_paused,The third block lands,strikes,"How many travellers lose posting, and after how long",Moderation load,1,Fires
+26,appeal_submitted,An appeal is sent,"targetId, hasText","The overturn rate, once outcomes come back",Moderation quality,1,Fires
+27,report_submitted,A post is reported,"targetType, reason","Reports per 100 active travellers, the safety number",Moderation load,1,Fires
+28,post_failed,A post fails to send,"kind, retryCount, recovered",Whether the never-lose-text promise holds in the wild,Reliability,1,Fires
+29,notifications_opened,The notification list opens,unreadCount,Whether the badge is the thing bringing people back,Return rate,1,Fires
+30,guidelines_opened,The rules are opened,"source (room, first post, moderation message)",Whether anybody reads them before being told off,Moderation quality,1,Fires
+31,menu_row,A row in the Lounge home menu is tapped,"row (profile, notify, posts, suggest)",Which of these screens anybody actually wants,Navigation,1,Fires
+32,notify_changed,A notification switch is turned on or off,"setting, on","What travellers stop wanting to hear about, which is the first warning that we send too much",Notification health,1,Fires
+33,question_muted,A question is muted or unmuted from its menu,"questionId, on",Whether busy threads are the reason people turn notifications down,Notification health,1,Fires
+34,profile_saved,The profile is saved,"hasAbout, hasPhoto","How many travellers bother, which says whether identity carries any weight here",Identity,1,Fires
+35,suggestion_sent,A suggestion is sent to the team,"kind, length","What travellers think is missing or wrong, in their own words",Product input,1,Fires
+36,all_posts_deleted,Delete everything you wrote is confirmed,"questions, answers","How often the privacy promise is used, and how much content it takes with it","Privacy, content loss",1,Fires
+37,"notify_settings_opened, notify_settings_closed",The settings screen opens and closes,"mutedCount, dwellMs","Whether anybody finds the settings, and whether they change anything once there",Notification health,1,Fires
+38,"my_posts_opened, my_posts_closed",Your posts opens and closes,"count, dwellMs","Whether travellers come back to what they wrote, which is a return signal of its own",Return rate,1,Fires

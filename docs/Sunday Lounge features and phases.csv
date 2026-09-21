@@ -1,0 +1,104 @@
+﻿ID,Area,Feature,What it is,Phase,Why this phase,Depends on,Build size,Prototype status,Source
+A1,Access,Booking-gated posting,"Posting unlocks on the first installment, per account, never expires",1,Everything else assumes it. It is the rule that makes an answer trustworthy,,M,Built,Product rules 1
+A2,Access,Reading for travellers with a trip,Anyone with an itinerary sent or paid can read the rooms,1,The audience for launch,A1,S,Built,Product rules 1
+A3,Access,Reading a destination you have not booked,"A traveller with any trip reads any room, read only, no chat and no ask button",1,Confirmed by decision 15. Lounge home and the archive both depend on it,A2,S,Built,Decision 15
+A4,Access,Reading with no trip at all,Account holders who have never booked read everything,3,"Moved out of Phase 1 by decision 4. The mechanic already exists, it is an audience switch rather than a build",A3,S,"Built, parked",Decision 4
+A5,Identity,Traveller identity on a post,"Full name, verified trip stamp, no city, initials avatar",1,Legal sign-off needed before any post is public,,S,Built,Decision 1
+A6,Identity,Verified trip stamp,"Destination, month travelled, who they travelled with, created a day after the trip ends",1,It is the reason an answer is believed,A5,M,Built,PRD 8
+A7,Identity,Our team's identity,A named person with 30 Sundays beneath and a verified mark,1,Seeded answers are written by ops and need an author,A5,S,Built,PRD 8
+A8,Access,Cancelled booking state,"Posting off, reading on, one quiet line on the next visit",1,"A real state on day one, and the rule is already written",A1,S,Missing,Product rules 2
+R1,Rooms,Destination room,One room per destination holding its questions and answers,1,The core object,A2,M,Built,PRD 7
+R2,Rooms,Travelling from India room,"Visas, passports, forex, insurance, immigration, flying. Anyone who booked can answer",1,"These questions arrive whatever anybody booked, and they were landing in the wrong rooms",R1,S,Built,New in the prototype
+R3,Rooms,Lounge home,"The rooms a traveller can use, and a feed mixing questions from them",1,"Needed the moment there are two rooms, which is day one because of R2","R1,R2",M,Built,New in the prototype
+R4,Rooms,Room switcher in the header,"The room name opens the room list, grouped into where you are going and everywhere else",1,"Without it, leaving a room means going back to a screen you never opened",R3,S,Built,New in the prototype
+R5,Rooms,Back returns where you came from,"From a trip, back goes to the trip. From Lounge home, back goes there",1,"Navigation correctness, not a feature. Cheap and invisible when right",R4,S,Built,New in the prototype
+R6,Rooms,Rail of other destinations on Lounge home,"Photos of destinations this traveller has not booked, opening the room read only",1,In scope now that a traveller with a trip can read every room,"A3,R3",S,Built,Decision 15
+R8,Rooms,Read-only room state,"A room you have not booked reads as complete: no chat block, no ask button, one quiet line",1,The state every traveller hits the first time they open another destination,A3,S,Built,Product rules 5
+R7,Rooms,Room list scales past forty destinations,"A rail rather than a list, so the screen survives the catalogue",2,Not a launch problem with three rooms,R3,S,Built,New in the prototype
+Q1,Q&A,Ask a question,"Title, body, up to four images, posted into one room",1,Half the module,"R1,M1",M,"Built, one image only",Product rules 3
+Q2,Q&A,Answer a question,"Text and images, from anyone with posting rights",1,The other half,"Q1,A1",M,Built,Product rules 3
+Q3,Q&A,One level of replies,A reply attaches to an answer. A reply to a reply attaches to the parent answer,1,Without it an answer thread cannot be corrected or thanked,Q2,S,Built,Product rules 3
+Q4,Q&A,Likes on questions and answers,Not on replies,1,The default sort depends on them,"Q1,Q2",S,"Built on answers, missing on question cards",Product rules 3
+Q5,Q&A,Most helpful answer,"The most liked answer is marked, and can change",1,A long thread is unreadable without one answer lifted,Q4,S,Built,Product rules 4
+Q6,Q&A,Default sort by score,"score = likes + answers, ties on most recent activity, cached per room",1,Decision 7,Q4,S,"Missing, prototype defaults to newest",Decision 7
+Q7,Q&A,Sort chips,"Unanswered, most answered, most liked, newest",1,The way a new question gets dug out from the bottom of the score,Q6,S,Built,Product rules 4
+Q8,Q&A,Unanswered strip,A dismissible card showing one unanswered question and a one-tap way to answer it,1,Your own document names an unanswered question at the bottom as the thing that kills a young room,Q7,S,Built,Product rules 4
+Q9,Q&A,One subject tag per question,"Assigned by a model as the question is posted, changeable by ops",1,"Without search in Phase 1, tags are the only way through a room",Q1,M,"Built with keyword matching, needs the model",Product rules 3
+Q10,Q&A,Filter by subject,Chips across the top of the questions,1,See Q9,Q9,S,Built,Product rules 3
+Q11,Q&A,Edit your own post,"With an edited marker, never silent",1,"The moderation flow asks people to edit, so it cannot ship without this","Q1,Q2",S,Built,Moderation 7
+Q12,Q&A,Delete your own post,"Replies survive, a question keeps its answers and loses its attribution",1,Legal expects it and the rules are written,Q11,S,Built,Moderation 7
+Q13,Q&A,Save a question,"A bookmark, and one screen listing them",2,"Small, but nobody saves anything in week one",Q1,S,Built,New in the prototype
+Q14,Q&A,Link a duplicate question,"A question cannot be an answer to another question, so it links instead",2,Only bites once a room has volume,Q1,S,Missing,Product rules 3
+C1,Content,Images on posts,"Up to four, JPEG PNG HEIC WebP, 10 MB each, resized to 2000px",1,Decision 9,Q1,M,"Built, one image only",Product rules 8
+C2,Content,Strip EXIF including GPS,"Always, on upload",1,Privacy. Cannot ship images without it,C1,S,App work,Product rules 8
+C3,Content,Image moderation before publish,Manual in V1. A flagged image flags the whole post,1,Same queue as text,"C1,M2",M,App work,Product rules 8
+C4,Content,Failed image upload keeps the text,"Text retained, image retried separately",1,Named in your rules as the most important failure behaviour,C1,S,Built,Product rules 12
+C5,Content,Video,As a content type in posts,3,"Storage, moderation and playback, for a marginal gain over photos",C1,L,Not built,PRD 7
+M1,Moderation,Pre-publish check on every post,"Approved, flagged or blocked before anything is visible",1,Nothing publishes without it,,L,Built as a rules check,Moderation 1
+M2,Moderation,Review queue and tooling,"The community manager sees flagged and blocked posts, approves, rejects, logs",1,"The one business day promise is a queue, not a screen",M1,L,App work,Moderation 1
+M3,Moderation,Flagged state for the traveller,"Held, editable, with the specific reason named and a notification when it goes live",1,Half of the moderation contract,M1,M,Built,Moderation 1
+M4,Moderation,Blocked state for the traveller,"Rejected, with the specific reason named",1,The other half,M1,M,Built,Moderation 1
+M5,Moderation,Posting paused after three blocks,"Posting off, reading on, only the manager lifts it, appeal route shown",1,The prototype blocks a second post and then has nowhere to send the traveller,M4,M,Missing,Moderation 1
+M6,Moderation,Appeals,"Tell us we got it wrong, decided in two business days",1,A block with no appeal is a trust incident waiting to happen,M5,M,Missing,Moderation 4
+M7,Moderation,Report a post,"On every question, answer and chat message, with a reason list and an outcome notification",1,The only tool travellers have,Q1,M,Built,Moderation 5
+M8,Moderation,Reported post leaves the reporter's feed,And nobody else's,1,"Costs nothing, and stops the reporter staring at what they reported",M7,S,Built,New in the prototype
+M9,Moderation,Guidelines screen,"Short version on first entry, full version one tap behind. Rule 9 points at the subject filters, not at search",1,"Shown once at join, per your rules",,S,Built,Guidelines
+M10,Moderation,Rules above the first compose,"Five lines, shown once, before somebody's first post",1,The moment the rules are actually read,"M9,Q1",S,Missing,Copy 4
+M11,Moderation,Consent notice at first post,"Plain language, not buried in signup",1,Legal asked for it,M10,S,Missing,Moderation 7
+M12,Moderation,Rate limit before moderation runs,"Cap posts per traveller per hour, and reports per traveller per day",1,The cheapest abuse control there is,M1,S,Missing,Moderation 3
+M13,Moderation,Decision log,"Rule fired, model version, original text, timestamp, kept 24 months",1,"Needed to tune, and to answer a complaint",M2,M,App work,Moderation 3
+M14,Moderation,Weekly moderation report,"Queue volume, median decision time, blocks overturned, reports per 100 travellers",2,Needs a few weeks of data before it means anything,M13,S,Missing,Moderation 4
+M15,Moderation,Fail safe when moderation is unreachable,"The post is held as flagged, never published or rejected",1,The failure mode that would otherwise publish the worst post you have,M1,S,App work,Product rules 12
+G1,Group chat,Destination month group chat,Everyone going to the same place in the same month,2,"Confirmed by decision 19. The biggest build in the module: membership, realtime, lifecycle, chat moderation. Holding it back is what makes Phase 1 quick","A1,R1",L,Built as a prototype,PRD 7
+G2,Group chat,"Threshold of 50, configurable per destination","Below it, no chat block renders at all",2,Ships with G1,G1,S,Built,Decision 2
+G3,Group chat,Welcome message from us,Posted automatically when the chat opens. It is also the empty state,2,Ships with G1,G1,S,Missing,Decision 13
+G4,Group chat,Ops weekly checkpoints,"Visa, packing, weather, currency, what to expect",2,The thing that stops a chat dying in week one,G1,M,Built,PRD 7
+G5,Group chat,Chat closes two weeks after the travel month ends,"Read only, visible 24 months, then archived. One date per room, known in advance",2,Ships with G1,G1,S,Built,Decision 11
+G6,Group chat,Self-delete window,Fifteen minutes on your own message,2,Ships with G1,G1,S,Missing,Moderation 4
+G7,Group chat,Membership follows the booking,"Date change moves you to the new month, cancellation removes you, old messages stay",2,"Ships with G1, and it is the fiddly part","G1,A8",M,Not built,Product rules 11
+G8,Group chat,Invite at booking confirmation,Meet the other people going when you are,2,Only meaningful once G1 exists. The Q&A invite ships in Phase 1 instead,G1,S,Built,PRD 7
+S1,Search,Search inside a room,"Live results, top questions as suggestions, ask from a failed search",2,Parked by your decision 5. It is the first thing to add when a room passes about forty questions,R1,M,"Built, parked",Decision 5
+S2,Search,Search across all rooms,"The same screen, wider scope",2,Ships with S1,"S1,R3",S,"Built, parked",Decision 5
+S3,Search,Ask from a failed search,The question is pre-filled with what was typed,2,Your own document calls a failed search the best moment to ask,S1,S,"Built, parked",Product rules 5
+E1,Entry,Trip details card,Directly after Manage co-travelers. The primary way in,1,Where the audience already is,R1,S,Built,Product rules 10
+E2,Entry,Account menu row,A permanent Sunday Lounge row opening Lounge home,1,The only door for somebody with no active trip,R3,S,Missing,Product rules 10
+E3,Entry,Booking confirmation invite,Shown just after a booking is made,1,The one moment a traveller is already thinking about the trip,R1,S,Built,PRD 7
+E4,Entry,Unlock notification,One to two days after booking. The Lounge is open for Thailand,1,Without it nobody discovers the module,"E3,N1",S,Not built,Copy 2
+E5,Entry,Deep links,"30sundays://lounge, /lounge/{destination}, /lounge/question/{id}",1,Every notification needs somewhere to land,N1,S,App work,Product rules 10
+E6,Entry,Ask for a first contribution,One day after a trip ends. Someone going next month has a question you can answer,2,"Needs unanswered questions to point at, which a launch room does not have","N1,Q8",S,Not built,Copy 9
+N1,Notifications,Push infrastructure and suppression,"Quiet hours 9pm to 9am IST, one push per two days, three a week, 24 hour delay after a visit",1,Every push below depends on it,,M,App work,Product rules 9
+N2,Notifications,Someone answered your question,Push and in-app,1,The only push that earns itself on day one,"N1,Q2",S,App work,Product rules 9
+N3,Notifications,Moderation notifications,"Post blocked, posting paused. These bypass the daily cap",1,A traveller who cannot post needs to know why,"N1,M5",S,App work,Product rules 9
+N4,Notifications,In-app notification list,"Replies, flagged post live, report outcomes",1,Everything that does not earn a push still has to land somewhere,N1,M,Not built,Product rules 9
+N6,Notifications,Notification settings,"Three switches: answers, most helpful, your rooms. Moderation notices are always on",1,"Without them we push everything or nothing, and travellers turn the app off instead",N4,S,Built,New in the build
+N7,Notifications,Mute one question,"From the menu on a question, undone from settings",1,A busy thread is the commonest reason somebody turns everything off,"N6,Q2",S,Built,New in the build
+N5,Notifications,Daily group chat digest,"One push a day, nothing if there is nothing unread",2,Ships with the chat,"G1,N1",M,Not built,Product rules 9
+U1,Traveller,Lounge menu,"One menu on Lounge home holding profile, notification settings, your posts and suggestions",1,"Four screens that are about the person, not the rooms, need one door",R1,S,Built,New in the build
+U2,Traveller,Profile,"Photo and one line about yourself. Name and trip stamp are read only, from the booking",1,"Identity is what makes an answer worth reading, and today it is only a name",A5,M,Built,New in the build
+U3,Traveller,Your posts,"Every question and answer this traveller wrote, with the state of anything being checked",1,The delete right in the moderation policy is not real if you cannot find the post,"U2,Q1,Q2",S,Built,Moderation 4.7
+U4,Traveller,Delete everything you wrote,"One action on the profile, with a confirm. Takes questions and answers together",1,Promised in the moderation policy and in the consent notice,U3,S,Built,Moderation 4.7
+U5,Traveller,Suggest a change,"Four kinds and a free text field, sent to the team rather than published",1,Reports cover one post. Nothing covered the rules or the room itself,R1,S,Built,New in the build
+U6,Traveller,Suggestion queue for marketing,"Suggestions land somewhere a person reads, alongside the moderation queue",1,The screen is worthless if nothing arrives at the other end,U5,S,App work,New in the build
+O1,Ops,Seed 15 to 20 questions per destination,"Written by ops from what sales already answers, attributed to a named person",1,An empty room is worse than no room,"A7,Q1",M,Built as sample data,PRD 7
+O2,Ops,Seed the India room separately,"Visas, passports, forex. Its own set",1,"The six in the prototype are a sample, not a launch set","R2,O1",M,Built as sample data,New in the prototype
+O3,Ops,Recruit 30 to 50 founding answerers,"Returning travellers, by hand, before askers arrive",1,"Answer time is a metric from week one, and ops alone cannot carry it",O1,M,Not applicable,PRD 7
+O4,Ops,Named owner and backup,Marketing owns moderation. The owner and the backup are named offline,1,"Handled offline, outside this list, but it still gates launch",,S,Handled offline,Decision 18
+D1,Data,Analytics events,"Invite shown, joined, post created, answer created, marked helpful, tag filter used, moderation warn and block, weekly reader, weekly poster",1,The four target metrics cannot be read without them,,M,Partly built,PRD 11
+D2,Data,Phase 1 dashboard,"Weekly reading, weekly posting, median answer time, room coverage. Join rate joins it in Phase 2 with the chat",1,"The kill criteria are agreed upfront, so they have to be visible",D1,M,Not built,PRD 11 and decision 19
+D3,Data,Room coverage metric,Every open room has an answer in the last seven days,1,One busy room can hide four dead ones,D1,S,Not built,New
+D4,Data,Search term reporting,"What people looked for, and what returned nothing",2,"Ships with search, and it is the cheapest seeding brief there is","S1,D1",S,Not built,New
+F1,Reliability,Never lose typed text on a failed post,"Text retained, retry offered, no error dump",1,Named in your rules as the single most important failure behaviour,Q1,S,Built,Product rules 12
+F2,Reliability,"One automatic retry, then manual",Including a post in flight when the app closes,1,Ships with F1,F1,S,Not built,Product rules 12
+F3,Reliability,Offline compose,"Text held locally, posted when the connection returns",2,"Rarer than a failed post, and F1 covers the common case",F1,M,Not built,Product rules 12
+F4,Reliability,Cached reading with a staleness indicator,"The last opened room, read only",2,"Nice, not load bearing",F3,M,Not built,Product rules 12
+L1,Legal,Retention rules,"Q&A indefinitely, chat 24 months after closing, images with their post, logs 24 months",1,Has to be true from the first post,,M,Not applicable,Moderation 7
+L2,Legal,Account deletion leaves posts as A traveller,"Identifiers removed, trip month intact",1,"Must be in the terms before launch, because it surprises people",L1,M,Not built,Moderation 7
+L3,Legal,Under 18 cannot post,Reading unaffected,1,Stated in your policy,A1,S,Not built,Moderation 7
+L4,Legal,Grievance officer published,Named and reachable,1,Regulatory,,S,Not applicable,Moderation 7
+L5,Legal,Terms addendum on content and image rights,"Ownership, licence, image rights",1,"Sits with legal, but it gates launch",L1,M,Not applicable,Moderation 7
+P1,Later,Ask someone who just returned,A weekly slot per room with somebody back within two weeks,2,Needs a populated room and an ops rhythm,"G1,O3",M,Not built,PRD 7
+P2,Later,Live on-ground feed,Travellers at the destination post short updates into the chat,2,Ships on top of the chat,G1,M,Not built,PRD 7
+P3,Later,Tagged recommendations,"Returning travellers tag places, future travellers filter by tag",2,Needs returning travellers posting at volume,"Q9,O3",M,Not built,PRD 7
+P4,Later,Photo wall per room,"Post-return sharing, later tied to AI photos",3,"Reach, not core value","C1,G1",L,Not built,PRD 7
+P5,Later,Meet-ups and shared bookings,"Opt-in dinners, shared transfers, group photographer slots",3,"Operationally heavy, and it needs trust that only a live chat builds",G1,L,Not built,PRD 7
+P6,Later,Resort-level rooms for Maldives,Bind Q&A to the resort rather than the destination,3,Only if Maldives clears the threshold. Tags cover it until then,"R1,Q9",M,Not built,Product rules 7

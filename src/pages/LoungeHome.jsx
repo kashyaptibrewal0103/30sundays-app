@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Bookmark, ShieldCheck, ChevronRight, Plane, Plus } from "lucide-react";
+import { Search, Bookmark, Menu, Bell, ChevronRight, Plane, Plus } from "lucide-react";
 import { CC } from "../components/Community/tokens";
 import { useCommunity } from "../state/useCommunity";
 import { getDest, roomOrder, DESTINATIONS } from "../data/communityData";
 import { Screen, Body, TopBar } from "../components/Gift/GiftUI";
 import { PAD, QuestionCard, SectionHead } from "../components/Community/CommunityUI";
 import { AskSheet } from "./CommunityFeed";
+import LoungeMenu from "../components/Community/LoungeMenu";
+import { RulesLink } from "../components/Community/RulesRowVariants";
 
 // The whole Lounge, one level up from a room.
 //
@@ -17,10 +19,11 @@ import { AskSheet } from "./CommunityFeed";
 
 export default function LoungeHome() {
   const navigate = useNavigate();
-  const { questionsFor, answersFor, reports } = useCommunity();
+  const { liveQuestionsFor, answersFor, reports, unreadNotifications, canPostNow } = useCommunity();
 
   // The mixed feed pages in the same way a room does.
   const [ask, setAsk] = useState(false);
+  const [menu, setMenu] = useState(false);
 
   const PAGE = 8;
   const [limit, setLimit] = useState(PAGE);
@@ -33,7 +36,7 @@ export default function LoungeHome() {
   // Every room's questions in one list, newest first. Nothing new is stored on
   // a question to do this: it already knows which room it is in.
   const everything = rooms
-    .flatMap(id => questionsFor(id).map(q => ({ q, room: id })))
+    .flatMap(id => liveQuestionsFor(id).map(q => ({ q, room: id })))
     .filter(x => !reports[x.q.id])
     .sort((a, b) => (a.q.minsAgo ?? 0) - (b.q.minsAgo ?? 0));
 
@@ -58,6 +61,27 @@ export default function LoungeHome() {
         onBack={() => navigate("/")}
         right={
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {/* Everything that happened to this traveller's posts. The count is
+                the only nudge most of it gets, since almost none of it pushes. */}
+            <button
+              onClick={() => navigate("/lounge/notifications")}
+              aria-label="Notifications"
+              style={{
+                position: "relative", width: 38, height: 38, borderRadius: "50%", border: "none",
+                background: "none", cursor: "pointer", display: "grid", placeItems: "center",
+              }}
+            >
+              <Bell size={17} color={CC.body} />
+              {unreadNotifications > 0 && (
+                <span style={{
+                  position: "absolute", top: 5, right: 5, minWidth: 16, height: 16,
+                  padding: "0 4px", borderRadius: 999, background: CC.pink,
+                  display: "grid", placeItems: "center",
+                  fontSize: 10, fontWeight: 800, color: "#fff",
+                }}>{unreadNotifications}</span>
+              )}
+            </button>
+
             {/* Saved lives here, one level above the rooms, because a thread
                 somebody saved in Thailand is still theirs after that room
                 closes. */}
@@ -70,21 +94,16 @@ export default function LoungeHome() {
               }}
             ><Bookmark size={17} color={CC.body} /></button>
 
+            {/* Everything about the traveller rather than about the rooms:
+                who they are, what reaches them, what they wrote. */}
             <button
-              onClick={() => navigate("/community/thailand/guidelines")}
+              onClick={() => setMenu(true)}
+              aria-label="Menu"
               style={{
-                display: "inline-flex", alignItems: "center", gap: 5, minHeight: 40,
-                padding: "0 2px", border: "none", background: "none", cursor: "pointer",
-                fontFamily: "inherit",
+                width: 38, height: 38, borderRadius: "50%", border: "none",
+                background: "none", cursor: "pointer", display: "grid", placeItems: "center",
               }}
-            >
-              <ShieldCheck size={14} color={CC.soft} />
-              <span style={{
-                fontSize: 13, fontWeight: 600, color: CC.body,
-                textDecoration: "underline", textUnderlineOffset: 3,
-                textDecorationColor: CC.line,
-              }}>Guidelines</span>
-            </button>
+            ><Menu size={19} color={CC.body} /></button>
           </div>
         }
       />
@@ -105,24 +124,28 @@ export default function LoungeHome() {
             </button>
           </div>
 
-          <SectionHead>Rooms</SectionHead>
-
           {/* The two rooms this traveller can write in keep full rows, with a
               coloured edge saying which kind each is. */}
           <div style={{ padding: `0 ${PAD}px`, display: "flex", flexDirection: "column", gap: 8 }}>
+
+            {/* The rules used to be a word in the header, which is where things
+                go to be ignored. A hairline shelf above the rooms is read on
+                the way past, and gives up nothing to the rooms below it. */}
+            <RulesLink onClick={() => navigate("/community/thailand/guidelines")} />
+
             {live.map(id => (
               <RoomRow
                 key={id} id={id}
-                count={questionsFor(id).length}
+                count={liveQuestionsFor(id).length}
                 onOpen={() => navigate(`/community/${id}`)}
               />
             ))}
           </div>
 
-          {/* Everything else is a rail. Three destinations today, forty later,
-              and a rail is the only shape that survives that. No padlocks: a
-              room says it is read only once you are inside it, which is a
-              better place to learn it than a badge on a photo. */}
+          {/* Everything else is a pill: a small mark and a name. They wrap, so
+              three today and forty later both work, and every place gets the
+              same amount of room. No padlocks: a room says it is read only once
+              you are inside it. */}
           {shut.length > 0 && (
             <>
               <p style={{
@@ -130,30 +153,26 @@ export default function LoungeHome() {
                 color: CC.body,
               }}>Read about somewhere else</p>
               <div style={{
-                display: "flex", gap: 9, overflowX: "auto", scrollbarWidth: "none",
-                padding: `0 ${PAD}px`, scrollSnapType: "x mandatory",
-                scrollPaddingLeft: PAD, scrollPaddingRight: PAD,
+                display: "flex", flexWrap: "wrap", gap: 8, padding: `0 ${PAD}px`,
               }}>
                 {shut.map(id => (
                   <button key={id} onClick={() => navigate(`/community/${id}`)} style={{
-                    flexShrink: 0, width: 112, padding: 0, border: "none", background: "none",
-                    cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-                    scrollSnapAlign: "start",
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "4px 13px 4px 4px", borderRadius: 999,
+                    border: `1px solid ${CC.line}`, background: CC.white,
+                    cursor: "pointer", fontFamily: "inherit",
                   }}>
                     <span style={{
-                      display: "block", width: "100%", height: 70, borderRadius: 12,
-                      overflow: "hidden", background: CC.mist,
+                      width: 28, height: 28, borderRadius: "50%", overflow: "hidden",
+                      background: CC.mist, flexShrink: 0, display: "block",
                     }}>
                       <img src={DESTINATIONS[id].hero} alt="" style={{
                         width: "100%", height: "100%", objectFit: "cover", display: "block",
                       }} />
                     </span>
-                    <span style={{
-                      display: "block", marginTop: 6, fontSize: 13, fontWeight: 700, color: CC.ink,
-                    }}>{DESTINATIONS[id].name}</span>
-                    <span style={{
-                      display: "block", marginTop: 1, fontSize: 11.5, color: CC.soft,
-                    }}>{DESTINATIONS[id].month}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: CC.ink }}>
+                      {DESTINATIONS[id].name}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -162,7 +181,7 @@ export default function LoungeHome() {
 
           <div style={{ height: 24 }} />
 
-          <SectionHead>All questions</SectionHead>
+          <SectionHead>All Questions</SectionHead>
           <div style={{ padding: `0 ${PAD}px`, display: "flex", flexDirection: "column", gap: 8 }}>
             {page.map(({ q, room }) => (
               <QuestionCard
@@ -184,7 +203,9 @@ export default function LoungeHome() {
       </Body>
 
       {/* The same action the rooms have, in the same corner, because somebody
-          who came up here to look and did not find it still has a question. */}
+          who came up here to look and did not find it still has a question. It
+          goes when posting is off. */}
+      {canPostNow && (
       <button
         onClick={() => setAsk(true)}
         style={{
@@ -199,6 +220,14 @@ export default function LoungeHome() {
       >
         <Plus size={18} /> Ask
       </button>
+      )}
+
+      {menu && (
+        <LoungeMenu
+          onClose={() => setMenu(false)}
+          onGo={(to) => { setMenu(false); navigate(to); }}
+        />
+      )}
 
       {ask && (
         <AskSheet
@@ -214,7 +243,7 @@ export default function LoungeHome() {
 
 // A room says what it is and how much is in it. The edge colour says which
 // kind it is without a word being spent on it.
-function RoomRow({ id, count, onOpen }) {
+export function RoomRow({ id, count, onOpen }) {
   const d = DESTINATIONS[id] || {};
   const trip = id !== "india";
   return (

@@ -1,0 +1,39 @@
+﻿Area,What you specified,Discourse capability,Fit,What it takes,Watch out for
+Rooms,"One room per destination, plus Travelling from India","Categories, with subcategories if needed",Native,Configuration only,
+Subjects,"One tag per question, 12 destination and 6 India","Tags, with tag groups restricted per category",Native,Configuration only,Tag order and colour is theme work
+Auto-tagging,A model assigns the tag as the question posts,"Discourse AI triage, driven by the Automation plugin",Plugin,"Both plugins, plus an LLM key",Self-host gets both free. Hosted puts them on a paid tier
+Group chat,"Per destination and month, opens at 50 bookings","Discourse Chat, channels with group-based membership",Native plus automation,"Channel per month, membership synced from bookings",Opening and closing on a date needs the Automation plugin
+Room below threshold,No chat block rendered at all,A channel simply is not created,Native,Nothing,
+Posting gate,"Unlocks on first installment, never expires","Groups plus category create permissions, synced by API",Native,A sync job from your booking system to Discourse groups,The sync is yours to build and monitor
+Reading gate,Any traveller with a trip reads every room,Category see permissions on a logged-in group,Native,Configuration,
+Cancellation,"Posting off, reading on, no reason shown","Remove from the posting group, or silence the user",Native,Sync job,
+Login,"Their existing account, no second identity",DiscourseConnect single sign on,Native,One integration,Usernames are still created underneath
+Names,"Full name, no username anywhere","Name field exists, usernames are mandatory in core",Theme work,Generate usernames from SSO and hide them in the theme,"Usernames leak in mentions, URLs and the API"
+Trip stamp,"Destination, month, who they travelled with, on every post","Custom user fields, rendered by a theme component",Theme work,"Fields from your booking data, plus a component to draw them",A per-post stamp is not a native concept. Flair is group level and one image
+Our team's identity,A named person with 30 Sundays beneath,"Groups plus flair, or the Category Experts plugin",Native plus plugin,Configuration,
+Questions and answers,"Question, answers, one level of replies","Topic and posts, flat, with reply-to context",Native,Nothing,"Discourse is flat by design. Your one-level rule is looser than its model, not tighter"
+Likes,"On questions and answers, not replies",Likes on every post,Native,Theme work to hide them on replies,
+Most helpful,"The most liked answer is marked, ops cannot pin",Solved marks an accepted answer. Post Voting sorts by votes,Custom,A theme component that labels the most liked reply,Discourse has no most-liked label out of the box
+Default sort,"Likes plus answers, ties on recent activity","Latest, Top and Hot orderings, none of which is your formula",Custom,"A custom topic list order, or accept Hot",Hot is close but not your rule
+Images,"Up to four per post, EXIF stripped","Multiple uploads, strip_image_metadata setting, S3, resizing",Native,Configuration,
+Never lose typed text,A failed post keeps everything,"Auto-saved drafts, server side",Native,Nothing,"Better than what the prototype does, because drafts survive the device"
+Edit history,"Edits marked, never silent","Post revision history, with a public edit marker",Native,Nothing,
+Check before it is public,Nothing is visible until it passes,"Post approval per group or category, plus watched words",Native,Configuration,"The author sees a pending notice, not your in-place card"
+The in-place card,"It lands, shows as being reviewed, resolves in place",No equivalent. Pending posts are held out of the topic,Custom,Your own UI over the API,This is the single biggest UX mismatch
+Automatic classification,"A model decides live, flagged or blocked","Discourse AI post classifier, Akismet, watched words",Plugin,Discourse AI plus rules,
+Review queue,"One business day, logged decisions","The review queue, with priorities, staff actions and history",Native,Nothing,Stronger than anything you would build. A real reason to use Discourse
+Three blocks then paused,"Posting off, reading on, only staff lift it","Silence a user, with an expiry and a reason",Native plus automation,An automation rule counting rejections,
+Appeals,"Two business days, with a route from the paused state",A silenced user can message staff. Group inbox for the team,Native,Configuration,
+Reporting,"On every post, outcome told to the reporter","Flags, with outcomes and notifications",Native,Nothing,
+Consent at first post,"Plain language, once","Discourse Policy plugin, or the theme",Plugin,One policy,
+Search,In a room and across rooms,"Full text search with filters by category, tag, author and date",Native,Nothing,
+Reading measurement,"Who read, how long, how deep","Topic views, posts read, and time read per user per topic",Native,Nothing,"Discourse tracks reading time natively, which most tools do not"
+Your 30 events,"Entry conversion, dwell, funnels, abandonment",Not available. Admin dashboard and Data Explorer are aggregate,Custom,"Your own analytics from your app, as already wired",Discourse will not give you the funnel
+Push,"Three pushes only, with quiet hours and caps",Web push and the Discourse Hub app. Email digests are native,Custom,Webhooks into your own push stack,"Your app must own push, not Discourse"
+In-app list,Everything that happened to your posts,The notifications panel,"Native, or your own over the API",Nothing,
+Retention,"Q&A forever, chat two weeks then readable 24 months","Chat retention settings, topic timers, automation",Native,Configuration,
+Account deletion,Posts stay as A traveller,"Anonymise user, which keeps posts and strips identity",Native,Nothing,"Exactly your rule, already built"
+No direct messages,"None, in any phase",Personal messages can be disabled site wide,Native,One setting,
+No badges or leaderboards,Explicitly out of scope,"Badges are on by default, gamification is a plugin",Native,Turn badges off,Trust levels still run underneath and grant abilities
+Your screens,"Lounge home, room switcher, trip band, subject colours",None of it. Discourse renders its own forum UI,Custom,"Either heavy theming in a webview, or headless over the API",This is the decision that shapes everything else
+In-app feel,"Native module inside your app, next to the itinerary","Webview, or your UI over the API",Custom,See above,A webview forum inside a native app is a visible seam

@@ -83,8 +83,8 @@ DESTINATIONS.india = {
   id: "india",
   booked: true,
   everyone: true,
-  name: "Travelling from India",
-  short: "From India",
+  name: "General Queries",
+  short: "General",
   about: "General questions about going abroad, whatever you booked. Anyone who has booked a trip with us can answer.",
 };
 

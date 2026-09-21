@@ -7,7 +7,7 @@ import {
 // The app palette is no longer used here; Community has its own, in tokens.
 import { Sheet } from "../Gift/GiftUI";
 import { CC, tintFor, hueFor } from "./tokens";
-import { ago, shortMonth } from "../../data/communityData";
+import { ago, shortMonth, track } from "../../data/communityData";
 
 // Community's own pieces. The screen chrome (Screen, Body, TopBar, Sheet,
 // Primary, Secondary, Field, Input, Textarea) comes from the gift kit, which
@@ -298,7 +298,7 @@ export function ActionBar({ title, caption, label, icon: Icon, onClick }) {
 // Long posts get cut at five lines with a way to open them. Measured rather
 // than guessed: the link only appears when the text actually overflows, so a
 // four line answer never shows a Read more that does nothing.
-export function ClampText({ children, lines = 5, style }) {
+export function ClampText({ children, lines = 5, style, answerId }) {
   const ref = useRef(null);
   const [open, setOpen] = useState(false);
   const [over, setOver] = useState(false);
@@ -326,7 +326,13 @@ export function ClampText({ children, lines = 5, style }) {
           a paragraph is not it. Bold, underlined and a chevron say clickable
           without spending the accent. */}
       {over && (
-        <button onClick={() => setOpen(v => !v)} style={{
+        <button
+          onClick={() => {
+            // Whether a long answer earns its length. Only the opening counts.
+            if (!open) track("community_answer_expanded", { answerId: answerId || null, lines });
+            setOpen(v => !v);
+          }}
+          style={{
           display: "inline-flex", alignItems: "center", gap: 3,
           marginTop: 6, padding: 0, minHeight: 36, border: "none", background: "none",
           cursor: "pointer", fontFamily: "inherit",
@@ -349,7 +355,7 @@ export function ClampText({ children, lines = 5, style }) {
 // `room` is passed only on a feed that mixes rooms, where the question is
 // useless without knowing which place it is about.
 
-export function QuestionCard({ q, answerCount, room, onClick }) {
+export function QuestionCard({ q, answerCount, likeCount = 0, room, onClick }) {
   const lastActivity = answerCount > 0
     ? Math.min(q.minsAgo, ...(q.answers || []).map(a => a.minsAgo ?? q.minsAgo))
     : q.minsAgo;
@@ -394,6 +400,16 @@ export function QuestionCard({ q, answerCount, room, onClick }) {
             }}>{tag}</span>
           )}
           <span style={{ flex: 1 }} />
+          {/* Likes sit next to the answer count because those two are the sort.
+              A zero is never shown: it says the thing is dead. */}
+          {likeCount > 0 && (
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 3, marginRight: 9,
+              fontSize: 11.5, fontWeight: 700, color: CC.soft,
+            }}>
+              <Heart size={11} color={CC.soft} /> {likeCount}
+            </span>
+          )}
           {answerCount > 0 ? (
             <span style={{ fontSize: 11.5, fontWeight: 700, color: CC.tealInk, whiteSpace: "nowrap" }}>
               {answerCount} {answerCount === 1 ? "answer" : "answers"}
@@ -569,7 +585,7 @@ export function AnswerCard({
       />
       <div style={{ marginTop: 12 }}>
         <QuoteBlock quote={answer.quotes} />
-        <ClampText>{answer.body}</ClampText>
+        <ClampText answerId={answer.id}>{answer.body}</ClampText>
         {answer.image && (
           <img src={answer.image} alt="" style={{
             width: "100%", borderRadius: 12, marginTop: 12, display: "block",

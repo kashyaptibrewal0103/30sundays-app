@@ -1,6 +1,7 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { CC } from "../components/Community/tokens";
-import { GUIDELINES, getDest } from "../data/communityData";
+import { GUIDELINES, getDest, track } from "../data/communityData";
 import { Screen, Body, TopBar } from "../components/Gift/GiftUI";
 import { PAD } from "../components/Community/CommunityUI";
 
@@ -8,8 +9,15 @@ import { PAD } from "../components/Community/CommunityUI";
 
 export default function CommunityGuidelines() {
   const { dest = "bali" } = useParams();
+  const [params] = useSearchParams();
   const navigate = useNavigate();
   const d = getDest(dest);
+
+  // Whether anybody reads these before being told off is the whole question,
+  // so the source matters as much as the count.
+  useEffect(() => {
+    track("community_guidelines_opened", { dest, source: params.get("src") || "room" });
+  }, [dest, params]);
 
   return (
     <Screen>

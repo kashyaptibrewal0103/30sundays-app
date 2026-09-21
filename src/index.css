@@ -234,3 +234,18 @@
 @media (prefers-reduced-motion: reduce) {
   [class*="unbox-anim"] { animation: none !important; }
 }
+
+/* The moderation bar on a post that is being checked: a short block that
+   travels across the track, so it reads as work happening rather than as a
+   progress percentage we cannot honestly give. */
+@keyframes loungeSlide {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(340%); }
+}
+
+/* Skeleton lines on a post that is being checked. Opacity only: the app's
+   `pulse` also scales, which makes a text-width bar look like it is breathing. */
+@keyframes loungeFade {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}

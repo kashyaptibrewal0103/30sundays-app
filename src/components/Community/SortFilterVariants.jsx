@@ -16,13 +16,16 @@ import { Sheet, Primary, Secondary } from "../Gift/GiftUI";
 // before the first question, against how many taps it costs to reach them.
 
 export const SORTS = [
+  // The default. Likes plus answers, which lifts what the room has already
+  // settled rather than whatever was typed last.
+  { id: "top", label: "Most helpful", short: "Most helpful" },
   { id: "recent", label: "Newest", short: "Newest" },
   { id: "unanswered", label: "Unanswered first", short: "Unanswered" },
   { id: "liked", label: "Most liked", short: "Most liked" },
   { id: "answered", label: "Most answered", short: "Most answered" },
 ];
 
-const labelOf = (id) => SORTS.find(s => s.id === id)?.short || "Newest";
+const labelOf = (id) => SORTS.find(s => s.id === id)?.short || "Most helpful";
 
 /* ─── Shared pieces ─── */
 
