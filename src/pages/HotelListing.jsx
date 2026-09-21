@@ -2,11 +2,12 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Search, X as XIcon, SlidersHorizontal, ChevronDown, ChevronUp,
-  Check, Home, MoreVertical, Star, User, Images, ChevronRight,
+  Check, Star, User, Images, ChevronRight, Map, MapPin,
   Car, Utensils, RotateCcw, Ban, LogIn, LogOut,
 } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
+import HotelMapScreen from "../components/HotelMapScreen";
 
 // ─── Change hotel, built like Change day plan ───
 //
@@ -81,16 +82,12 @@ function PriceDelta({ delta, nights, fallbackPrice }) {
 //
 // Stars are ours, the score is Booking.com's, so the score keeps their mark and
 // takes its colour from how good it is, the way a day rating does.
-function StarChip({ stars }) {
-  const col = "#E8940B";
+function Stars({ n }) {
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0,
-      padding: "3px 9px", borderRadius: 20, background: C.white,
-      border: `1px solid ${col}55`, fontSize: 11.5, fontWeight: 700, color: col, whiteSpace: "nowrap",
-    }}>
-      <Star size={11} color={col} fill={col} strokeWidth={0} />
-      {stars} star
+    <span style={{ display: "inline-flex", gap: 1.5, flexShrink: 0 }} aria-label={`${n} star hotel`}>
+      {Array.from({ length: n }).map((_, i) => (
+        <Star key={i} size={13} color="#E8940B" fill="#E8940B" strokeWidth={0} />
+      ))}
     </span>
   );
 }
@@ -168,16 +165,14 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
       <div style={{ padding: "10px 12px 11px", display: "flex", flexDirection: "column", gap: 7 }}>
         <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.3 }}>{hotel.name}</p>
 
-        {/* How good it is */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <StarChip stars={hotel.stars} />
+        {/* How good it is: our stars counted out, their score scored */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <Stars n={hotel.stars} />
           <ScoreChip score={hotel.bookingScore} />
         </div>
 
-        {/* What you get, and where it puts you */}
-        <p style={{ margin: 0, fontSize: 12.5, color: C.sub, lineHeight: 1.35 }}>
-          {hotel.roomType} · {hotel.neighbourhood}, {hotel.distanceFromCenter} km from city centre
-        </p>
+        {/* Where it puts you */}
+        <Fact icon={MapPin}>{hotel.neighbourhood} · {hotel.distanceFromCenter} km from city centre</Fact>
 
         {/* What is and is not included: a figure per fact, spaced apart, so the
             row reads as facts and not as a sentence run on from the line above */}
@@ -254,11 +249,9 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const dealQS = dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : "";
   const backToItinerary = `/itinerary/${itineraryId}${dealId && versionId ? `?dealId=${dealId}&versionId=${versionId}` : ""}`;
 
-  const [query, setQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmSelf, setConfirmSelf] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [confirmSelf, setConfirmSelf] = useState(false);
   const [sheetTab, setSheetTab] = useState("Filters");
   const [gallery, setGallery] = useState(null);
   const [filters, setFilters] = useState({
@@ -286,9 +279,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const nights = stayInfo?.nights || 1;
 
   const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
     let list = allHotels.filter(h => h.id !== currentHotelId).filter(h => {
-      if (q && !h.name.toLowerCase().includes(q) && !h.neighbourhood.toLowerCase().includes(q)) return false;
       for (const f of filters.quick) {
         if (f === "5 star" && h.stars !== 5) return false;
         if (f === "9+ rated" && h.bookingScore < 9) return false;
@@ -312,7 +303,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     else if (filters.sort === "distance") list = [...list].sort((a, b) => a.distanceFromCenter - b.distanceFromCenter);
     else list = [...list].sort((a, b) => (b.bookingScore + b.stars / 2) - (a.bookingScore + a.stars / 2));
     return list;
-  }, [allHotels, currentHotelId, currentHotel, nights, query, filters]);
+  }, [allHotels, currentHotelId, currentHotel, nights, filters]);
 
   // Escape closes what is on top, the way a full screen should.
   useEffect(() => {
@@ -320,11 +311,12 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
       if (e.key !== "Escape") return;
       if (gallery) setGallery(null);
       else if (showSheet) setShowSheet(false);
+      else if (mapOpen) setMapOpen(false);
       else navigate(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [gallery, showSheet, navigate]);
+  }, [gallery, showSheet, mapOpen, navigate]);
 
   if (!itinerary || !stayInfo) {
     return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Stay not found</div>;
@@ -378,62 +370,29 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
             <ArrowLeft size={18} color={C.head} />
           </button>
 
-          {searching ? (
-            <input
-              autoFocus
-              data-testid="hotel-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search hotels in ${stayInfo.city}`}
-              style={{
-                flex: 1, minWidth: 0, border: `1px solid ${C.div}`, borderRadius: 999,
-                padding: "9px 14px", fontSize: 13.5, fontFamily: "inherit", color: C.head, outline: "none",
-              }}
-            />
-          ) : (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, display: "flex", alignItems: "baseline", gap: 7, whiteSpace: "nowrap", overflow: "hidden" }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: C.head }}>{stayInfo.city}</span>
-                <span style={{ fontSize: 12, color: C.inact }}>{shown.length} options</span>
-              </p>
-              <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {stayInfo.checkIn} - {stayInfo.checkOut} · 1 room ·{" "}
-                <User size={11} color={C.sub} style={{ display: "inline", verticalAlign: "-1px", marginRight: 1 }} /> 2
-              </p>
-            </div>
-          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, display: "flex", alignItems: "baseline", gap: 7, whiteSpace: "nowrap", overflow: "hidden" }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: C.head }}>{stayInfo.city}</span>
+              <span style={{ fontSize: 12, color: C.inact }}>{shown.length} options</span>
+            </p>
+            <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {stayInfo.checkIn} - {stayInfo.checkOut} · 1 room ·{" "}
+              <User size={11} color={C.sub} style={{ display: "inline", verticalAlign: "-1px", marginRight: 1 }} /> 2
+            </p>
+          </div>
 
+          {/* Where they are, not just what they cost */}
           <button
-            data-testid="toggle-search"
-            onClick={() => { setSearching(s => !s); if (searching) setQuery(""); }}
+            data-testid="open-map"
+            onClick={() => setMapOpen(true)}
             style={{
-              flexShrink: 0, width: 34, height: 34, borderRadius: "50%", border: "none", background: C.bg,
-              display: "grid", placeItems: "center", cursor: "pointer", fontFamily: "inherit",
+              flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "8px 13px", borderRadius: 999, border: `1px solid ${C.div}`, background: C.white,
+              fontSize: 12.5, fontWeight: 700, color: C.head, cursor: "pointer", fontFamily: "inherit",
             }}
           >
-            {searching ? <XIcon size={16} color={C.head} /> : <Search size={16} color={C.head} />}
+            <Map size={15} color={C.head} /> Map view
           </button>
-
-          {/* Secondary action: arrange this stay yourself */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <button onClick={() => setMenuOpen(o => !o)} aria-label="More options" style={{
-              width: 32, height: 32, borderRadius: 10, border: "none", background: "none",
-              display: "grid", placeItems: "center", cursor: "pointer",
-            }}>
-              <MoreVertical size={19} color={C.head} />
-            </button>
-            {menuOpen && (
-              <>
-                <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-                <div style={{ position: "absolute", top: 40, right: 0, zIndex: 41, width: 220, background: C.white, borderRadius: 12, border: `1px solid ${C.div}`, boxShadow: "0 8px 28px rgba(0,0,0,0.16)", overflow: "hidden" }}>
-                  <button onClick={() => { setMenuOpen(false); setConfirmSelf(true); }} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 14px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-                    <Home size={17} color={C.sub} style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: 13.5, fontWeight: 600, color: C.head }}>Book this stay myself</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
         </div>
       </div>
 
@@ -443,9 +402,9 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           <div style={{ textAlign: "center", padding: "48px 20px" }}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.head }}>Nothing matches those filters</p>
             <p style={{ margin: "6px 0 16px", fontSize: 13, color: C.sub, lineHeight: "19px" }}>
-              Try clearing a filter, or search for a hotel you had in mind.
+              Try clearing a filter to see more hotels.
             </p>
-            <button onClick={() => { clearAllFilters(); setQuery(""); }} style={{
+            <button onClick={clearAllFilters} style={{
               padding: "10px 18px", borderRadius: 999, border: `1px solid ${C.div}`, background: C.white,
               fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
             }}>Clear filters</button>
@@ -462,6 +421,20 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                 onGallery={(hotel, at) => setGallery({ hotel, at })}
               />
             ))}
+
+            {/* The one thing the overflow menu used to hold. It is a real
+                choice, so it keeps a home, just not behind three dots. */}
+            <button
+              data-testid="self-book"
+              onClick={() => setConfirmSelf(true)}
+              style={{
+                marginTop: 2, padding: "12px 0", background: "none", border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 12.5, color: C.sub, textAlign: "center",
+              }}
+            >
+              Prefer to arrange this stay yourself?{" "}
+              <span style={{ color: C.p600, fontWeight: 700 }}>Book it myself</span>
+            </button>
           </div>
         )}
       </div>
@@ -648,6 +621,18 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
             </button>
           </div>
         </div>
+      )}
+
+      {mapOpen && (
+        <HotelMapScreen
+          hotels={shown}
+          allHotels={allHotels}
+          city={stayInfo.city}
+          nights={nights}
+          currentHotel={currentHotel}
+          onOpen={(h) => { setMapOpen(false); openHotel(h); }}
+          onClose={() => setMapOpen(false)}
+        />
       )}
     </div>
   );
