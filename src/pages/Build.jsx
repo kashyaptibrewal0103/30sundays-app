@@ -19,6 +19,8 @@ import {
 } from "../data/resortData";
 import { useDeals } from "../data/deals";
 import { useSaves } from "../data/saves";
+import { hasCityPage } from "../data/cityData";
+import CityDetail from "./CityDetail";
 import LoginV2 from "./LoginV2";
 
 // Steps: 0 Destination · 1 Party · 2 When · 3 Route · 4 Activities.
@@ -1314,7 +1316,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
             return (
             <div key={s.city} style={{ display: "flex", alignItems: "center", gap: 13, padding: "7px 0" }}>
               <button
-                onClick={(e) => { e.stopPropagation(); setCityView(s.city); }}
+                onClick={(e) => { e.stopPropagation(); if (hasCityPage(dest, s.city)) setCityView(s.city); }}
                 aria-label={`Watch ${s.city}`}
                 style={{ position: "relative", flexShrink: 0, width: 34, height: 34, border: "none", padding: 0, cursor: "pointer", background: "transparent", display: "block" }}
               >
@@ -1366,7 +1368,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
           const wished = savedRegions.includes(a.city);
           return (
             <div key={a.city} style={{ flexShrink: 0, width: 116 }}>
-              <div onClick={() => setCityView(a.city)} style={{ position: "relative", width: "100%", aspectRatio: "9 / 16", borderRadius: 14, overflow: "hidden", background: C.div, cursor: "pointer" }}>
+              <div onClick={() => { if (hasCityPage(dest, a.city)) setCityView(a.city); }} style={{ position: "relative", width: "100%", aspectRatio: "9 / 16", borderRadius: 14, overflow: "hidden", background: C.div, cursor: "pointer" }}>
                 <img src={areaImg(dest, a.city, i)} alt={a.city} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 42%, rgba(0,0,0,0.8))" }} />
                 <span style={{ position: "absolute", top: "44%", left: "50%", transform: "translate(-50%,-50%)", width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", border: "1.5px solid rgba(255,255,255,0.7)", display: "grid", placeItems: "center" }}>
@@ -1463,7 +1465,9 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
             <p style={{ textAlign: "center", color: C.sub, fontSize: 13, margin: "24px 0" }}>No routes include those regions. Try fewer.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {shownRoutes.map(renderRouteCard)}
+              {/* Pass the index explicitly: map's third argument is the whole
+                  array, and it would land in the card's label slot. */}
+              {shownRoutes.map((r, i) => renderRouteCard(r, i))}
             </div>
           )}
 
@@ -1521,7 +1525,9 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
       </div>
 
 
-      {cityView && <CityDetail dest={dest} city={cityView} onClose={() => setCityView(null)} />}
+      {/* The real city screen, as a layer. The wizard holds its answers in
+          memory, so a route change here would throw a half-made route away. */}
+      {cityView && <CityDetail dest={dest} city={cityView} onBack={() => setCityView(null)} />}
       {mapOpen && <RouteMapView dest={dest} nights={n} route={route} setRoute={setRoute} onClose={() => setMapOpen(false)} />}
     </div>
   );
@@ -1721,30 +1727,6 @@ function NightsDropdown({ value, onChange }) {
         ))}
       </select>
       <ChevronDown size={14} color={C.sub} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-    </div>
-  );
-}
-
-// Full-screen city look opened from "View details".
-function CityDetail({ dest, city, onClose }) {
-  const area = (destAreas[dest] || []).find(a => a.city === city) || { city, crowd: "Mixed", blurb: "" };
-  const pct = couplePct(city);
-  return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "#000" }}>
-      <img src={areaImg(dest, city, 0)} alt={city} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.4) 100%)" }} />
-      <button onClick={onClose} style={{ position: "absolute", top: 14, left: 14, ...iconBtn, background: "rgba(0,0,0,0.4)" }} aria-label="Close"><XIcon size={20} color="#fff" /></button>
-      <div style={{ position: "absolute", top: "44%", left: "50%", transform: "translate(-50%,-50%)", width: 60, height: 60, borderRadius: "50%", background: "rgba(255,255,255,0.22)", backdropFilter: "blur(6px)", border: "1.5px solid rgba(255,255,255,0.65)", display: "grid", placeItems: "center" }}>
-        <Play size={24} color="#fff" fill="#fff" />
-      </div>
-      <div style={{ position: "absolute", left: 18, right: 18, bottom: 22, color: "#fff" }}>
-        <h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, fontFamily: "Georgia, 'Times New Roman', serif" }}>{city}</h1>
-        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          <GlassChip>{CROWD_LABEL[area.crowd] || "Popular"}</GlassChip>
-          <TrustBadge pct={pct} dark />
-        </div>
-        <p style={{ margin: "12px 0 0", fontSize: 14, lineHeight: 1.5, color: "rgba(255,255,255,0.92)" }}>{area.blurb}</p>
-      </div>
     </div>
   );
 }

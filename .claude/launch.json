@@ -7,6 +7,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite"],
       "port": 5201
+    },
+    {
+      "name": "home-lab",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "/Users/jaiki96/Documents/Claude-code/30sundays-app/.claude/worktrees/home-lab"],
+      "port": 5203
     }
   ]
 }

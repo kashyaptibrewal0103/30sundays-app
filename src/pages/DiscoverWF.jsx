@@ -5,6 +5,7 @@ import { C, destData, destinations, reviews, getCustomerPhotos, couplePhotoNames
 import { useSaves } from "../data/saves";
 import { destHero } from "../data/buildData";
 import { regionsFor, activitiesFor } from "../data/discoverData";
+import { cityPath, hasCityPage } from "../data/cityData";
 import { weatherData, seasonLabel } from "../data/weatherData";
 import EduSingleCard from "../components/home_v2/EduSingleCard";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
@@ -73,6 +74,13 @@ export default function DiscoverWF() {
   const isRegionSaved = (c) => saved.regions.includes(c);
   const isActivitySaved = (id) => saved.activities.includes(id);
 
+  // Cities with their own screen go to it, so the tap has a web address and a
+  // back button. Everything else keeps the in-page reel it has today.
+  const openRegion = (r) => {
+    if (hasCityPage(dest, r.city)) navigate(cityPath(dest, r.city));
+    else setReel({ kind: "region", data: r });
+  };
+
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", background: C.bg }}>
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", minHeight: 0, paddingBottom: 16 }}>
@@ -99,10 +107,14 @@ export default function DiscoverWF() {
         </div>
         <div className="hs" style={{ gap: 11, paddingLeft: PAD, paddingRight: PAD }}>
           {regions.map((r, i) => (
-            <div key={r.city} onClick={() => setReel({ kind: "region", data: r })} style={{ flexShrink: 0, width: 148, position: "relative", borderRadius: 16, overflow: "hidden", aspectRatio: "9 / 16", background: C.div, cursor: "pointer" }}>
+            <div key={r.city} onClick={() => openRegion(r)} style={{ flexShrink: 0, width: 148, position: "relative", borderRadius: 16, overflow: "hidden", aspectRatio: "9 / 16", background: C.div, cursor: "pointer" }}>
               <img src={r.img} alt={r.city} className="wf-kb" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", animationDelay: `${(i % 4) * -3.5}s` }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.18) 28%, rgba(0,0,0,0.72) 100%)" }} />
-              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}><Play size={14} color={C.head} fill={C.head} /></div>
+              {/* A city with its own screen opens a screen, so it does not get a play
+                  glyph promising a clip it will not show. */}
+              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {hasCityPage(dest, r.city) ? <ChevronRight size={16} color={C.head} /> : <Play size={14} color={C.head} fill={C.head} />}
+              </div>
               <div style={{ position: "absolute", top: 8, right: 8 }}>
                 <SaveHeart saved={isRegionSaved(r.city)} onClick={() => toggleRegion(dest, r.city)} />
               </div>
