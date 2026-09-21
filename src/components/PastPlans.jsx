@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, Archive, X as XIcon, Info } from "lucide-react";
-import { C, allItineraries } from "../data";
-import { useDeals } from "../data/deals";
+import { ChevronDown, Archive } from "lucide-react";
+import { C } from "../data";
 import TripPlanCard from "./TripPlanCard";
 
 // ─── The plans that did not go ahead ───
@@ -16,9 +15,6 @@ import TripPlanCard from "./TripPlanCard";
 //
 // So past plans group by ENQUIRY and sort by TIME, collapsed, at the bottom.
 
-const byId = (id) => allItineraries.find((i) => i.id === id);
-const toNum = (p) => Number(String(p || 0).replace(/[^0-9.]/g, "")) || 0;
-const shortDate = (ts) => new Date(ts).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const monthYear = (ts) => new Date(ts).toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 
 // Deals that came out of one conversation share an enquiry id. A deal without
@@ -52,7 +48,6 @@ const toCards = (deal) => {
 export default function PastPlans({ deals }) {
   const [open, setOpen] = useState(false);
   const [openEnquiry, setOpenEnquiry] = useState(null);
-  const [again, setAgain] = useState(null);
   const groups = groupByEnquiry(deals);
   if (!groups.length) return null;
 
@@ -78,18 +73,17 @@ export default function PastPlans({ deals }) {
               group={g}
               open={openEnquiry === g.key}
               onToggle={() => setOpenEnquiry((o) => (o === g.key ? null : g.key))}
-              onAgain={(deal, v) => setAgain({ deal, v })}
             />
           ))}
         </div>
       )}
 
-      {again && <PlanAgain deal={again.deal} version={again.v} onClose={() => setAgain(null)} />}
     </div>
   );
 }
 
-function PastEnquiry({ group, open, onToggle, onAgain }) {
+function PastEnquiry({ group, open, onToggle }) {
+  const navigate = useNavigate();
   const countries = [...new Set(group.deals.map((d) => d.dest))];
   const itineraries = group.deals.reduce((n, d) => n + (d.versions || []).filter((v) => v.status === "quote").length, 0);
   const when = monthYear(group.at);
@@ -115,7 +109,7 @@ function PastEnquiry({ group, open, onToggle, onAgain }) {
             {countries.join(" · ")}
           </p>
           <p style={{ margin: "3px 0 0", fontSize: 11, color: C.inact, fontVariantNumeric: "tabular-nums" }}>
-            {itineraries} itinerar{itineraries === 1 ? "y" : "ies"}{group.planId ? ` · Plan ${group.planId}` : ""}
+            {itineraries} itinerar{itineraries === 1 ? "y" : "ies"}{group.planId ? ` · Trip ${group.planId}` : ""}
           </p>
         </div>
         <ChevronDown size={17} color={C.sub} style={{ flexShrink: 0, transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }} />
@@ -128,129 +122,23 @@ function PastEnquiry({ group, open, onToggle, onAgain }) {
           </p>
           {group.deals.flatMap(toCards).map((card) => {
             const v = [...card.versions].sort((a, b) => b.num - a.num)[0];
+            // Straight to the itinerary as it was built. Everything you can do
+            // with a closed plan, keeping the PDF or starting it again, lives
+            // on that screen, next to the trip it is about.
+            const openPlan = () => navigate(`/itinerary/${v.itineraryId ?? card.itineraryId}?dealId=${card.id.split("__")[0]}&versionId=${v.id}`);
             return (
               <TripPlanCard
                 key={card.id}
                 deal={card}
                 planId={v.planId}
                 pastNote={`Quoted ${when}`}
-                onOpen={() => onAgain(card, v)}
-                onStartNew={() => onAgain(card, v)}
+                onOpen={openPlan}
+                onStartNew={openPlan}
               />
             );
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── Planning a past trip again ───
-//
-// If the travel dates are still ahead there is something to reprice straight
-// away. If they have gone by there is nothing to price until the traveller says
-// when, so we ask first.
-//
-// Either way it ends on the itinerary screen they already know, with today's
-// prices in the cost breakdown and Save Itinerary where it always is.
-function PlanAgain({ deal, version, onClose }) {
-  const navigate = useNavigate();
-  const { createDeal } = useDeals();
-  const from = new Date(version.customizations?.travelDates?.fromDate || Date.now());
-  const datesPassed = from.getTime() < Date.now();
-  const [step, setStep] = useState(datesPassed ? "dates" : "pricing");
-  const [date, setDate] = useState("");
-
-  const itineraryId = version.itineraryId ?? deal.itineraryId;
-  const it = byId(itineraryId);
-  const nights = version.customizations?.travelDates?.nights ?? it?.nights ?? 7;
-
-  useEffect(() => {
-    if (step !== "pricing") return;
-    const t = setTimeout(() => {
-      const fromDate = (date ? new Date(date) : from).toISOString();
-      const { dealId, versionId } = createDeal({
-        itineraryId,
-        dest: deal.dest,
-        title: deal.title,
-        img: deal.img,
-        indicativePrice: toNum(it?.price),
-        customizations: { travelDates: { fromDate, nights, travelers: 2 }, selectedDayOptions: {}, selectedHotels: {} },
-      });
-      navigate(`/itinerary/${itineraryId}?dealId=${dealId}&versionId=${versionId}`);
-    }, 1500);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
-
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-
-  return (
-    <div style={{
-      position: isMobile ? "fixed" : "absolute", inset: 0, zIndex: 120, background: C.white,
-      display: "flex", flexDirection: "column",
-      ...(isMobile ? {} : { borderRadius: 44, overflow: "hidden" }),
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${C.div}`, flexShrink: 0 }}>
-        <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}>
-          <XIcon size={20} color={C.head} />
-        </button>
-        <div style={{ minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.head }}>{deal.dest} · {nights}N</p>
-          {version.planId && (
-            <p style={{ margin: 0, fontSize: 11.5, color: C.sub, fontVariantNumeric: "tabular-nums" }}>From plan {version.planId}</p>
-          )}
-        </div>
-      </div>
-
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }} className="hide-scrollbar">
-        {step === "dates" && (
-          <div data-testid="again-dates">
-            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "12px 14px", borderRadius: 13, background: "#FFF8E1", border: "1px solid #FCEBB6", marginBottom: 18 }}>
-              <Info size={14} color="#B45309" style={{ flexShrink: 0, marginTop: 1 }} />
-              <p style={{ margin: 0, fontSize: 12.5, color: C.head, lineHeight: "18px" }}>
-                This plan was for {shortDate(from)}, which has gone by. Tell us when you want to travel and we will price it for those dates.
-              </p>
-            </div>
-            <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: C.sub, marginBottom: 7 }}>New start date</label>
-            <input
-              data-testid="again-date-input"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              style={{
-                width: "100%", boxSizing: "border-box", padding: "13px 14px", borderRadius: 13,
-                border: `1px solid ${date ? C.p600 : C.div}`, fontSize: 15, color: C.head, fontFamily: "inherit", outline: "none",
-              }}
-            />
-            <p style={{ margin: "8px 2px 0", fontSize: 11.5, color: C.sub }}>
-              {nights} nights, the same as the original plan. You can change the length on the next screen.
-            </p>
-            <button
-              data-testid="again-get-prices"
-              onClick={() => setStep("pricing")}
-              disabled={!date}
-              style={{
-                width: "100%", marginTop: 22, padding: "15px 0", borderRadius: 14, border: "none",
-                background: date ? C.p600 : C.div, color: date ? "#fff" : C.inact,
-                fontSize: 15, fontWeight: 700, cursor: date ? "pointer" : "not-allowed", fontFamily: "inherit",
-              }}
-            >
-              Fetch updated prices
-            </button>
-          </div>
-        )}
-
-        {step === "pricing" && (
-          <div data-testid="again-pricing" style={{ textAlign: "center", padding: "60px 20px" }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", border: `3px solid ${C.p100}`, borderTopColor: C.p600, animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.head }}>Fetching updated prices</p>
-            <p style={{ margin: "4px 0 0", fontSize: 12.5, color: C.sub }}>
-              Hotels and activities for {shortDate(date ? new Date(date) : from)}
-            </p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

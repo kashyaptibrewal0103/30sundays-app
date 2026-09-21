@@ -11,7 +11,7 @@ import { C } from "../data";
 // So every past itinerary carries its own number. Nothing else is needed on the
 // card: the country and the version are already written above it.
 
-export default function PlanRef({ id, label = "Plan ID" }) {
+export default function PlanRef({ id, label = "Trip ID" }) {
   const [copied, setCopied] = useState(false);
 
   const copy = (e) => {

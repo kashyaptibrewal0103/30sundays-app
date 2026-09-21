@@ -148,7 +148,7 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId
         {Header}
         <div onClick={() => onStartNew?.()} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "11px 12px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
           <span style={{ fontSize: 12.5, color: C.sub, minWidth: 0 }}>{pastNote || "This plan is closed"}</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.p600, flexShrink: 0 }}>Plan this again →</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.p600, flexShrink: 0 }}>View →</span>
         </div>
         {planId && <PlanRef id={planId} />}
       </div>

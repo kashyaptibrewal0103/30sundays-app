@@ -254,7 +254,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const dealStatus = version ? effectiveStatus(version) : null;
   const inDeal = !!version;
   const isDraft = inDeal && dealStatus === "draft";
-  const editable = true; // no gate; we reconcile at our end
+  // An enquiry that did not go ahead. The itinerary is still worth reading, so
+  // it opens as it was built, but nothing on it can be changed: editing a
+  // closed plan would quietly bring it back into My Plans. The way forward is
+  // a fresh plan, which is what Regenerate makes.
+  const closedDeal = inDeal && dealsCtx.getDeal(dealId)?.status === "lost";
+  const editable = !closedDeal;
   // The quote/PDF bar applies only to plans opened from the Plan tab (a deal).
   // Explore itineraries (no deal) show no version/PDF until the first edit
   // creates one. Quoted = a PDF exists; a deal copy is quoted once priced.
@@ -347,7 +352,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const goEdit = (target) => navigate(`/build?dealId=${dealId}&versionId=${versionId}&edit=${target}`);
   // Any saved plan can be edited via the wizard — built trips seed from their
   // own data, curated ones seed from the itinerary (Build handles the fallback).
-  const wizardEditable = inDeal;
+  const wizardEditable = inDeal && !closedDeal;
 
   // Guided customisation tour: auto-run once per person, or on demand when
   // opened with ?tour=1 (from the home banner). Replayable from the "How it
@@ -821,6 +826,45 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     }, 1800);
   };
   const handleDownloadPdf = () => showToast("Quote PDF downloaded (demo)");
+
+  // ─── Planning a closed trip again ───
+  //
+  // The prices on a closed plan are the ones we quoted months ago, so nothing
+  // here can be reused as it stands. Regenerate builds a NEW plan from this
+  // one: same route, same length, today's prices.
+  //
+  // If the travel dates have gone by there is nothing to price until the
+  // traveller says when, so we ask first. If they are still ahead we go
+  // straight to pricing. Either way it lands on this same screen, priced, with
+  // Save Itinerary where it always is. The closed plan is never touched.
+  const [regen, setRegen] = useState(null);       // null | "dates" | "pricing"
+  const [regenDate, setRegenDate] = useState("");
+  const pastTripStart = version?.customizations?.travelDates?.fromDate;
+  const datesPassed = pastTripStart ? new Date(pastTripStart).getTime() < Date.now() : true;
+
+  const startRegen = () => setRegen(datesPassed ? "dates" : "pricing");
+
+  useEffect(() => {
+    if (regen !== "pricing") return;
+    const t = setTimeout(() => {
+      const fromDate = (regenDate ? new Date(regenDate) : new Date(pastTripStart || Date.now())).toISOString();
+      const nights = version?.customizations?.travelDates?.nights ?? it.nights ?? 7;
+      const travelers = version?.customizations?.travelDates?.travelers ?? 2;
+      const { dealId: newDeal, versionId: newVersion } = dealsCtx.createDeal({
+        itineraryId: it.id,
+        dest: it.dest,
+        title: it.name || it.dest,
+        img: it.img,
+        indicativePrice: Number(String(it.price || 0).replace(/[^0-9.]/g, "")) || 0,
+        customizations: { travelDates: { fromDate, nights, travelers }, selectedDayOptions: {}, selectedHotels: {} },
+      });
+      setRegen(null);
+      setRegenDate("");
+      navigate(`/itinerary/${it.id}?dealId=${newDeal}&versionId=${newVersion}`);
+    }, 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regen]);
   const handleDiscardCopy = () => {
     dealsCtx.discardVersion(dealId, versionId);
     navigate(`/itinerary/${it.id}`);
@@ -901,8 +945,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {/* Trip meta - dates, travellers, route + edit (moved out of the hero) */}
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-          {wizardEditable ? (
-            /* A built plan — one "Edit" entry (right) routes back to the wizard */
+          {wizardEditable || closedDeal ? (
+            /* A built plan — one "Edit" entry (right) routes back to the wizard.
+               A closed plan shows the same line with nothing to tap. */
             <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>
               {dateLabel} · {travellers} traveller{travellers > 1 ? "s" : ""}
             </p>
@@ -1070,7 +1115,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 note={note}
                 // A transfer day has nothing to swap. A free day does: the
                 // alternatives are tours you can add to it.
-                canChange={dayHasOptions(i) && !(free && hasTransfer)}
+                canChange={editable && dayHasOptions(i) && !(free && hasTransfer)}
                 onOpen={() => { setDayDetailJump(null); setDayDetailIndex(i); }}
                 onOpenReviews={() => { setDayDetailJump("reviews"); setDayDetailIndex(i); }}
                 onChange={() => setChangeDayIndex(i)}
@@ -1456,7 +1501,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {/* ═══ Sticky footer - changes panel (floating) + price/CTA row ═══ */}
       <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, zIndex: 20 }}>
         {/* Floating "changes since last version" panel */}
-        {inDeal && hasChanges && !fetchingPrice && (
+        {inDeal && !closedDeal && hasChanges && !fetchingPrice && (
           <div style={{ background: C.white, borderTop: `1px solid ${C.div}`, boxShadow: "0 -6px 20px rgba(0,0,0,0.07)" }}>
             <button onClick={() => setShowChanges(s => !s)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "11px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
               <Sparkles size={14} color={C.p600} style={{ flexShrink: 0 }} />
@@ -1511,7 +1556,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         {/* What Save actually does, for the people who are not tapping it */}
         {/* An older version exists once this one has been priced, or once we are
             past V1. Only then is there something for saving to preserve. */}
-        {inDeal && !validQuote && !fetchingPrice && (
+        {inDeal && !closedDeal && !validQuote && !fetchingPrice && (
           <SaveVersionNote
             hasPrevious={quoted || (version?.num || 1) > 1}
             scope={`${dealId || it.id}_${versionId || version?.id || "v"}`}
@@ -1545,6 +1590,28 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             }}>
               Plan My Trip <ArrowRight size={14} />
             </Link>
+          </>
+        ) : closedDeal ? (
+          /* A plan that did not go ahead: read it, keep the PDF, or start it
+             again at today's prices. */
+          <>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Quoted price</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact }}>
+                {version.pricedAt
+                  ? `Quoted on ${new Date(version.pricedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}. No longer valid.`
+                  : "This price is no longer valid."}
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <button data-testid="download-pdf" onClick={handleDownloadPdf} style={{ display: "flex", alignItems: "center", gap: 5, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: "#027A48", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                <Download size={15} /> PDF
+              </button>
+              <button data-testid="regenerate" onClick={startRegen} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 16px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
+                <RefreshCw size={14} /> Regenerate
+              </button>
+            </div>
           </>
         ) : (
         <>
@@ -1723,6 +1790,65 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             setTimeout(() => setPricingState("live"), 2000);
           }}
         />
+      )}
+
+      {/* ═══ Regenerating a closed plan ═══
+          The dates question only when the old dates have gone by, then the
+          same pricing wait the rest of the app uses. */}
+      {regen && (
+        <div data-testid="regen-screen" style={{ position: "absolute", inset: 0, zIndex: 320, background: C.white, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${C.div}`, flexShrink: 0 }}>
+            <button onClick={() => { setRegen(null); setRegenDate(""); }} aria-label="Close" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}>
+              <XIcon size={20} color={C.head} />
+            </button>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.head }}>{it.dest} · {it.nights}N</p>
+              <p style={{ margin: 0, fontSize: 11.5, color: C.sub }}>Planning this trip again</p>
+            </div>
+          </div>
+
+          <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+            {regen === "dates" && (
+              <div data-testid="regen-dates">
+                <div style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "12px 14px", borderRadius: 13, background: "#FFF8E1", border: "1px solid #FCEBB6", marginBottom: 18 }}>
+                  <Info size={14} color="#B45309" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <p style={{ margin: 0, fontSize: 12.5, color: C.head, lineHeight: "18px" }}>
+                    This plan was for {new Date(pastTripStart || Date.now()).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}, which has gone by. Tell us when you want to travel and we will price it for those dates.
+                  </p>
+                </div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: C.sub, marginBottom: 7 }}>New start date</label>
+                <input
+                  data-testid="regen-date-input"
+                  type="date"
+                  value={regenDate}
+                  onChange={(e) => setRegenDate(e.target.value)}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", borderRadius: 13, border: `1px solid ${regenDate ? C.p600 : C.div}`, fontSize: 15, color: C.head, fontFamily: "inherit", outline: "none" }}
+                />
+                <p style={{ margin: "8px 2px 0", fontSize: 11.5, color: C.sub }}>
+                  {version?.customizations?.travelDates?.nights ?? it.nights} nights, the same as the original plan. You can change the length on the next screen.
+                </p>
+                <button
+                  data-testid="regen-get-prices"
+                  onClick={() => setRegen("pricing")}
+                  disabled={!regenDate}
+                  style={{ width: "100%", marginTop: 22, padding: "15px 0", borderRadius: 14, border: "none", background: regenDate ? C.p600 : C.div, color: regenDate ? "#fff" : C.inact, fontSize: 15, fontWeight: 700, cursor: regenDate ? "pointer" : "not-allowed", fontFamily: "inherit" }}
+                >
+                  Fetch updated prices
+                </button>
+              </div>
+            )}
+
+            {regen === "pricing" && (
+              <div data-testid="regen-pricing" style={{ textAlign: "center", padding: "60px 20px" }}>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", border: `3px solid ${C.p100}`, borderTopColor: C.p600, animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.head }}>Fetching updated prices</p>
+                <p style={{ margin: "4px 0 0", fontSize: 12.5, color: C.sub }}>
+                  Hotels and activities for {new Date(regenDate || pastTripStart || Date.now()).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ═══ Change day plan, full screen ═══ */}
