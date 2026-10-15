@@ -1177,6 +1177,11 @@ function StepMealPref({ mealPrefs, setMealPrefs }) {
 // Select-only: get to know the regions (intro videos), then pick one of our
 // curated routes for the chosen nights. No manual route editing here. Too few
 // nights → nudge to add some; too many → hand off to the team.
+// The region carousel at the top of the route step ("Where will you base
+// yourself") is switched off for now at the user's request. Everything it needs
+// is still here and still wired up: flip this to true to bring it straight back.
+const SHOW_REGION_PICKER = false;
+
 function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
   const meta = destMeta[dest] || {};
   const minN = meta.minNights || 4;
@@ -1359,7 +1364,15 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
     <div style={{ padding: "18px 16px 24px" }}>
       {/* Header: pick where to base yourself first (the region carousel). Each
           route card below has its own "view on map" link. */}
-      <h1 style={{ ...titleStyle, fontSize: 18, letterSpacing: "-0.3px" }}>{editRoute ? "Change your route" : "Where will you base yourself"}</h1>
+      {/* The edit view keeps its own title. The "Where will you base yourself"
+          title belongs to the hidden carousel and goes with it. */}
+      {editRoute && (
+        <h1 style={{ ...titleStyle, fontSize: 18, letterSpacing: "-0.3px" }}>Change your route</h1>
+      )}
+      {SHOW_REGION_PICKER && (<>
+      {!editRoute && (
+        <h1 style={{ ...titleStyle, fontSize: 18, letterSpacing: "-0.3px" }}>Where will you base yourself</h1>
+      )}
       <p style={{ ...subStyle, marginTop: 4 }}>Explore each region, then choose your route below.</p>
 
       {/* ── Regions: watch (tap card) and wishlist (heart) only, no selecting here ── */}
@@ -1386,6 +1399,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
           );
         })}
       </div>
+      </>)}
       {tooManyRegions && (
         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 12, background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, padding: "10px 12px" }}>
           <span style={{ fontSize: 12, color: "#9A3412", lineHeight: "16px" }}>⚠️ That's a lot of stops for {n} nights. We'd suggest fewer regions or more nights, so each place gets real time.</span>
@@ -1394,7 +1408,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
 
       {/* ── Section 2: curated routes (or an edge-case nudge) ── */}
       <div ref={routesRef}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, margin: "26px 0 12px" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, margin: SHOW_REGION_PICKER || editRoute ? "26px 0 12px" : "0 0 12px" }}>
         <p style={{ ...sectionHead, margin: 0 }}>Choose your route for {n} Night{n > 1 ? "s" : ""}</p>
         {dirty && !tooShort && !tooLong && (
           <button
@@ -1860,7 +1874,7 @@ function ActivityReel({ a, dest, on, onToggle, onClose }) {
 }
 
 // ════════════════════ Building ════════════════════
-function Building({ dest }) {
+export function Building({ dest }) {
   const msgs = ["Mapping your route…", "Picking your stays…", "Slotting in your experiences…", "Pricing it up…"];
   const [i, setI] = useState(0);
   useEffect(() => { const t = setInterval(() => setI(x => (x + 1) % msgs.length), 380); return () => clearInterval(t); }, []);
