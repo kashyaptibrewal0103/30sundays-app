@@ -6,7 +6,7 @@ import { CC } from "./tokens";
 import { PAD, TravellerMark, initialsFor } from "./CommunityUI";
 import { ago } from "../../data/communityData";
 
-// Six Lounges that borrow the app's handwriting without copying its screens.
+// Six Communities that borrow the app's handwriting without copying its screens.
 //
 // What is taken, in every option, so the whole thing reads as one product:
 //   type      14/700 titles, 12 grey detail, 11 small caps kickers at 0.9px

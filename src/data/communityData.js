@@ -1,4 +1,4 @@
-// ─── Community: Q&A and group chat, all fake ───
+// ─── Community: rooms and Q&A, all fake ───
 // Thailand October 2026 is the main scenario, on trip-1. Mauritius sits below
 // the group threshold so the Q&A only state can be shown, and Vietnam has
 // already travelled so its group is closed and read only.
@@ -29,10 +29,9 @@ export const DESTINATIONS = {
     // exists before anybody has booked for this month, which is what makes it
     // safe to lead with at launch.
     recent3m: 142,
-    // The full catalogue behind the sample below. The seeded questions and
-    // chat are a handful each; these are what the real counts would be.
+    // The full catalogue behind the sample below. The seeded questions are
+    // a handful; this is what the real count would be.
     questionsTotal: 143,
-    messagesTotal: 312,
     cohort: { state: "open", members: 19, lastActiveMins: 5 },
     about: "Most questions here are about the boat days around Phuket and Krabi, how much of Bangkok to keep for the end, and what October weather actually does. Ask anything.",
   },
@@ -44,7 +43,6 @@ export const DESTINATIONS = {
     hero: "/lab-locations/bali-kelingking-beach-viewpoint.jpg",
     recent3m: 168,
     questionsTotal: 186,
-    messagesTotal: 268,
     cohort: { state: "open", members: 14, lastActiveMins: 12 },
     about: "Most questions here are about the drive times between the south and Ubud, what to pack for November, and which beach clubs are worth it. Ask anything.",
   },
@@ -56,7 +54,6 @@ export const DESTINATIONS = {
     hero: "/lab-locations/mauritius-le-morne-brabant.jpg",
     recent3m: 39,
     questionsTotal: 31,
-    messagesTotal: 24,
     // Below the threshold, so there is no group to join yet.
     cohort: { state: "below", members: 3 },
     about: "A quieter month for Mauritius, so answers here come mostly from our team and from travellers who went earlier in the year.",
@@ -69,7 +66,6 @@ export const DESTINATIONS = {
     hero: "/lab-locations/vietnam-ha-long-bay-cruise.jpg",
     recent3m: 74,
     questionsTotal: 88,
-    messagesTotal: 190,
     // The month has been and gone, so the group is read only.
     cohort: { state: "closed", members: 11, closedOn: "31 August 2026" },
     about: "This group has wrapped up. The questions stay here for whoever travels after you.",
@@ -166,6 +162,8 @@ export const PEOPLE = {
 // `answers` are in posting order. There is no accepted or solved state: a
 // thread is a conversation, not a ticket.
 // `quotes` on an answer points at what it is replying to.
+// `parentId` nests it under another answer. Three levels deep at most: past
+// that the indent eats the column and the conversation stops being readable.
 
 export const QUESTIONS = [
   // ── Travelling from India: true whatever you booked ──
@@ -181,9 +179,9 @@ export const QUESTIONS = [
       { id: "in1a", author: OPS, minsAgo: 120,
         body: "Yes. Indian passport holders can enter Thailand without a visa for stays up to 60 days. You still need a passport valid for six months, a return ticket and proof of where you are staying, and the officer can ask for funds. We send all three in your trip pack before you fly.",
         likes: 41 },
-      { id: "in1b", author: PEOPLE.gaurav, minsAgo: 80,
+      { id: "in1b", author: PEOPLE.gaurav, parentId: "in1a", minsAgo: 80,
         body: "Nobody asked us for anything beyond the passport and the return ticket at Bangkok. Took about twenty minutes.", likes: 12 },
-      { id: "in1c", author: PEOPLE.farah, minsAgo: 40,
+      { id: "in1c", author: PEOPLE.farah, parentId: "in1b", minsAgo: 40,
         body: "We were asked for the hotel booking at Phuket. Had it on the phone, that was enough.", likes: 9 },
     ],
   },
@@ -196,7 +194,7 @@ export const QUESTIONS = [
       { id: "in2a", author: OPS, minsAgo: 380,
         body: "Six months from the date you enter, not from the date you come back. Five months will be refused at check-in in Delhi or Mumbai, before you ever reach the destination. If yours is inside six months, renew before you book anything.",
         likes: 55 },
-      { id: "in2b", author: PEOPLE.gaurav, minsAgo: 300,
+      { id: "in2b", author: PEOPLE.gaurav, parentId: "in2a", minsAgo: 300,
         body: "Tatkal took us nine days including the police check. Do not leave it to the last month.", likes: 18 },
     ],
   },
@@ -209,9 +207,9 @@ export const QUESTIONS = [
       { id: "in3a", author: OPS, minsAgo: 880,
         body: "A forex card locks the rate and avoids the markup your bank adds on every swipe, so it wins for anything you plan to spend. Keep one regular card as a backup for deposits at hotels. Carry a small amount of cash for the first day, because the airport rate is always the worst one you will see.",
         likes: 33 },
-      { id: "in3b", author: PEOPLE.aisha, minsAgo: 700,
+      { id: "in3b", author: PEOPLE.aisha, parentId: "in3a", minsAgo: 700,
         body: "We loaded the forex card and used cash for boats and markets. Barely touched the bank card.", likes: 14 },
-      { id: "in3c", author: PEOPLE.farah, minsAgo: 500,
+      { id: "in3c", author: PEOPLE.farah, parentId: "in3b", minsAgo: 500,
         body: "Watch the ATM fee at the other end. Withdrawing in two big amounts cost us far less than five small ones.", likes: 21 },
     ],
   },
@@ -224,7 +222,7 @@ export const QUESTIONS = [
       { id: "in4a", author: OPS, minsAgo: 1450,
         body: "Emigration at the Indian end takes your passport and boarding pass, stamps it and asks where you are going. That is usually the whole conversation. There is no departure form any more. Reach the airport three hours before an international flight and the queue is the only thing that will cost you time.",
         likes: 29 },
-      { id: "in4b", author: PEOPLE.lakshmi, minsAgo: 1200,
+      { id: "in4b", author: PEOPLE.lakshmi, parentId: "in4a", minsAgo: 1200,
         body: "Nobody asked us a single question on the way out. The queue at T3 was the long bit.", likes: 7 },
     ],
   },
@@ -237,7 +235,7 @@ export const QUESTIONS = [
       { id: "in5a", author: OPS, minsAgo: 2500,
         body: "For a week it costs less than one airport meal a day and it covers the two things that actually go wrong: a hospital visit and a cancelled leg. A scooter accident abroad is the common one and it is not cheap. Every 30 Sundays trip includes cover, so check what you already have before buying a second policy.",
         likes: 26 },
-      { id: "in5b", author: PEOPLE.gaurav, minsAgo: 2000,
+      { id: "in5b", author: PEOPLE.gaurav, parentId: "in5a", minsAgo: 2000,
         body: "Used ours for a stomach bug in Krabi. Clinic bill came back in about three weeks.", likes: 16 },
     ],
   },
@@ -261,7 +259,7 @@ export const QUESTIONS = [
     answers: [
       { id: "t1a", author: PEOPLE.gaurav, minsAgo: 11,
         body: "Phang Nga was the calmer of the two for us. Phi Phi is prettier but there are a lot more boats in the same bay.", likes: 6 },
-      { id: "t1b", author: OPS, minsAgo: 9,
+      { id: "t1b", author: OPS, parentId: "t1a", minsAgo: 9,
         body: "For one day we would send you to Phang Nga on a longtail rather than a speedboat. Less time in the sun, fewer stops, and the sea inside the bay stays flat. Keep Phi Phi for the Krabi leg instead, you are much closer to it from Railay and the crossing is shorter.",
         likes: 24 },
       { id: "t1c", author: PEOPLE.farah, minsAgo: 6,
@@ -290,6 +288,7 @@ export const QUESTIONS = [
     title: "Two nights in Bangkok at the end, is that enough?",
     body: "We land back in Bangkok from Krabi and have two nights before flying home. Worried we will feel rushed.",
     author: PEOPLE.gaurav, minsAgo: 300,
+    image: "/lab-locations/with-people/thailand-wat-arun-bangkok.jpg",
     answers: [
       { id: "t3a", author: OPS, minsAgo: 260,
         body: "Two nights is the right amount after a week of beaches. Keep the first evening for the river and Wat Arun at sunset, and the second day for one market and one rooftop. Trying to add the palace as well is what makes people feel rushed.",
@@ -305,7 +304,8 @@ export const QUESTIONS = [
     author: PEOPLE.lakshmi, minsAgo: 800,
     answers: [
       { id: "t4a", author: PEOPLE.farah, minsAgo: 700,
-        body: "Yes, longtail only, about fifteen minutes from Ao Nang. It sounds like a hassle and then it turns out to be the nicest part.", likes: 10 },
+        body: "Yes, longtail only, about fifteen minutes from Ao Nang. It sounds like a hassle and then it turns out to be the nicest part.", likes: 10,
+        image: "/lab-locations/with-people/thailand-railay-beach-krabi.jpg" },
       { id: "t4b", author: OPS, minsAgo: 640,
         body: "Longtail is the only way in and your transfer covers it both ways. One thing worth knowing: they wait until the boat is full, so allow a little time on the morning you check out.",
         likes: 14 },
@@ -409,7 +409,8 @@ export const QUESTIONS = [
     author: PEOPLE.divya, minsAgo: 700,
     answers: [
       { id: "e1", author: PEOPLE.meera, minsAgo: 620,
-        body: "Yes. The early boat is calmer and you get Kelingking before the crowds. We went back to the hotel and slept in the afternoon, which worked out fine.", likes: 15 },
+        body: "Yes. The early boat is calmer and you get Kelingking before the crowds. We went back to the hotel and slept in the afternoon, which worked out fine.", likes: 15,
+        image: "/lab-locations/with-people/bali-kelingking-beach-viewpoint.jpg" },
       { id: "e2", author: OPS, minsAgo: 540,
         body: "The early crossing is also the safest one in November, when the afternoon swell picks up. If either of you gets seasick, take something thirty minutes before boarding.",
         likes: 13 },
@@ -446,7 +447,8 @@ export const QUESTIONS = [
     author: PEOPLE.riya, minsAgo: 7000,
     answers: [
       { id: "g1", author: PEOPLE.tara, minsAgo: 6800,
-        body: "We skipped the swings and did a walk through the terraces instead. Quieter, and we got better photos with nobody else in them.", likes: 14 },
+        body: "We skipped the swings and did a walk through the terraces instead. Quieter, and we got better photos with nobody else in them.", likes: 14,
+        image: "/lab-locations/with-people/bali-tegallalang-rice-terraces.jpg" },
     ],
   },
 
@@ -476,7 +478,7 @@ export const QUESTIONS = [
     answers: [{ id: "t14a", author: OPS, minsAgo: 22800, body: "Not expected, and welcome. Round up a taxi fare, twenty to fifty baht for a porter, and a little more for a driver who has had you all day.", likes: 14 }] },
   { id: "t15", tags: ["Boats"], dest: "thailand", title: "Is the Maya Bay trip still allowed?",
     body: "I read it was closed for a few years.", author: PEOPLE.farah, minsAgo: 26000,
-    answers: [{ id: "t15a", author: OPS, minsAgo: 25800, body: "Open again, with limits. No swimming in the bay itself and boats moor at the back, so you walk in. Still worth the early slot.", likes: 11 }] },
+    answers: [{ id: "t15a", author: OPS, minsAgo: 25800, body: "Open again, with limits. No swimming in the bay itself and boats moor at the back, so you walk in. Still worth the early slot.", likes: 11, image: "/lab-locations/with-people/thailand-maya-bay.jpg" }] },
   { id: "t16", tags: ["Food"], dest: "thailand", title: "Any good vegetarian food in Phuket?",
     body: "One of us does not eat meat or fish at all.", author: PEOPLE.gaurav, minsAgo: 29000, answers: [] },
   { id: "t17", tags: ["Stays"], dest: "thailand", title: "Is it worth upgrading to a pool villa?",
@@ -518,6 +520,7 @@ export const QUESTIONS = [
     title: "Is October a good month for the south coast?",
     body: "We are told the wind picks up. Does that spoil the beach days?",
     author: PEOPLE.pooja, minsAgo: 180,
+    image: "/lab-locations/with-people/mauritius-le-morne-brabant.jpg",
     answers: [
       { id: "m1a", author: OPS, minsAgo: 140,
         body: "October is one of the better months. The wind is what makes Le Morne good for kitesurfing, but the east and north stay sheltered. We would keep your beach days on the north coast and use the south for the drives and the viewpoints.",
@@ -538,6 +541,7 @@ export const QUESTIONS = [
     title: "Is one night on the Ha Long cruise enough?",
     body: "We are deciding between one night and two.",
     author: PEOPLE.ishita, minsAgo: 40000,
+    image: "/lab-locations/with-people/vietnam-ha-long-bay-cruise.jpg",
     answers: [
       { id: "v1a", author: OPS, minsAgo: 39000,
         body: "One night suits most people. The second night adds a quieter bay and a kayak morning, so take it if you want slow rather than more.",
@@ -625,76 +629,6 @@ export const GUIDELINES = [
   ["Be kind about other people's plans", "Everyone wants a different holiday. Answer the question that was asked, and leave the rest."],
 ];
 
-// ─── Cohort chat ───
-export const CHAT = [
-  { id: "ch1", author: OPS, minsAgo: 8600, checkpoint: true,
-    title: "Visas, six weeks out",
-    text: "A quick one for everyone. Visa on arrival is fine for all of you, but every passport in your booking needs six months left on it from 1 November. Have a look tonight and message your consultant if anyone is close." },
-  { id: "ch2", author: PEOPLE.riya, minsAgo: 8300,
-    text: "Checked ours, all good until 2029. Thanks for the nudge." },
-  { id: "ch3", author: PEOPLE.neha, minsAgo: 8100,
-    text: "Mine expires in March. Getting it renewed this week, glad this came up now and not in October." },
-  { id: "ch4", author: PEOPLE.meera, minsAgo: 6000,
-    text: "Is anyone else landing on the 4th? We are on the early flight and would love to know who else is around." },
-  { id: "ch5", author: PEOPLE.tara, minsAgo: 5900,
-    text: "We land on the 4th too, in the evening. Two nights in Seminyak first." },
-  { id: "ch6", author: PEOPLE.ananya, minsAgo: 5400,
-    text: "We are the 6th. Doing Ubud first and then south." },
-  { id: "ch7", author: OPS, minsAgo: 4300, checkpoint: true,
-    title: "What November actually looks like",
-    text: "Weather note for the group. Expect clear mornings and short heavy showers in the late afternoon, around twelve days of rain across the month. Pack a light rain jacket and keep afternoons flexible. None of your booked activities get cancelled for rain, and if the sea is rough on a boat day we move it and tell you the night before." },
-  { id: "ch8", author: PEOPLE.divya, minsAgo: 4100,
-    text: "This is useful. We were about to pack for pure sunshine." },
-  { id: "ch9", author: PEOPLE.sana, minsAgo: 3400,
-    text: "Has anyone done the cooking class in Ubud? Deciding whether to add it." },
-  { id: "ch10", author: PEOPLE.riya, minsAgo: 3200,
-    text: "We did it in March. Go for the morning one, you shop at the market first and that is the best part of it." },
-  { id: "ch11", author: PEOPLE.meera, minsAgo: 1500,
-    text: "Random, but does anyone know if the beach clubs need booking ahead in November?" },
-  { id: "ch12", author: PEOPLE.tara, minsAgo: 900,
-    text: "We booked two days ahead and that was plenty. Weekends fill up faster." },
-  { id: "ch13", author: PEOPLE.neha, minsAgo: 240,
-    text: "Passport renewed, appointment done. See you all in November." },
-  { id: "ch14", author: PEOPLE.ananya, minsAgo: 120,
-    text: "Starting a note of everything from this group so we do not lose it. Happy to share it closer to the date." },
-  { id: "ch15", author: PEOPLE.divya, minsAgo: 12,
-    text: "Yes please. Ours is a mess of screenshots at the moment." },
-];
-
-// The Thailand group, October 2026. Same shape as the Bali one.
-export const THAILAND_CHAT = [
-  { id: "th1", author: OPS, minsAgo: 7200, checkpoint: true,
-    title: "Visas, five weeks out",
-    text: "One for everyone. The Thailand e-Visa is already on your trip, so there is nothing to queue for at the airport. Every passport in your booking needs six months left on it from 24 October. Have a look tonight and message your consultant if anyone is close." },
-  { id: "th2", author: PEOPLE.aisha, minsAgo: 7000,
-    text: "Checked, both fine until 2031. That e-Visa saved us a whole morning last time." },
-  { id: "th3", author: PEOPLE.gaurav, minsAgo: 6400,
-    text: "Is anyone else landing in Phuket on the 24th? We are on the morning flight." },
-  { id: "th4", author: PEOPLE.farah, minsAgo: 6100,
-    text: "We land that evening. Three nights in Phuket first, then Krabi." },
-  { id: "th5", author: PEOPLE.lakshmi, minsAgo: 5200,
-    text: "Same route for us, just a day behind. Happy to swap notes on the boat days." },
-  { id: "th6", author: OPS, minsAgo: 4000, checkpoint: true,
-    title: "What late October actually looks like",
-    text: "Weather note for the group. Expect clear mornings, and a heavy hour most afternoons on the west coast. Around nine rainy days across the month, and almost none of it all day. Boat days are confirmed the evening before, and if the sea is rough we move the day rather than cancel it." },
-  { id: "th7", author: PEOPLE.farah, minsAgo: 3800,
-    text: "Good to know. We were about to cancel our Phi Phi day off the back of a forecast." },
-  { id: "th8", author: PEOPLE.aisha, minsAgo: 2600,
-    text: "Has anyone done Railay before? Wondering how much to pack into a day bag for the boat." },
-  { id: "th9", author: PEOPLE.lakshmi, minsAgo: 2400,
-    text: "Keep it light and waterproof. You step into ankle deep water getting off the longtail, every time." },
-  { id: "th10", author: PEOPLE.gaurav, minsAgo: 1200,
-    text: "Random question, do the Bangkok rooftops need booking ahead on a weekend?" },
-  { id: "th11", author: PEOPLE.aisha, minsAgo: 900,
-    text: "A day or two ahead was enough for us. Friday and Saturday fill up first." },
-  { id: "th12", author: PEOPLE.farah, minsAgo: 15,
-    text: "Starting a shared note with everything from this group. Will share it closer to the date." },
-];
-
-// The group each destination reads from. A destination with no entry here has
-// no group yet, which is the Mauritius case.
-export const CHAT_BY_DEST = { bali: CHAT, thailand: THAILAND_CHAT };
-
 // ─── Moderation ───
 // First offence explains and offers an edit. Second offence blocks the post.
 const RULES = [
@@ -718,19 +652,6 @@ export const ago = (mins) => {
   if (mins < 1440) return `${Math.round(mins / 60)}h`;
   if (mins < 43200) return `${Math.round(mins / 1440)}d`;
   return `${Math.round(mins / 43200)}mo`;
-};
-
-export const clock = (mins) => {
-  const d = new Date(Date.now() - mins * 60000);
-  return d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
-};
-
-export const dayLabel = (mins) => {
-  const d = new Date(Date.now() - mins * 60000);
-  const days = Math.floor(mins / 1440);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 };
 
 export const track = (event, props) => console.log("[analytics]", event, props || "");

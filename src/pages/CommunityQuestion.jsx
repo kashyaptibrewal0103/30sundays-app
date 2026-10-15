@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { CornerUpLeft, Pencil, Trash2, Bookmark, Share2, MoreHorizontal, Flag, Lock, BellOff, Bell } from "lucide-react";
+import { Pencil, Trash2, Bookmark, Share2, MoreHorizontal, Flag, BellOff, Bell, BadgeCheck, ThumbsUp, CornerUpLeft } from "lucide-react";
 import { CC } from "../components/Community/tokens";
 import { useCommunity } from "../state/useCommunity";
-import { ME, getDest, checkPost, track, canPost, shortMonth } from "../data/communityData";
+import { getDest, canPost, shortMonth, ago } from "../data/communityData";
 import { Screen, Body, TopBar, Primary, Secondary, Sheet, Field, Input, Textarea } from "../components/Gift/GiftUI";
 import {
-  PAD, CARD, AuthorLine, AnswerCard, PostActions, QuoteBlock, Toast, MoreMenu,
-  IconAction, ClampText,
+  PAD, TravellerMark, TripStamp, PostActions, QuoteBlock, Toast, MoreMenu,
+  IconAction, MoreButton, postMenuItems, ClampText, LikePop,
 } from "../components/Community/CommunityUI";
 import { AnswerSheet } from "../components/Community/PostSheets";
 import { PendingEdge } from "../components/Community/PendingVariants";
@@ -27,7 +27,10 @@ export default function CommunityQuestion() {
     editQuestion, deleteQuestion, editAnswer, deleteAnswer, pendingAnswersFor, canPostNow,
   } = useCommunity();
 
-  const [compose, setCompose] = useState(null); // null | { quote }
+  // The composer is always at the foot now, so the only state it needs is
+  // which answer, if any, is being replied to, and a nudge to focus it.
+  const [quote, setQuote] = useState(null);
+  const [focusSignal, setFocusSignal] = useState(0);
   const [toast, setToast] = useState(null);
   const [editing, setEditing] = useState(false);
   const [confirmGone, setConfirmGone] = useState(false);
@@ -42,6 +45,39 @@ export default function CommunityQuestion() {
   const writable = canPost(dest);
   const readOnly = d.cohort?.state === "closed" || !writable;
 
+  // Posting order. Nothing is lifted, because the asker never picks a winner
+  // and a thread is a conversation rather than a ticket. The one exception is
+  // a label: whichever answer has the most likes is called out where it sits,
+  // so somebody scrolling knows which one other travellers trusted.
+  // answersFor returns nothing for a question that is gone, so everything
+  // below is safe to work out before we know whether there is one.
+  const ordered = answersFor(q);
+  const liked = ordered.filter(a => (a.likes || 0) + (likes[a.id] ? 1 : 0) > 0);
+  const best = liked.length > 1
+    ? liked.reduce((m, a) => (
+      ((a.likes || 0) + (likes[a.id] ? 1 : 0)) > ((m.likes || 0) + (likes[m.id] ? 1 : 0)) ? a : m
+    ))
+    : null;
+
+  // The room's own answer comes first in a room whose answers are rules, and
+  // what travellers add goes under a heading that says what it is.
+  const roots = ordered.filter(a => !a.parentId || !ordered.some(x => x.id === a.parentId));
+  const official = d.everyone ? roots.filter(a => a.author?.ops) : [];
+  const rest = d.everyone ? roots.filter(a => !a.author?.ops) : roots;
+
+  // One pair per thread view. The close says whether the answers were read,
+  // which is the only way to judge whether an answer was any good.
+  // Every hook runs before the missing-question screen below, so a thread
+  // that vanishes under the reader never changes the order they run in.
+  useDwell(
+    "question",
+    {
+      questionId: q?.id ?? qid, dest, tag: (q?.tags || [])[0] || null,
+      answerCount: ordered.length, source: params.get("src") || "feed",
+    },
+    () => ({ answersSeen: ordered.length, reachedEnd: false }),
+  );
+
   if (!q) {
     return (
       <Screen>
@@ -55,47 +91,52 @@ export default function CommunityQuestion() {
     );
   }
 
-  // Posting order. Nothing is lifted, because the asker never picks a winner
-  // and a thread is a conversation rather than a ticket. The one exception is
-  // a label: whichever answer has the most likes is called out where it sits,
-  // so somebody scrolling knows which one other travellers trusted.
-  const ordered = answersFor(q);
-  const liked = ordered.filter(a => (a.likes || 0) + (likes[a.id] ? 1 : 0) > 0);
-  const best = liked.length > 1
-    ? liked.reduce((m, a) => (
-      ((a.likes || 0) + (likes[a.id] ? 1 : 0)) > ((m.likes || 0) + (likes[m.id] ? 1 : 0)) ? a : m
-    ))
-    : null;
+  // Replies nest under the answer they reply to. Three levels is the cap: a
+  // fourth indent leaves the words in a column too narrow to read on a phone,
+  // so anything deeper is attached to its grandparent instead.
+  const MAX_DEPTH = 3;
+  const childrenOf = (parentId) => ordered.filter(a => (a.parentId || null) === parentId);
+  const countAll = (a) => {
+    const kids = ordered.filter(x => x.parentId === a.id);
+    return kids.length + kids.reduce((n, k) => n + countAll(k), 0);
+  };
 
-  // The room's own answer comes first in a room whose answers are rules, and
-  // what travellers add goes under a heading that says what it is.
-  const official = d.everyone ? ordered.filter(a => a.author?.ops) : [];
-  const rest = d.everyone ? ordered.filter(a => !a.author?.ops) : ordered;
+  const renderThread = (a, depth = 0) => {
+    const kids = depth + 1 < MAX_DEPTH ? ordered.filter(x => x.parentId === a.id) : [];
+    const deeper = depth + 1 >= MAX_DEPTH ? ordered.filter(x => x.parentId === a.id) : [];
+    return (
+      <div key={a.id}>
+        {renderAnswer(a, countAll(a))}
+        {(kids.length > 0 || deeper.length > 0) && (
+          <div style={{
+            marginTop: 12, marginLeft: 16, paddingLeft: 15,
+            borderLeft: `2px solid ${CC.line}`,
+            display: "flex", flexDirection: "column", gap: 12,
+          }}>
+            {kids.map(k => renderThread(k, depth + 1))}
+            {/* At the cap the thread stops indenting and carries on in line. */}
+            {deeper.map(k => renderThread(k, depth))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
-  // One pair per thread view. The close says whether the answers were read,
-  // which is the only way to judge whether an answer was any good.
-  useDwell(
-    "question",
-    {
-      questionId: q.id, dest, tag: (q.tags || [])[0] || null,
-      answerCount: ordered.length, source: params.get("src") || "feed",
-    },
-    () => ({ answersSeen: ordered.length, reachedEnd: false }),
-  );
-
-  const renderAnswer = (a) => (reports[a.id] ? (
+  const renderAnswer = (a, replyCount = 0) => (reports[a.id] ? (
     <ReportedNote key={a.id} />
   ) : (
-    <AnswerCard
+    <CommentAnswer
       key={a.id} answer={a} best={best?.id === a.id}
-      liked={!!likes[a.id]} bookmarked={!!bookmarks[a.id]} reported={!!reports[a.id]}
+      replyCount={replyCount}
+      liked={!!likes[a.id]}
       onLike={() => toggleLike(a.id)}
-      onCopy={() => copy("Answer")}
-      onBookmark={() => { toggleBookmark(a.id); setToast(bookmarks[a.id] ? "Removed from saved" : "Saved"); }}
-      onReply={() => setCompose({ quote: { author: a.author, text: firstLine(a.body) } })}
-      onReport={() => setReport({ id: a.id, what: "answer" })}
-      onEdit={a.mine ? () => setEditAns(a) : undefined}
-      onDelete={a.mine ? () => setKillAns(a) : undefined}
+      onReply={() => setQuote({ author: a.author, text: firstLine(a.body), parentId: a.id })}
+      menu={postMenuItems({
+        mine: !!a.mine, reported: !!reports[a.id],
+        onEdit: a.mine ? () => setEditAns(a) : undefined,
+        onDelete: a.mine ? () => setKillAns(a) : undefined,
+        onReport: () => setReport({ id: a.id, what: "answer" }),
+      })}
     />
   ));
 
@@ -128,31 +169,55 @@ export default function CommunityQuestion() {
       <Body>
         <div style={{ padding: `12px ${PAD}px 24px`, display: "flex", flexDirection: "column", gap: 12 }}>
 
-          {/* The question itself */}
-          <div style={{ ...CARD, padding: 16 }}>
+          {/* The question, laid out the way a post is: who is speaking first,
+              then what they said. Flat on the page, no card edge, so the
+              bubbles under it read as the smaller thing. */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <TravellerMark name={q.author?.name} ops={q.author?.ops} size={38} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {/* The name owns the row, with the time at the far end of it.
+                    What they can vouch for goes underneath, where it reads as
+                    a credential rather than part of their name. */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{
+                    flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 500, color: CC.ink,
+                    lineHeight: "19px",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>{q.mine ? "You" : q.author?.name}</span>
+                  <span style={{ flexShrink: 0, fontSize: 12, color: CC.soft }}>
+                    {ago(q.minsAgo)}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
+                  <BadgeCheck size={12} color={CC.teal} style={{ flexShrink: 0 }} />
+                  <TripStamp ops={q.author?.ops} stamp={q.author?.stamp} />
+                </div>
+              </div>
+            </div>
+
             <h1 style={{
-              fontSize: 19, fontWeight: 700, color: CC.ink, margin: 0,
+              fontSize: 19, fontWeight: 700, color: CC.ink, margin: "10px 0 0",
               lineHeight: "26px", letterSpacing: "-0.2px",
             }}>{q.title}</h1>
             {q.body && (
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 8 }}>
                 <ClampText>{q.body}</ClampText>
               </div>
             )}
-            {q.image && <img src={q.image} alt="" style={{ width: "100%", borderRadius: 12, marginTop: 12, display: "block" }} />}
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${CC.line}` }}>
-              {/* No dots here: the question's are up in the bar. The time
-                  sits at the foot with the actions, as it does on an answer. */}
-              <AuthorLine author={q.mine ? { ...q.author, name: "You" } : q.author} stamp={false} />
-            </div>
-            {/* Like and reply only. Save, the link and the dots are up in the
+            {q.image && <img src={q.image} alt="" style={{
+              width: "100%", maxHeight: 340, objectFit: "cover",
+              borderRadius: 12, marginTop: 12, display: "block",
+            }} />}
+            {/* Like and answer only. Save, the link and the dots are up in the
                 bar, where they stay put while the thread scrolls. */}
-            <PostActions
-              liked={!!likes[q.id]} likes={likes[q.id] ? 1 : 0}
-              minsAgo={q.minsAgo}
-              onLike={() => toggleLike(q.id)}
-              onReply={() => setCompose({ quote: null })}
-            />
+            <div style={{ marginTop: 4, borderBottom: `1px solid ${CC.line}`, paddingBottom: 4 }}>
+              <PostActions
+                liked={!!likes[q.id]} likes={(q.likes || 0) + (likes[q.id] ? 1 : 0)}
+                onLike={() => toggleLike(q.id)}
+                onReply={() => { setQuote(null); setFocusSignal(n => n + 1); }}
+              />
+            </div>
           </div>
 
           {/* An answer of this traveller's that is still being checked, or held,
@@ -174,7 +239,7 @@ export default function CommunityQuestion() {
               {official.length > 0 && (
                 <>
                   <Heading>{official.length === 1 ? "The Answer" : "The Answers"}</Heading>
-                  {official.map(a => renderAnswer(a))}
+                  {official.map(a => renderThread(a))}
                 </>
               )}
 
@@ -194,7 +259,7 @@ export default function CommunityQuestion() {
                       These are experiences, not rules. The answer above is the rule.
                     </p>
                   )}
-                  {rest.map(a => renderAnswer(a))}
+                  {rest.map(a => renderThread(a))}
                 </>
               )}
             </>
@@ -202,15 +267,7 @@ export default function CommunityQuestion() {
         </div>
       </Body>
 
-      {compose ? (
-        <AnswerSheet
-          questionId={q.id} questionTitle={q.title} quote={compose.quote}
-          isFirstAnswer={ordered.length === 0}
-          hoursSinceAsked={Math.round((q.minsAgo ?? 0) / 60)}
-          onClose={() => setCompose(null)}
-          onPosted={() => { setCompose(null); setToast("Your answer is up"); }}
-        />
-      ) : !canPostNow ? (
+      {!canPostNow ? (
         <div style={{
           flexShrink: 0, borderTop: `1px solid ${CC.line}`, background: CC.well,
           padding: `14px ${PAD}px calc(16px + env(safe-area-inset-bottom))`, textAlign: "center",
@@ -233,18 +290,16 @@ export default function CommunityQuestion() {
           </p>
         </div>
       ) : (
-        <div style={{
-          flexShrink: 0, borderTop: `1px solid ${CC.line}`, background: CC.white,
-          padding: `10px ${PAD}px calc(12px + env(safe-area-inset-bottom))`,
-        }}>
-          <button onClick={() => setCompose({ quote: null })} style={{
-            width: "100%", minHeight: 48, display: "flex", alignItems: "center", justifyContent: "center",
-            gap: 8, borderRadius: 14, border: "none", cursor: "pointer", fontFamily: "inherit",
-            background: CC.pink, color: "#fff", fontSize: 15.5, fontWeight: 700,
-          }}>
-            <CornerUpLeft size={17} /> Answer this
-          </button>
-        </div>
+        /* The next step is simply there, the way a comment field is. No
+           button in front of it, nothing to open or close. */
+        <AnswerSheet
+          questionId={q.id} questionTitle={q.title}
+          quote={quote} onClearQuote={() => setQuote(null)}
+          focusSignal={focusSignal}
+          isFirstAnswer={ordered.length === 0}
+          hoursSinceAsked={Math.round((q.minsAgo ?? 0) / 60)}
+          onPosted={() => { setQuote(null); setToast("Your answer is up"); }}
+        />
       )}
 
       {menu && (
@@ -400,6 +455,100 @@ export function EditSheet({ q, onClose, onSave }) {
         </Field>
       </div>
     </Sheet>
+  );
+}
+
+// An answer as a comment: the face outside, the words in a grey bubble, the
+// small acts on a line underneath. The question stays flat and big above, so
+// the two can never be mistaken for each other again.
+function CommentAnswer({ answer, best, liked, onLike, onReply, menu, replyCount = 0 }) {
+  const ops = !!answer.author?.ops;
+  return (
+    <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+      <TravellerMark name={answer.author?.name} ops={ops} size={32} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* No position here: a sheet anchors to its nearest positioned
+            ancestor, and it belongs to the screen, not to one bubble. */}
+        <div style={{
+          background: ops ? "#F5FCFB" : CC.well,
+          border: ops ? `1px solid ${CC.tealLine}` : "none",
+          borderRadius: 16, padding: "9px 13px 11px",
+        }}>
+          {best && (
+            <p style={{
+              display: "inline-flex", alignItems: "center", gap: 5, margin: "0 0 4px",
+              fontSize: 11, fontWeight: 800, color: CC.tealInk,
+            }}>Most Helpful</p>
+          )}
+          {/* The name row carries the time, and the dots sit in the corner of
+              the bubble they belong to. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{
+              flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: CC.ink,
+              lineHeight: "17px",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>{answer.mine ? "You" : answer.author?.name}</span>
+            <span style={{ flexShrink: 0, fontSize: 11.5, color: CC.soft }}>
+              {ago(answer.minsAgo)}
+            </span>
+            <MoreButton items={menu} style={{ margin: "-10px -8px -10px 0" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
+            {/* The team's stamp already carries the badge, so the name only
+                needs one when the stamp cannot. */}
+            {!ops && <BadgeCheck size={11} color={CC.teal} style={{ flexShrink: 0 }} />}
+            <TripStamp ops={ops} stamp={answer.author?.stamp} />
+          </div>
+          <div style={{ marginTop: 4, fontSize: 14, color: CC.ink, lineHeight: "20px" }}>
+            <QuoteBlock quote={answer.quotes} />
+            <ClampText answerId={answer.id}>{answer.body}</ClampText>
+          </div>
+          {answer.image && (
+            <img src={answer.image} alt="" style={{
+              width: "100%", maxHeight: 260, objectFit: "cover",
+              borderRadius: 12, marginTop: 8, display: "block",
+            }} />
+          )}
+          {answer.edited && (
+            <p style={{ fontSize: 11, color: CC.soft, margin: "6px 0 0" }}>Edited</p>
+          )}
+        </div>
+
+        {/* The two acts, small and grey under the bubble. Each keeps its
+            icon, so neither is a word on its own. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "3px 13px 0" }}>
+          <SmallAction
+            icon={ThumbsUp} label="Like" active={liked}
+            count={(answer.likes || 0) + (liked ? 1 : 0)}
+            onClick={onLike}
+          />
+          <SmallAction icon={CornerUpLeft} label="Reply" onClick={onReply} />
+          {replyCount > 0 && (
+            <span style={{ fontSize: 12, color: CC.soft }}>
+              {replyCount} {replyCount === 1 ? "reply" : "replies"}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Like and reply under a bubble: an icon, a word, and the count when there
+// is one. Small enough to stay out of the way of the words above it.
+function SmallAction({ icon: Icon, label, count, active, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 0",
+      border: "none", background: "none", cursor: "pointer", fontFamily: "inherit",
+      fontSize: 12, fontWeight: 700, color: active ? CC.tealInk : CC.body,
+    }}>
+      <LikePop liked={!!active}>
+        <Icon size={13} color={active ? CC.tealInk : CC.body}
+          fill={active ? CC.tealTint : "none"} />
+      </LikePop>
+      {label}{count > 0 ? ` ${count}` : ""}
+    </button>
   );
 }
 

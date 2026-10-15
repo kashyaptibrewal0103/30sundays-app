@@ -21,7 +21,7 @@ export default function CommunityGuidelines() {
 
   return (
     <Screen>
-      <TopBar title="Lounge guidelines" onBack={() => navigate(`/community/${dest}`)} />
+      <TopBar title="Community guidelines" onBack={() => navigate(`/community/${dest}`)} />
       <Body>
         <div style={{ padding: `12px ${PAD}px 40px` }}>
           <p style={{ fontSize: 14.5, color: CC.ink, margin: "0 0 18px", lineHeight: "22px" }}>
@@ -47,7 +47,7 @@ export default function CommunityGuidelines() {
           </ul>
 
           <p style={{ fontSize: 12.5, color: CC.soft, margin: "16px 2px 0", lineHeight: "18px" }}>
-            Our team reads the Sunday Lounge every day. If something here does not
+            Our team reads the Sunday Community every day. If something here does not
             sit right, tell your consultant and they will pass it on.
           </p>
         </div>

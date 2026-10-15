@@ -7,7 +7,7 @@ import { PAD, TravellerMark } from "./CommunityUI";
 import { ago } from "../../data/communityData";
 import { destData } from "../../data";
 
-// Six ways to make the Lounge look like the rest of the app rather than like a
+// Six ways to make the Community look like the rest of the app rather than like a
 // forum bolted on. Every one of these borrows a pattern that is already
 // shipping somewhere in the prototype, so none of them needs a new idea to be
 // learned.
@@ -25,7 +25,7 @@ import { destData } from "../../data";
 
 const wrap = { padding: `0 ${PAD}px` };
 
-// The app's own colours, not the Lounge's, because the point is to match.
+// The app's own colours, not the Community's, because the point is to match.
 const APP = {
   head: "#181E4C", sub: "#5A5F7D", faint: "#8E93AE", div: "#EAECF5",
   good: "#027A48", goodBg: "#ECFDF3",
@@ -504,7 +504,7 @@ export const NATIVE_STYLES = [
   },
   {
     id: "photos", n: 3, name: "Photo rows", tag: "from both", Comp: PhotoRows,
-    note: "Hotel rows with the day card's thumbnail. The Lounge stops looking like a text feature and starts looking like the rest of the trip, and the photo gives the subject away before the title is read.",
+    note: "Hotel rows with the day card's thumbnail. The Community stops looking like a text feature and starts looking like the rest of the trip, and the photo gives the subject away before the title is read.",
     cost: "The photos are of the destination, not of the question, so they decorate rather than inform, and by the tenth row the same beach has been used twice.",
   },
   {

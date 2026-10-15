@@ -156,11 +156,11 @@ export default function Account({ userState, leadData, setUserState, setLeadData
 
   // Single settings list (matches the app): TCS certificate sits above Logout.
   const mainList = [
-    // The Lounge's permanent door. Everything else that opens it hangs off a
+    // The Community's permanent door. Everything else that opens it hangs off a
     // trip, so somebody between trips has no way in without this row.
-    { icon: MessagesSquare, label: "Sunday Lounge", onClick: () => {
+    { icon: MessagesSquare, label: "Sunday Community", onClick: () => {
       communityTrack("community_lounge_entry_tapped", { surface: "account_row" });
-      navigate("/lounge");
+      navigate("/community");
     } },
     { icon: Wallet, label: "Wallet", onClick: () => navigate("/wallet") },
     { icon: Gift, label: "Gift cards", onClick: () => navigate("/gift-cards") },

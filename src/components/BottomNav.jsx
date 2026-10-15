@@ -11,7 +11,7 @@ const tabs = [
 ];
 
 // Home + its parallel design variants all map to the Explore tab.
-const HOME_ROUTES = ["/", "/v3", "/v4", "/v5", "/v6", "/ai", ...HOME_LAB_ROUTES];
+const HOME_ROUTES = ["/", "/v3", "/v4", "/v5", "/v6", "/ai", "/home-v5", ...HOME_LAB_ROUTES];
 // Top-level paths that always show the nav
 const showOn = new Set([...HOME_ROUTES, "/trips", "/account"]);
 

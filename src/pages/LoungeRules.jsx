@@ -18,7 +18,7 @@ export default function LoungeRules() {
 
   return (
     <Screen>
-      <TopBar title="Rules Row" sub="Five options, in place" onBack={() => navigate("/lounge-index")} />
+      <TopBar title="Rules Row" sub="Five options, in place" onBack={() => navigate("/community-index")} />
       <Body>
         <div style={{ padding: "16px 0 40px" }}>
           <Block n={0} name="What Is There Now" note="The same card as a room, which is the problem.">

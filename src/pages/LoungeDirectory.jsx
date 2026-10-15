@@ -10,12 +10,12 @@ import { useCommunity } from "../state/useCommunity";
 import { Screen, Body, TopBar } from "../components/Gift/GiftUI";
 import { PAD, SectionBar, SectionHead } from "../components/Community/CommunityUI";
 
-// Every Lounge screen, state and edge case, on one page.
+// Every Community screen, state and edge case, on one page.
 //
 // Two audiences use this. Somebody who wants to see the product walks the
 // flow at the top in order. Somebody building or testing one screen jumps
 // straight to it from the lists below, including the states that are hard to
-// reach by hand: an empty room, a failed post, a chat that has closed.
+// reach by hand: an empty room, a failed post, a room whose month has passed.
 
 export default function LoungeDirectory() {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export default function LoungeDirectory() {
 
   return (
     <Screen>
-      <TopBar title="Lounge Screens" sub="Every screen and state" onBack={() => navigate("/lounge")} />
+      <TopBar title="Community Screens" sub="Every screen and state" onBack={() => navigate("/community")} />
       <Body>
         <div style={{ padding: "14px 0 44px" }}>
 
@@ -57,7 +57,7 @@ export default function LoungeDirectory() {
           <SectionHead right="In order">The whole flow</SectionHead>
           <Group>
             <Row n={1} icon={Briefcase} title="A trip screen"
-              desc="The band that opens the Lounge, under the trip"
+              desc="The band that opens the Community, under the trip"
               onClick={go("/trips/trip-1")} />
             <Row n={2} icon={MessageCircleQuestion} title="The destination room"
               desc="Opened from the trip, so back returns to the trip"
@@ -68,9 +68,9 @@ export default function LoungeDirectory() {
             <Row n={4} icon={ArrowRightLeft} title="The room switcher"
               desc="Tap the room name in the bar to change room"
               onClick={go("/community/thailand")} />
-            <Row n={5} icon={Home} title="Lounge home"
+            <Row n={5} icon={Home} title="Community home"
               desc="Every room, and questions from all of them"
-              onClick={go("/lounge")} last />
+              onClick={go("/community")} last />
           </Group>
 
           <SectionBar />
@@ -94,11 +94,11 @@ export default function LoungeDirectory() {
           {/* ── The screens themselves ── */}
           <SectionHead right="Thailand, October 2026">The screens</SectionHead>
           <Group>
-            <Row icon={Home} title="Lounge home"
+            <Row icon={Home} title="Community home"
               desc="Search, rooms, and questions from every room"
-              onClick={go("/lounge")} />
+              onClick={go("/community")} />
             <Row icon={MessageCircleQuestion} title="A destination room"
-              desc="Month band, group chat, filters, questions"
+              desc="Cover, who is going, filters, questions"
               onClick={go("/community/thailand")} />
             <Row icon={Plane} tint={CC.tealTint} iconColor={CC.teal} title="General Queries"
               desc="Visas, passports, forex. Anyone who booked can answer"
@@ -109,36 +109,33 @@ export default function LoungeDirectory() {
             <Row icon={Users} title="A thread in the India room"
               desc="Our team's answer, then what travellers found"
               onClick={go("/community/india/q/in1")} />
-            <Row icon={MessagesSquare} title="Group chat"
-              desc="19 travellers going the same month"
-              onClick={go("/community/thailand/chat")} />
             <Row icon={Search} title="Search one room"
               desc="Top questions first, then live results"
               onClick={go("/community/thailand/search")} />
             <Row icon={Search} title="Search everywhere"
               desc="The same screen, across all rooms"
-              onClick={go("/lounge/search")} />
+              onClick={go("/community/search")} />
             <Row icon={Bookmark} title="Saved questions"
               desc="Whatever this traveller bookmarked"
               onClick={go("/community/thailand/saved")} />
             <Row icon={Bell} title="Notifications"
               desc="Answers, moderation outcomes, appeals"
-              onClick={go("/lounge/notifications")} />
+              onClick={go("/community/notifications")} />
             <Row icon={ShieldCheck} title="Guidelines"
-              desc="The rules, now a row on the Lounge home"
+              desc="The rules, now a row on the Community home"
               onClick={go("/community/thailand/guidelines")} />
             <Row icon={User} title="Your profile"
               desc="Photo, one line about you, delete everything you wrote"
-              onClick={go("/lounge/profile")} />
+              onClick={go("/community/profile")} />
             <Row icon={Bell} title="Notification settings"
               desc="What reaches you, and muted questions"
-              onClick={go("/lounge/settings")} />
+              onClick={go("/community/settings")} />
             <Row icon={FileText} title="Your posts"
               desc="Every question and answer this traveller wrote"
-              onClick={go("/lounge/my-posts")} />
+              onClick={go("/community/my-posts")} />
             <Row icon={Lightbulb} title="Suggest a change"
               desc="A feature, a rule, or something broken, sent to the team"
-              onClick={go("/lounge/suggest")} last />
+              onClick={go("/community/suggest")} last />
           </Group>
 
           <SectionBar />
@@ -147,14 +144,14 @@ export default function LoungeDirectory() {
           <SectionHead>Edge cases</SectionHead>
           <Group>
             <Row icon={Lock} tint={CC.goldTint} iconColor={CC.goldInk} title="A room you have not booked"
-              desc="Bali. Reading only, no chat, no asking"
+              desc="Bali. Reading only, no asking"
               onClick={go("/community/bali")} />
-            <Row icon={Users} title="No group chat yet"
-              desc="Mauritius, below the threshold of eight"
+            <Row icon={Users} title="A quiet room"
+              desc="Mauritius, only a few going so far"
               onClick={go("/community/mauritius")} />
-            <Row icon={MessagesSquare} title="A chat that has closed"
-              desc="Vietnam, the month has passed"
-              onClick={go("/community/vietnam/chat")} />
+            <Row icon={MessagesSquare} title="A month that has passed"
+              desc="Vietnam, closed but still readable"
+              onClick={go("/community/vietnam")} />
             <Row icon={HelpCircle} title="A question nobody answered"
               desc="Shows Needs an answer, and the offer to write one"
               onClick={go("/community/thailand/q/t6")} />
@@ -172,7 +169,7 @@ export default function LoungeDirectory() {
               onClick={failNext} />
             <Row icon={Bell} title="Notifications"
               desc="Everything that happened to this traveller's posts"
-              onClick={go("/lounge/notifications")} />
+              onClick={go("/community/notifications")} />
             <Row icon={Lock} tint={CC.pinkTint} iconColor={CC.pink} title="Posting paused"
               desc="Three blocked posts. Reading, liking and saving carry on"
               onClick={pauseNow} />
@@ -227,41 +224,41 @@ export default function LoungeDirectory() {
           <SectionHead right="Not live">Design options</SectionHead>
           <Group>
             <Row icon={Layers} title="Room list"
-              desc="Eight ways to show the rooms on Lounge home"
-              onClick={go("/lounge-rooms")} />
+              desc="Eight ways to show the rooms on Community home"
+              onClick={go("/community-rooms")} />
             <Row icon={ArrowRightLeft} title="Trip mark in the switcher"
               desc="Five ways to say which destination is yours"
-              onClick={go("/lounge-switcher")} />
+              onClick={go("/community-switcher")} />
             <Row icon={Layers} title="Trip screen entry"
               desc="Eleven layouts for the band on a trip"
               onClick={go("/community-entries")} />
             <Row icon={Layers} title="Question card styles"
               desc="Seven directions for the feed"
-              onClick={go("/lounge-styles")} />
+              onClick={go("/community-styles")} />
             <Row icon={Layers} title="Card styles, app native"
               desc="The same, built from the app's own patterns"
-              onClick={go("/lounge-native")} />
+              onClick={go("/community-native")} />
             <Row icon={Layers} title="Card styles, mixed"
               desc="The set the current design came from"
-              onClick={go("/lounge-mix")} />
+              onClick={go("/community-mix")} />
             <Row icon={Layers} title="Card meta row"
               desc="Six ways to place the count and the time"
-              onClick={go("/lounge-meta")} />
+              onClick={go("/community-meta")} />
             <Row icon={Layers} title="Reply rows"
               desc="Six ways to cut the height of an answer"
-              onClick={go("/lounge-rows")} />
+              onClick={go("/community-rows")} />
             <Row icon={Layers} title="Room top block"
               desc="Layouts for the band above the questions"
-              onClick={go("/lounge-layouts")} />
+              onClick={go("/community-layouts")} />
             <Row icon={Layers} title="Trip band copy"
               desc="Headline options for the entry band"
-              onClick={go("/lounge-copy")} />
+              onClick={go("/community-copy")} />
             <Row icon={Layers} title="Count signals"
               desc="Which numbers earn their place"
-              onClick={go("/lounge-signals")} />
+              onClick={go("/community-signals")} />
             <Row icon={Layers} title="Parts"
               desc="The small pieces on their own"
-              onClick={go("/lounge-parts")} last />
+              onClick={go("/community-parts")} last />
           </Group>
         </div>
       </Body>

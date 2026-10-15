@@ -13,13 +13,13 @@ import { ME, track } from "../../data/communityData";
 // themselves are a row on the screen behind this one, so they are not repeated.
 
 const ROWS = [
-  { key: "profile", icon: User, to: "/lounge/profile",
+  { key: "profile", icon: User, to: "/community/profile",
     label: "Your Profile", sub: "Photo, name, and what you have seen" },
-  { key: "notify", icon: Bell, to: "/lounge/settings",
+  { key: "notify", icon: Bell, to: "/community/settings",
     label: "Notification Settings", sub: "Choose what reaches you" },
-  { key: "posts", icon: FileText, to: "/lounge/my-posts",
+  { key: "posts", icon: FileText, to: "/community/my-posts",
     label: "Your Posts", sub: "Everything you asked and answered" },
-  { key: "suggest", icon: Lightbulb, to: "/lounge/suggest",
+  { key: "suggest", icon: Lightbulb, to: "/community/suggest",
     label: "Suggest A Change", sub: "A feature, a rule, anything off" },
 ];
 
@@ -27,12 +27,12 @@ export default function LoungeMenu({ onClose, onGo }) {
   const { profile } = useCommunity();
 
   return (
-    <Sheet title="Sunday Lounge" onClose={onClose}>
+    <Sheet title="Sunday Community" onClose={onClose}>
       <div style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom))" }}>
         {/* Who you are here, at the top, because the rest of the menu is about
             what happens to what this person writes. */}
         <button
-          onClick={() => { track("community_menu_row", { row: "profile" }); onGo("/lounge/profile"); }}
+          onClick={() => { track("community_menu_row", { row: "profile" }); onGo("/community/profile"); }}
           style={{
             display: "flex", alignItems: "center", gap: 12, width: "100%",
             padding: "12px 0", border: "none", background: "none", cursor: "pointer",

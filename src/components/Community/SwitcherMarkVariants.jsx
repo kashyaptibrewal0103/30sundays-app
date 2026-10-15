@@ -194,7 +194,7 @@ function List({ children }) {
       <div style={{ display: "flex", flexDirection: "column" }}>{children}</div>
       <p style={{
         fontSize: 14.5, fontWeight: 700, color: CC.pink, margin: "12px 0 10px",
-      }}>Sunday Lounge Home ›</p>
+      }}>Sunday Community Home ›</p>
     </div>
   );
 }

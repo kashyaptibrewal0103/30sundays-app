@@ -12,6 +12,12 @@ const LABS = [
   { to: "/home-lab/cards", t: "Ten ways to show six", s: "The country grid, ten shapes." },
   { to: "/home-lab/cta", t: "Five ways to ask", s: "Plan my trip, five shapes." },
   { to: "/home-lab/plans", t: "Ten ways back in", s: "The existing plan block, ten shapes." },
+  { to: "/home-lab/lines", t: "Six line changes", s: "How the line on the video swaps." },
+  { to: "/home-lab/proof", t: "Five ways to show the proof", s: "The Google rating and the traveller count." },
+  { to: "/home-lab/line", t: "One line, five ways", s: "The Community under the pass, as a line." },
+  { to: "/home-lab/booked-hero", t: "Booked home", s: "The clip, with the pass over its bottom. Live." },
+  { to: "/home-lab/booked-flat", t: "Booked home, no clip", s: "The plainer opening, kept to compare." },
+  { to: "/home-lab/booked", t: "Home, once you have booked", s: "Your trip and the Community at the top, five shapes." },
 ];
 
 function Group({ title, children }) {

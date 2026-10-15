@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Lock, AlertTriangle, ImagePlus, X as XIcon, SendHorizontal } from "lucide-react";
 import { CC } from "./tokens";
 import { useCommunity } from "../../state/useCommunity";
-import { ME, checkPost, track } from "../../data/communityData";
+import { track } from "../../data/communityData";
 import { Sheet, Primary, Secondary } from "../Gift/GiftUI";
 import { QuoteBlock } from "./CommunityUI";
 
@@ -193,7 +193,8 @@ export function BlockedSheet({ rule, onClose }) {
 // So: no scrim, no captured scroll, one line high until there is something to
 // say, and it grows from there.
 export function AnswerSheet({
-  questionId, questionTitle, quote, isFirstAnswer, hoursSinceAsked, onClose, onPosted,
+  questionId, questionTitle, quote, onClearQuote, focusSignal,
+  isFirstAnswer, hoursSinceAsked, onClose, onPosted,
 }) {
   const { postAnswer } = useCommunity();
   const [body, setBody] = useState("");
@@ -212,13 +213,21 @@ export function AnswerSheet({
     el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
   };
 
-  useEffect(() => { field.current?.focus(); }, []);
-
-  // Opened, then either posted or left. A reply is counted separately from an
-  // answer, because they are different acts on the same screen.
+  // The bar lives on the thread now, so focus only when asked for: a Reply
+  // tap, or the question's own Answer action. Never on page load, where a
+  // keyboard jumping up is an ambush.
   useEffect(() => {
+    if (quote || focusSignal) field.current?.focus();
+  }, [quote, focusSignal]);
+
+  // Started means touched, not rendered. A reply is counted separately from
+  // an answer, because they are different acts on the same screen.
+  const started = useRef(false);
+  const markStarted = () => {
+    if (started.current) return;
+    started.current = true;
     track("community_answer_started", { questionId, isReply: !!quote });
-  }, [questionId, quote]);
+  };
 
   // The answer lands in the thread and the check runs behind it, so the only
   // failure left in here is the network.
@@ -234,7 +243,12 @@ export function AnswerSheet({
       }
       postAnswer(questionId, {
         body, images, questionTitle, isFirstAnswer, hoursSinceAsked, isReply: !!quote,
+        parentId: quote?.parentId || null,
       });
+      // The bar stays mounted, so it empties itself for the next thought.
+      setBody("");
+      setImages([]);
+      started.current = false;
       onPosted();
     }, 700);
   };
@@ -251,23 +265,27 @@ export function AnswerSheet({
         </div>
       )}
 
-      {/* Who is about to speak, in one line rather than a panel. */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{
-          flex: 1, minWidth: 0, fontSize: 11.5, color: CC.body,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
-          {ME.name} · went to {ME.stamp.destination}, {ME.stamp.month}
-        </span>
-        <button onClick={onClose} aria-label="Close" style={{
-          width: 26, height: 26, borderRadius: "50%", flexShrink: 0, border: "none",
-          background: CC.well, cursor: "pointer", display: "grid", placeItems: "center",
-        }}><XIcon size={13} color={CC.body} /></button>
-      </div>
+      {onClose && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+          <button onClick={onClose} aria-label="Close" style={{
+            width: 26, height: 26, borderRadius: "50%", flexShrink: 0, border: "none",
+            background: CC.well, cursor: "pointer", display: "grid", placeItems: "center",
+          }}><XIcon size={13} color={CC.body} /></button>
+        </div>
+      )}
 
       {quote && (
-        <div style={{ marginBottom: 8 }}>
-          <QuoteBlock quote={quote} />
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <QuoteBlock quote={quote} />
+          </div>
+          {onClearQuote && (
+            <button onClick={onClearQuote} aria-label="Stop replying to this" style={{
+              width: 26, height: 26, borderRadius: "50%", flexShrink: 0, border: "none",
+              background: CC.well, cursor: "pointer", display: "grid", placeItems: "center",
+              marginTop: 4,
+            }}><XIcon size={13} color={CC.body} /></button>
+          )}
         </div>
       )}
 
@@ -302,6 +320,7 @@ export function AnswerSheet({
           ref={field}
           rows={1}
           value={body}
+          onFocus={markStarted}
           onChange={(e) => { setBody(e.target.value); grow(e.target); }}
           placeholder="What would you tell them"
           style={{

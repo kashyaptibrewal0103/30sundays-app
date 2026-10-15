@@ -9,7 +9,7 @@ import { track } from "../data/communityData";
 
 const MAX = 600;
 
-// A way to tell the team the Lounge itself is wrong.
+// A way to tell the team the Community itself is wrong.
 //
 // Reports are about one post. This is about the room: a rule that does not fit,
 // a room that should exist, something that keeps getting in the way. It is not
@@ -38,7 +38,7 @@ export default function CommunitySuggest() {
   if (sent) {
     return (
       <Screen>
-        <TopBar title="Suggest A Change" onBack={() => navigate("/lounge")} />
+        <TopBar title="Suggest A Change" onBack={() => navigate("/community")} />
         <Body>
           <div style={{ padding: `56px ${PAD}px`, textAlign: "center" }}>
             <span style={{
@@ -50,10 +50,10 @@ export default function CommunitySuggest() {
             </h3>
             <p style={{ fontSize: 14, color: CC.body, margin: 0, lineHeight: "21px" }}>
               A real person reads every one of these. If we act on it you will see
-              it show up in the Lounge.
+              it show up in the Community.
             </p>
             <div style={{ marginTop: 26 }}>
-              <Primary onClick={() => navigate("/lounge")}>Back To The Lounge</Primary>
+              <Primary onClick={() => navigate("/community")}>Back To The Community</Primary>
             </div>
           </div>
         </Body>
@@ -73,7 +73,7 @@ export default function CommunitySuggest() {
       <Body>
         <div style={{ padding: `18px ${PAD}px 30px` }}>
           <p style={{ margin: "0 0 18px", fontSize: 14, color: CC.body, lineHeight: "21px" }}>
-            Tell us what would make the Lounge better. This goes to the 30 Sundays
+            Tell us what would make the Community better. This goes to the 30 Sundays
             team, not to other travellers.
           </p>
 

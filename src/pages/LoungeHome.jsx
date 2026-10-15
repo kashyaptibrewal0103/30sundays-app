@@ -5,25 +5,29 @@ import { CC } from "../components/Community/tokens";
 import { useCommunity } from "../state/useCommunity";
 import { getDest, roomOrder, DESTINATIONS } from "../data/communityData";
 import { Screen, Body, TopBar } from "../components/Gift/GiftUI";
-import { PAD, QuestionCard, SectionHead } from "../components/Community/CommunityUI";
+import { PAD, FeedPostCard, SectionHead, Toast } from "../components/Community/CommunityUI";
 import { AskSheet } from "./CommunityFeed";
 import LoungeMenu from "../components/Community/LoungeMenu";
 import { RulesLink } from "../components/Community/RulesRowVariants";
 
-// The whole Lounge, one level up from a room.
+// The whole Community, one level up from a room.
 //
-// Nobody lands here from the app: tapping Sunday Lounge opens the trip they
+// Nobody lands here from the app: tapping Sunday Community opens the trip they
 // are on. This is where the back arrow goes, so it is a browse screen rather
 // than a hub, and it is ordered that way. Rooms first, because the room you
 // are in is the likeliest tap. The mixed feed is underneath, for reading.
 
 export default function LoungeHome() {
   const navigate = useNavigate();
-  const { liveQuestionsFor, answersFor, reports, unreadNotifications, canPostNow } = useCommunity();
+  const {
+    liveQuestionsFor, answersFor, reports, reportPost, unreadNotifications, canPostNow,
+    likes, toggleLike, bookmarks, toggleBookmark,
+  } = useCommunity();
 
   // The mixed feed pages in the same way a room does.
   const [ask, setAsk] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const PAGE = 8;
   const [limit, setLimit] = useState(PAGE);
@@ -57,14 +61,14 @@ export default function LoungeHome() {
   return (
     <Screen>
       <TopBar
-        title="Sunday Lounge"
+        title="Sunday Community"
         onBack={() => navigate("/")}
         right={
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             {/* Everything that happened to this traveller's posts. The count is
                 the only nudge most of it gets, since almost none of it pushes. */}
             <button
-              onClick={() => navigate("/lounge/notifications")}
+              onClick={() => navigate("/community/notifications")}
               aria-label="Notifications"
               style={{
                 position: "relative", width: 38, height: 38, borderRadius: "50%", border: "none",
@@ -111,7 +115,7 @@ export default function LoungeHome() {
       <Body>
         <div style={{ padding: "14px 0 92px" }}>
           <div style={{ padding: `0 ${PAD}px 18px` }}>
-            <button onClick={() => navigate("/lounge/search")} style={{
+            <button onClick={() => navigate("/community/search")} style={{
               display: "flex", alignItems: "center", gap: 9, width: "100%",
               height: 46, padding: "0 13px", borderRadius: 12,
               background: CC.well, border: `1px solid ${CC.line}`,
@@ -119,24 +123,27 @@ export default function LoungeHome() {
             }}>
               <Search size={17} color={CC.soft} style={{ flexShrink: 0 }} />
               <span style={{ fontSize: 15, color: CC.soft }}>
-                Search everything in the Lounge
+                Search everything in the Community
               </span>
             </button>
           </div>
 
-          {/* The two rooms this traveller can write in keep full rows, with a
-              coloured edge saying which kind each is. */}
-          <div style={{ padding: `0 ${PAD}px`, display: "flex", flexDirection: "column", gap: 8 }}>
-
-            {/* The rules used to be a word in the header, which is where things
-                go to be ignored. A hairline shelf above the rooms is read on
-                the way past, and gives up nothing to the rooms below it. */}
+          {/* The rules used to be a word in the header, which is where things
+              go to be ignored. A hairline shelf above the rooms is read on
+              the way past, and gives up nothing to the rooms below it. */}
+          <div style={{ padding: `0 ${PAD}px` }}>
             <RulesLink onClick={() => navigate("/community/thailand/guidelines")} />
+          </div>
 
+          {/* The two rooms this traveller can write in, as a groups list:
+              a square photo, the name, and what is new in there. */}
+          <SectionHead style={{ marginTop: 16 }}>Your Rooms</SectionHead>
+          <div style={{ padding: `0 ${PAD}px`, display: "flex", flexDirection: "column", gap: 4 }}>
             {live.map(id => (
               <RoomRow
                 key={id} id={id}
                 count={liveQuestionsFor(id).length}
+                fresh={liveQuestionsFor(id).filter(q => (q.minsAgo ?? 0) <= 1440).length}
                 onOpen={() => navigate(`/community/${id}`)}
               />
             ))}
@@ -181,15 +188,32 @@ export default function LoungeHome() {
 
           <div style={{ height: 24 }} />
 
-          <SectionHead>All Questions</SectionHead>
-          <div style={{ padding: `0 ${PAD}px`, display: "flex", flexDirection: "column", gap: 8 }}>
-            {page.map(({ q, room }) => (
-              <QuestionCard
-                key={`${room}-${q.id}`} q={q}
-                room={getDest(room).short || getDest(room).name}
-                answerCount={answersFor(q).length}
-                onClick={() => navigate(`/community/${room}/q/${q.id}`)}
-              />
+          <SectionHead>From Your Rooms</SectionHead>
+          {/* One feed across every room, each post carrying its room's name,
+              parted by the grey bar every feed uses. */}
+          <div style={{ borderTop: `1px solid ${CC.line}` }}>
+            {page.map(({ q, room }, i) => (
+              <div key={`${room}-${q.id}`}>
+                {i > 0 && <div style={{ height: 6, background: CC.well }} />}
+                <FeedPostCard
+                  q={q}
+                  room={getDest(room).short || getDest(room).name}
+                  answerCount={answersFor(q).length}
+                  likeCount={(q.likes || 0) + (likes[q.id] ? 1 : 0)}
+                  liked={!!likes[q.id]}
+                  saved={!!bookmarks[q.id]}
+                  onClick={() => navigate(`/community/${room}/q/${q.id}`)}
+                  onLike={() => toggleLike(q.id)}
+                  onSave={() => { toggleBookmark(q.id); setToast(bookmarks[q.id] ? "Removed from saved" : "Saved"); }}
+                  onCopy={() => {
+                    // A rejected clipboard write is silent otherwise, and an
+                    // unhandled rejection in the console.
+                    try { navigator.clipboard?.writeText(`${window.location.origin}/community/${room}/q/${q.id}`)?.catch(() => {}); } catch { /* noop */ }
+                    setToast("Link copied");
+                  }}
+                  onReport={() => { reportPost(q.id, "Reported from the feed"); setToast("Reported. It is gone from your feed."); }}
+                />
+              </div>
             ))}
           </div>
 
@@ -229,6 +253,8 @@ export default function LoungeHome() {
         />
       )}
 
+      {toast && <Toast onDone={() => setToast(null)}>{toast}</Toast>}
+
       {ask && (
         <AskSheet
           dest={live[0]}
@@ -241,21 +267,19 @@ export default function LoungeHome() {
   );
 }
 
-// A room says what it is and how much is in it. The edge colour says which
-// kind it is without a word being spent on it.
-export function RoomRow({ id, count, onOpen }) {
+// A room in the groups list: a square photo, the name, and what is new. No
+// card edge; the photo does the identifying, the way a groups list does it.
+export function RoomRow({ id, count, fresh = 0, onOpen }) {
   const d = DESTINATIONS[id] || {};
-  const trip = id !== "india";
   return (
     <button onClick={onOpen} style={{
-      display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left",
-      cursor: "pointer", fontFamily: "inherit", padding: "13px 14px",
-      background: CC.white, borderRadius: 14, border: `1px solid ${CC.line}`,
-      borderLeft: `3px solid ${trip ? CC.gold : CC.teal}`,
+      display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
+      cursor: "pointer", fontFamily: "inherit", padding: "9px 0",
+      background: "none", border: "none",
     }}>
       {d.hero ? (
         <span style={{
-          width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
+          width: 48, height: 48, borderRadius: 12, overflow: "hidden", flexShrink: 0,
           background: CC.mist, display: "block",
         }}>
           <img src={d.hero} alt="" style={{
@@ -264,20 +288,28 @@ export function RoomRow({ id, count, onOpen }) {
         </span>
       ) : (
         <span style={{
-          width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+          width: 48, height: 48, borderRadius: 12, flexShrink: 0,
           background: CC.tealTint, display: "grid", placeItems: "center",
-        }}><Plane size={18} color={CC.teal} /></span>
+        }}><Plane size={21} color={CC.teal} /></span>
       )}
 
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{
-          display: "block", fontSize: 15, fontWeight: 700, color: CC.ink,
+          display: "block", fontSize: 15.5, fontWeight: 700, color: CC.ink,
           letterSpacing: "-0.1px",
         }}>
           {d.name}{d.month ? `, ${d.month}` : ""}
         </span>
-        <span style={{ display: "block", marginTop: 3, fontSize: 12, color: CC.body }}>
-          {count} questions
+        <span style={{ display: "block", marginTop: 3, fontSize: 12.5, color: CC.body }}>
+          {fresh > 0 ? (
+            <>
+              <span style={{
+                display: "inline-block", width: 7, height: 7, borderRadius: "50%",
+                background: CC.teal, marginRight: 6, verticalAlign: "1px",
+              }} />
+              {fresh} new {fresh === 1 ? "question" : "questions"}
+            </>
+          ) : `${count} questions`}
         </span>
       </span>
       <ChevronRight size={17} color={CC.soft} style={{ flexShrink: 0 }} />

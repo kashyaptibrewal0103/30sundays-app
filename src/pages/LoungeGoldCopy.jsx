@@ -6,7 +6,6 @@ import { Screen, Body, TopBar } from "../components/Gift/GiftUI";
 import { PAD } from "../components/Community/CommunityUI";
 import { GOLD_VARIANTS } from "../components/Community/GoldContentVariants";
 import { getDest, COHORT_THRESHOLD } from "../data/communityData";
-import { useCommunity } from "../state/useCommunity";
 
 // The golden band is settled. This screen is only about the words inside it.
 //
@@ -17,10 +16,9 @@ import { useCommunity } from "../state/useCommunity";
 export default function LoungeGoldCopy() {
   const navigate = useNavigate();
   const [picked, setPicked] = useState(null);
-  const { unreadFor } = useCommunity();
 
   const d = getDest("thailand");
-  const unread = unreadFor("thailand");
+  const unread = 0;
 
   // Week one: three bookings, nothing asked, nothing unread.
   const dayOne = { ...d, cohort: { ...d.cohort, members: 3, state: "below" } };

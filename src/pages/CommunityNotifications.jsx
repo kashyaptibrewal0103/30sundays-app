@@ -11,7 +11,7 @@ import { ago, track } from "../data/communityData";
 
 // Everything that happened to this traveller's posts, in one list.
 //
-// Most of what the Lounge has to say does not earn a push. It lands here
+// Most of what the Community has to say does not earn a push. It lands here
 // instead, and the badge on the way in is the only nudge it gets.
 
 const LOOK = {
@@ -41,7 +41,7 @@ export default function CommunityNotifications() {
 
   return (
     <Screen>
-      <TopBar title="Notifications" onBack={() => navigate("/lounge")} />
+      <TopBar title="Notifications" onBack={() => navigate("/community")} />
       <Body>
         {notifications.length === 0 ? (
           <div style={{ textAlign: "center", padding: `40px ${PAD}px` }}>

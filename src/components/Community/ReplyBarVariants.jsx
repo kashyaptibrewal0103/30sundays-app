@@ -139,7 +139,7 @@ export function ReplyWithYou({ onSend }) {
 
 /* ═══ E. A pill in the corner ═══ */
 // No bar at all, so the thread runs to the bottom of the screen. Matches the
-// Ask pill on the Lounge, which is the same shaped job.
+// Ask pill on the Community, which is the same shaped job.
 
 export function ReplyPill({ onOpen }) {
   return (
@@ -172,7 +172,7 @@ export const REPLY_VARIANTS = [
     cost: "The tallest of the five, and the stamp line repeats what the posted answer will show anyway.",
     Comp: ReplyWithYou },
   { id: "pill", n: "E", name: "A pill in the corner", weight: "0px", tag: "No bar",
-    note: "The thread runs to the bottom of the screen. Matches the Ask pill on the Lounge, which is the same shaped job.",
+    note: "The thread runs to the bottom of the screen. Matches the Ask pill on the Community, which is the same shaped job.",
     cost: "Covers the last answer, and it is the furthest thing from just typing.",
     Comp: ReplyPill, opens: true, floating: true },
 ];

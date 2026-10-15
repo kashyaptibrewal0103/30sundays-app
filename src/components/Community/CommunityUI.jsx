@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import {
   BadgeCheck, Heart, Link2, Bookmark, CornerUpLeft, Lock, Pin, ChevronRight,
-  MessageCircle, ImagePlus, X as XIcon, ArrowLeft, SendHorizontal, Flag, Pencil, Trash2,
-  ChevronDown, ChevronUp, User, Baby, MoreHorizontal,
+  X as XIcon, ArrowLeft, Flag, Pencil, Trash2, ThumbsUp, MessageCircle, Link2 as LinkIcon,
+  ChevronDown, ChevronUp, MoreHorizontal,
 } from "lucide-react";
 // The app palette is no longer used here; Community has its own, in tokens.
 import { Sheet } from "../Gift/GiftUI";
@@ -33,13 +33,18 @@ export function initialsFor(name) {
 }
 
 export function TravellerMark({ name, ops, size = 36 }) {
+  // The team answers as 30 Sundays, so it wears the brand's own mark rather
+  // than the generic tick every verified traveller already carries.
   if (ops) {
     return (
       <span style={{
         width: size, height: size, borderRadius: "50%", flexShrink: 0,
-        background: CC.tealTint, display: "grid", placeItems: "center",
+        background: CC.white, border: `1px solid ${CC.tealLine}`,
+        display: "grid", placeItems: "center", overflow: "hidden",
       }}>
-        <BadgeCheck size={size * 0.52} color={CC.teal} />
+        <img src="/logo-mark.png" alt="30 Sundays" style={{
+          width: size * 0.78, height: size * 0.78, objectFit: "contain", display: "block",
+        }} />
       </span>
     );
   }
@@ -55,7 +60,7 @@ export function TravellerMark({ name, ops, size = 36 }) {
 
 // Where, when, and who went, in as few characters as it takes. Everybody in
 // here is a verified traveller, so saying so on every line says nothing.
-export function TripStamp({ stamp, adults, children, ops, style }) {
+export function TripStamp({ stamp, ops, style }) {
   if (ops) {
     return (
       <span style={{
@@ -67,21 +72,13 @@ export function TripStamp({ stamp, adults, children, ops, style }) {
     );
   }
   if (!stamp) return null;
+  // Party size is gone: it never changed whether an answer was worth reading.
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 4, flexWrap: "wrap",
       fontSize: 11.5, fontWeight: 600, color: CC.tealInk, ...style,
     }}>
       {stamp.destination}, {shortMonth(stamp.month)}
-      {adults > 0 && (
-        <>
-          <span style={{ color: CC.tealLine }}>·</span>
-          {adults}<User size={12} color={CC.teal} />
-        </>
-      )}
-      {children > 0 && (
-        <>{children}<Baby size={12} color={CC.teal} /></>
-      )}
     </span>
   );
 }
@@ -98,10 +95,14 @@ export function AuthorLine({ author, minsAgo, stamp = true, right }) {
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <p style={{
-            flex: 1, minWidth: 0,
-            fontSize: 14, fontWeight: 700, color: CC.ink, margin: 0, lineHeight: "18px",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>{author?.name}</p>
+            flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 5,
+            fontSize: 14, fontWeight: 600, color: CC.ink, margin: 0, lineHeight: "18px",
+          }}>
+            <span style={{
+              minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>{author?.name}</span>
+            <BadgeCheck size={13} color={CC.teal} style={{ flexShrink: 0 }} />
+          </p>
           {right || (minsAgo != null && (
             <span style={{ flexShrink: 0, fontSize: 12, color: CC.soft }}>{ago(minsAgo)}</span>
           ))}
@@ -109,8 +110,7 @@ export function AuthorLine({ author, minsAgo, stamp = true, right }) {
 
         {stamp && (ops || author?.stamp) && (
           <div style={{ marginTop: 1 }}>
-            <TripStamp ops={ops} stamp={author.stamp}
-              adults={author.adults} children={author.children} />
+            <TripStamp ops={ops} stamp={author.stamp} />
           </div>
         )}
       </div>
@@ -196,12 +196,37 @@ export function Kicker({ children, style }) {
 }
 
 // Photo first, like every other surface in the app that sells a place.
-export function Hero({ image, kicker, title, sub, onBack, pill, height = 200 }) {
+// `images` turns the cover into a collage of travellers' own photographs: one
+// large frame and four smaller ones. A single stock-looking landscape said
+// where the room is; a wall of real trips says who is in it. Falls back to the
+// one picture when a destination has no customer photos.
+export function Hero({ image, images, kicker, title, sub, onBack, pill, height = 200 }) {
+  const collage = (images || []).length >= 5;
   return (
     <div style={{ position: "relative", height }}>
-      <img src={image} alt="" className="ken-burns" style={{
-        width: "100%", height: "100%", objectFit: "cover", display: "block",
-      }} />
+      {collage ? (
+        <div style={{
+          display: "grid", width: "100%", height: "100%", gap: 2, overflow: "hidden",
+          // minmax(0, …) rather than plain fr. A grid track defaults to a
+          // minimum of its content, so a photograph's own height pushed the
+          // rows past the cover and the pictures spilled over the feed.
+          gridTemplateColumns: "minmax(0, 1.55fr) minmax(0, 1fr) minmax(0, 1fr)",
+          gridTemplateRows: "minmax(0, 1fr) minmax(0, 1fr)",
+          background: CC.ink,
+        }}>
+          {images.slice(0, 5).map((src, i) => (
+            <img key={i} src={src} alt="" style={{
+              width: "100%", height: "100%", minWidth: 0, minHeight: 0,
+              objectFit: "cover", display: "block",
+              ...(i === 0 ? { gridRow: "1 / 3" } : null),
+            }} />
+          ))}
+        </div>
+      ) : (
+        <img src={image} alt="" style={{
+          width: "100%", height: "100%", objectFit: "cover", display: "block",
+        }} />
+      )}
       <div style={{
         position: "absolute", inset: 0,
         background: "linear-gradient(to bottom, rgba(0,0,0,0.34) 0%, transparent 42%, rgba(0,0,0,0.78) 100%)",
@@ -425,6 +450,130 @@ export function QuestionCard({ q, answerCount, likeCount = 0, room, onClick }) {
   );
 }
 
+// A like is the one act in here with no confirmation, so it gets a beat of
+// its own. The key changes on every fresh like, which is what replays the
+// keyframe; taking a like back is quiet, because undoing should be.
+export function LikePop({ liked, children }) {
+  const [beat, setBeat] = useState(0);
+  const was = useRef(liked);
+  useEffect(() => {
+    if (liked && !was.current) setBeat(b => b + 1);
+    was.current = liked;
+  }, [liked]);
+  return (
+    <span key={beat} style={{
+      display: "inline-flex",
+      animation: beat ? "likePop 0.36s cubic-bezier(0.2, 0.9, 0.3, 1.2)" : undefined,
+    }}>{children}</span>
+  );
+}
+
+// ── A question as a feed post ──
+
+// The Facebook shape: who wrote it on top, the dots behind them, the words,
+// then a thumb and a comment count on a rail of their own. Full bleed, no
+// card edge; the grey bar between posts does the separating. The compact
+// QuestionCard above stays for search, saved and the older labs.
+export function FeedPostCard({
+  q, answerCount, likeCount = 0, liked, saved, room,
+  onClick, onLike, onSave, onCopy, onReport,
+}) {
+  const tag = (q.tags || [])[0];
+  return (
+    <div style={{ padding: `13px ${PAD}px 4px`, background: CC.white }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <TravellerMark name={q.author?.name} ops={q.author?.ops} size={38} />
+        <button onClick={onClick} style={{
+          flex: 1, minWidth: 0, textAlign: "left", border: "none",
+          background: "none", cursor: "pointer", fontFamily: "inherit", padding: 0,
+        }}>
+          <span style={{
+            display: "block", fontSize: 14.5, fontWeight: 700, color: CC.ink,
+            letterSpacing: "-0.1px",
+          }}>{q.mine ? "You" : q.author?.name}</span>
+          <span style={{ display: "block", marginTop: 2, fontSize: 12, color: CC.soft }}>
+            {room && <>
+              <span style={{ fontWeight: 700, color: CC.body }}>{room}</span>
+              {" · "}
+            </>}
+            {ago(q.minsAgo)}
+            {tag && <>
+              {" · "}
+              <span style={{ fontWeight: 700, color: hueFor(tag) }}>{tag}</span>
+            </>}
+          </span>
+        </button>
+        {/* The rare things live behind the dots, the way they do on a thread. */}
+        <MoreButton items={[
+          { icon: Bookmark, label: saved ? "Remove from saved" : "Save post", onClick: onSave },
+          { icon: LinkIcon, label: "Copy link", onClick: onCopy },
+          { icon: Flag, label: "Report post", danger: true, onClick: onReport },
+        ]} style={{ margin: 0 }} />
+      </div>
+
+      <button onClick={onClick} style={{
+        display: "block", width: "100%", textAlign: "left", border: "none",
+        background: "none", cursor: "pointer", fontFamily: "inherit", padding: 0,
+      }}>
+        <span style={{
+          display: "block", marginTop: 9, fontSize: 15.5, fontWeight: 600,
+          color: CC.ink, lineHeight: "21px", letterSpacing: "-0.1px",
+        }}>{q.title}</span>
+        {q.body && (
+          <span style={{
+            display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
+            overflow: "hidden", marginTop: 5, fontSize: 13.5, color: CC.body,
+            lineHeight: "19px",
+          }}>{q.body}</span>
+        )}
+        {/* A portrait photo would otherwise take the whole screen and push
+            every other post out of the feed, so it is cropped to a window. */}
+        {q.image && (
+          <img src={q.image} alt="" style={{
+            width: "100%", maxHeight: 300, objectFit: "cover",
+            borderRadius: 12, marginTop: 10, display: "block",
+          }} />
+        )}
+      </button>
+
+      {/* The action rail. A thumb because everyone reads a thumb, and the
+          answers as comments, which is what they are on a feed. */}
+      <div style={{
+        display: "flex", alignItems: "center", marginTop: 8,
+        borderTop: `1px solid ${CC.well}`,
+      }}>
+        <button onClick={onLike} style={{
+          display: "inline-flex", alignItems: "center", gap: 6, minHeight: 40,
+          padding: "0 12px 0 0", border: "none", background: "none",
+          cursor: "pointer", fontFamily: "inherit",
+          fontSize: 12.5, fontWeight: 700, color: liked ? CC.tealInk : CC.body,
+        }}>
+          <LikePop liked={liked}>
+            <ThumbsUp size={15} color={liked ? CC.tealInk : CC.body}
+              fill={liked ? CC.tealTint : "none"} />
+          </LikePop>
+          {likeCount > 0 ? likeCount : "Like"}
+        </button>
+        <button onClick={onClick} style={{
+          display: "inline-flex", alignItems: "center", gap: 6, minHeight: 40,
+          padding: "0 12px", border: "none", background: "none",
+          cursor: "pointer", fontFamily: "inherit",
+          fontSize: 12.5, fontWeight: 700, color: CC.body,
+        }}>
+          <MessageCircle size={15} color={CC.body} />
+          {answerCount}
+        </button>
+        <span style={{ flex: 1 }} />
+        {answerCount === 0 && (
+          <span style={{ fontSize: 12, fontWeight: 700, color: CC.goldInk }}>
+            Needs an answer
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── An answer ──
 
 // A quote sits above the answer with the original author named, so a reply to
@@ -483,8 +632,8 @@ export function PostActions({ liked, likes, minsAgo, onLike, onReply }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8 }}>
       <TextAction
-        icon={Heart} label={liked ? "Liked" : "Like"} count={likes}
-        active={liked} fill={liked} onClick={onLike}
+        icon={ThumbsUp} label={liked ? "Liked" : "Like"} count={likes}
+        active={liked} fill={liked} pop onClick={onLike}
       />
       {onReply && <TextAction icon={CornerUpLeft} label="Reply" onClick={onReply} />}
 
@@ -499,18 +648,22 @@ export function PostActions({ liked, likes, minsAgo, onLike, onReply }) {
 
 // The two named actions. The count sits after the word, because a number on
 // its own never says what it is counting.
-export function TextAction({ icon: Icon, label, count, active, fill, onClick }) {
+export function TextAction({ icon: Icon, label, count, active, fill, pop, onClick }) {
+  const mark = (
+    <Icon size={16} color={active ? CC.tealInk : CC.body}
+      fill={fill ? CC.tealTint : "none"} />
+  );
   return (
     <button onClick={onClick} style={{
       display: "inline-flex", alignItems: "center", gap: 6, minHeight: 40, padding: "0 10px",
       borderRadius: 999, border: "none", background: "none", cursor: "pointer",
       fontFamily: "inherit", fontSize: 13, fontWeight: 700,
-      color: active ? CC.pink : CC.body,
+      color: active ? CC.tealInk : CC.body,
     }}>
-      <Icon size={16} color={active ? CC.pink : CC.body} fill={fill ? CC.pink : "none"} />
+      {pop ? <LikePop liked={!!active}>{mark}</LikePop> : mark}
       {label}
       {count > 0 && (
-        <span style={{ fontWeight: 600, color: active ? CC.pink : CC.soft }}>{count}</span>
+        <span style={{ fontWeight: 600, color: active ? CC.tealInk : CC.soft }}>{count}</span>
       )}
     </button>
   );
@@ -558,53 +711,6 @@ export function IconAction({ icon: Icon, label, active, fill, muted, onClick }) 
   );
 }
 
-export function AnswerCard({
-  answer, liked, bookmarked, reported, best,
-  onLike, onCopy, onBookmark, onReply, onReport, onEdit, onDelete,
-}) {
-  const ops = !!answer.author?.ops;
-  return (
-    <div style={{ ...CARD, padding: 16 }}>
-      {/* Most helpful, not accepted. Nobody marked this: it is simply the one
-          the most people found useful, and it can change. */}
-      {best && (
-        <p style={{
-          display: "inline-flex", alignItems: "center", gap: 5, margin: "0 0 10px",
-          fontSize: 11.5, fontWeight: 800,
-          color: CC.tealInk,
-        }}>
-          <Heart size={11} color={CC.teal} fill={CC.teal} /> Most Helpful
-        </p>
-      )}
-      <AuthorLine
-        author={answer.mine ? { ...answer.author, name: "You" } : answer.author}
-        right={<MoreButton items={postMenuItems({
-          mine: !!answer.mine, reported,
-          onEdit, onDelete, onReport,
-        })} />}
-      />
-      <div style={{ marginTop: 12 }}>
-        <QuoteBlock quote={answer.quotes} />
-        <ClampText answerId={answer.id}>{answer.body}</ClampText>
-        {answer.image && (
-          <img src={answer.image} alt="" style={{
-            width: "100%", borderRadius: 12, marginTop: 12, display: "block",
-          }} />
-        )}
-      </div>
-      {answer.edited && (
-        <p style={{ fontSize: 11.5, color: CC.soft, margin: "8px 0 0" }}>Edited</p>
-      )}
-
-      <PostActions
-        liked={liked} likes={(answer.likes || 0) + (liked ? 1 : 0)}
-        minsAgo={answer.minsAgo}
-        onLike={onLike} onReply={onReply}
-      />
-    </div>
-  );
-}
-
 // Used on a post this traveller wrote, in the list and on the thread.
 export function OwnerChip({ icon: Icon, label, danger, onClick }) {
   return (
@@ -616,147 +722,6 @@ export function OwnerChip({ icon: Icon, label, danger, onClick }) {
     }}>
       <Icon size={14} color={danger ? CC.pinkInk : CC.body} /> {label}
     </button>
-  );
-}
-
-// ── Cohort chat ──
-
-export function ChatBubble({ msg }) {
-  const ops = !!msg.author?.ops;
-  const mine = !!msg.mine;
-
-  // An ops checkpoint is the thing people scroll back for, so it gets a card
-  // of its own rather than a bubble in the run of chat.
-  if (ops) {
-    return (
-      <div style={{
-        ...CARD, borderColor: CC.tealLine, background: "#F5FCFB", padding: 16, margin: "8px 0",
-      }}>
-        <TripStamp ops />
-        {msg.title && (
-          <p style={{ fontSize: 15, fontWeight: 700, color: CC.ink, margin: "10px 0 0", letterSpacing: "-0.1px" }}>
-            {msg.title}
-          </p>
-        )}
-        <p style={{ fontSize: 14, color: CC.ink, margin: "6px 0 0", lineHeight: "21px" }}>{msg.text}</p>
-      </div>
-    );
-  }
-
-  // No avatar. In a group where nobody knows each other yet, a wall of
-  // coloured initials is noise; the name on the message is enough.
-  return (
-    <div style={{ display: "flex", margin: "8px 0", justifyContent: mine ? "flex-end" : "flex-start" }}>
-      <div style={{ maxWidth: "82%" }}>
-        <div style={{
-          display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3,
-          justifyContent: mine ? "flex-end" : "flex-start",
-        }}>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: CC.ink }}>
-            {mine ? "You" : msg.author?.name}
-          </span>
-        </div>
-        <div style={{
-          background: mine ? CC.well : CC.white,
-          border: `1px solid ${CC.line}`,
-          borderRadius: 14, padding: "10px 13px",
-        }}>
-          <p style={{ fontSize: 14.5, color: CC.ink, margin: 0, lineHeight: "21px" }}>{msg.text}</p>
-          {msg.image && (
-            <img src={msg.image} alt="" style={{ width: "100%", borderRadius: 10, marginTop: 8, display: "block" }} />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Sits above the first message nobody has read yet.
-export function UnreadDivider({ n }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 10px" }}>
-      <div style={{ flex: 1, height: 1, background: CC.pinkLine }} />
-      <span style={{ fontSize: 11, fontWeight: 700, color: CC.pinkInk, letterSpacing: "0.3px" }}>
-        {n} new {n === 1 ? "message" : "messages"}
-      </span>
-      <div style={{ flex: 1, height: 1, background: CC.pinkLine }} />
-    </div>
-  );
-}
-
-export function DayDivider({ label }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 10px" }}>
-      <div style={{ flex: 1, height: 1, background: CC.line }} />
-      <span style={{ fontSize: 11.5, fontWeight: 700, color: CC.soft }}>
-        {label}
-      </span>
-      <div style={{ flex: 1, height: 1, background: CC.line }} />
-    </div>
-  );
-}
-
-// ── Composer ──
-
-// Kept as its own component with its own state, so typing does not re-render
-// the message list and throw the scroll position away.
-export function Composer({ placeholder, onSend, disabled }) {
-  const [text, setText] = useState("");
-  const [image, setImage] = useState(null);
-  const fileRef = useRef(null);
-
-  const send = () => {
-    if (!text.trim() || disabled) return;
-    onSend({ text, image });
-    setText("");
-    setImage(null);
-  };
-
-  return (
-    <div style={{
-      flexShrink: 0, borderTop: `1px solid ${CC.line}`, background: CC.white,
-      padding: `8px ${PAD}px calc(8px + env(safe-area-inset-bottom))`,
-    }}>
-      {image && (
-        <div style={{ position: "relative", width: 64, marginBottom: 8 }}>
-          <img src={image} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10, display: "block" }} />
-          <button onClick={() => setImage(null)} aria-label="Remove image" style={{
-            position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: "50%",
-            background: CC.ink, border: "none", cursor: "pointer", display: "grid", placeItems: "center",
-          }}><XIcon size={12} color="#fff" /></button>
-        </div>
-      )}
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-        <button onClick={() => fileRef.current?.click()} aria-label="Add a photo" disabled={disabled} style={{
-          width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: CC.well,
-          border: "none", cursor: disabled ? "default" : "pointer", display: "grid", placeItems: "center",
-        }}><ImagePlus size={19} color={CC.body} /></button>
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (!f) return;
-            const r = new FileReader();
-            r.onload = () => setImage(r.result);
-            r.readAsDataURL(f);
-          }} />
-        <textarea
-          value={text} onChange={(e) => setText(e.target.value)} rows={1} disabled={disabled}
-          placeholder={placeholder}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          style={{
-            flex: 1, minHeight: 44, maxHeight: 110, padding: "11px 14px", borderRadius: 14,
-            border: `1px solid ${CC.line}`, background: CC.white, resize: "none",
-            fontFamily: "inherit", fontSize: 15, color: CC.ink, outline: "none", lineHeight: "21px",
-          }}
-        />
-        <button onClick={send} disabled={!text.trim() || disabled} aria-label="Send" style={{
-          width: 44, height: 44, borderRadius: 12, flexShrink: 0, border: "none",
-          background: text.trim() && !disabled ? CC.pink : CC.line,
-          cursor: text.trim() && !disabled ? "pointer" : "default",
-          display: "grid", placeItems: "center",
-        }}><SendHorizontal size={18} color="#fff" /></button>
-      </div>
-    </div>
   );
 }
 

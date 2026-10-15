@@ -8,7 +8,6 @@ import {
   GoldShell, QuestionRail, MetaDot, BUBBLE_SHADES,
 } from "../components/Community/CountSignals";
 import { getDest, questionsFor } from "../data/communityData";
-import { useCommunity } from "../state/useCommunity";
 
 // One decision left on this screen: how light the bubbles are.
 //
@@ -18,11 +17,10 @@ import { useCommunity } from "../state/useCommunity";
 export default function LoungeSignals() {
   const navigate = useNavigate();
   const [picked, setPicked] = useState(null);
-  const { unreadFor } = useCommunity();
 
   const d = getDest("thailand");
   const questions = questionsFor("thailand");
-  const unread = unreadFor("thailand") || 3;
+  const unread = 0;
   const open = () => navigate("/community/thailand");
 
   const head = `Ask ${d.recent3m} travellers who visited ${d.name} in the last 3 months`;
@@ -51,7 +49,7 @@ export default function LoungeSignals() {
                   "One bubble holds one question. Nothing else.",
                   "The answer count appears only at two or more. “0 answers” says the question is dead.",
                   "The last bubble is “See all 143 questions”, which absorbs the overflow and is the only destination the rail needs.",
-                  "So the band has no footer. “Visit Lounge” and “143 FAQs answered” are gone.",
+                  "So the band has no footer. “Visit the Community” and “143 FAQs answered” are gone.",
                   "84% of the screen, 12px gutters, 16px left edge, snapped. The next bubble peeks by about 40px.",
                   "One height for every bubble, question clamped to two lines.",
                   "One bubble every five seconds. It stops on touch, and never moves for reduced motion.",

@@ -68,7 +68,7 @@ function CommunityTripCard({ d, count, onClick }) {
           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <span style={{
               fontSize: 12, fontWeight: 800, color: CC.goldInk,
-            }}>Sunday Lounge</span>
+            }}>Sunday Community</span>
             {state === "open" && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: CC.body }}>
                 <span style={{ width: 5, height: 5, borderRadius: "50%", background: CC.gold }} />

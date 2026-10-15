@@ -168,7 +168,7 @@ function SeasonCard({ d }) {
   );
 }
 
-function LowerSections({ groups, showUsp = true }) {
+export function LowerSections({ groups, showUsp = true }) {
   return (
     <div style={{ paddingTop: showUsp ? 4 : 24, background: C.white, position: "relative" }}>
       {/* Compact proof line (hidden for leads, where the customisation card leads instead) */}

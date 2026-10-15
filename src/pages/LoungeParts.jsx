@@ -13,7 +13,7 @@ import { sortQuestions } from "../components/Community/FeedFilters";
 import { getDest, questionsFor, tagsFor } from "../data/communityData";
 import { useCommunity } from "../state/useCommunity";
 
-// Two parts of the Lounge, side by side with their alternatives. One tab asks
+// Two parts of the Community, side by side with their alternatives. One tab asks
 // somebody to answer; the other narrows the list. Both are shown in place,
 // with the real questions under them, because neither can be judged alone.
 
@@ -48,7 +48,7 @@ export default function LoungeParts() {
   return (
     <Screen>
       <TopBar
-        title="Lounge parts"
+        title="Community parts"
         sub={tab === "help" ? "Five ways to ask"
           : tab === "filters" ? "Six ways to sort"
             : tab === "actions" ? "Six ways to carry the actions"

@@ -48,7 +48,7 @@ export default function LoungePaused() {
         <span style={{
           flex: 1, display: "inline-flex", alignItems: "center", gap: 5,
           fontSize: 16, fontWeight: 600, color: CC.ink,
-        }}>Thailand Lounge <ChevronDown size={15} color={CC.soft} /></span>
+        }}>Thailand Community <ChevronDown size={15} color={CC.soft} /></span>
         <Search size={16} color={CC.body} />
         <Bookmark size={15} color={CC.body} />
         <ShieldCheck size={14} color={CC.soft} />
@@ -73,7 +73,7 @@ export default function LoungePaused() {
 
   return (
     <Screen>
-      <TopBar title="Posting Paused" sub="Five ways" onBack={() => navigate("/lounge")} />
+      <TopBar title="Posting Paused" sub="Five ways" onBack={() => navigate("/community")} />
       <Body>
         <div style={{ padding: `14px 0 44px` }}>
           <p style={{ fontSize: 13.5, color: CC.body, margin: `0 ${PAD}px 18px`, lineHeight: "20px" }}>

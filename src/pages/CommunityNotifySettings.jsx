@@ -63,14 +63,6 @@ export default function CommunityNotifySettings() {
             </div>
           </div>
 
-          <p style={{
-            margin: `14px ${PAD}px 0`, fontSize: 12.5, fontStyle: "italic",
-            color: CC.soft, lineHeight: "18px",
-          }}>
-            Nothing here buzzes your phone yet. It all lands in your notifications
-            list, and the count on the bell is the only nudge it gets.
-          </p>
-
           {/* Threads somebody stopped wanting. Empty for most people, which is
               why it only appears once there is something in it. */}
           {muted.length > 0 && (

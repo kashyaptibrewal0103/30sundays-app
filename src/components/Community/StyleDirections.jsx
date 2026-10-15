@@ -6,7 +6,7 @@ import { CC } from "./tokens";
 import { PAD, TravellerMark } from "./CommunityUI";
 import { ago } from "../../data/communityData";
 
-// Seven ways the Lounge could look. Not seven layouts: the blocks are the same
+// Seven ways the Community could look. Not seven layouts: the blocks are the same
 // in all of them (a way into the chat, a way to search, the questions). What
 // changes is the personality, and personality is carried by three things only:
 // type, shape, and where the colour sits.
@@ -39,7 +39,7 @@ function Editorial({ d, qs, countOf }) {
         <p style={{
           margin: 0, fontSize: 10.5, fontWeight: 800, letterSpacing: "2.4px",
           color: CC.soft, textTransform: "uppercase",
-        }}>Sunday Lounge</p>
+        }}>Sunday Community</p>
         <h1 style={{
           margin: "6px 0 0", fontSize: 38, lineHeight: "38px", fontWeight: 800,
           color: CC.ink, letterSpacing: "-1.6px",

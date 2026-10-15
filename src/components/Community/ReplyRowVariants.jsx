@@ -4,7 +4,7 @@ import { CARD, TravellerMark, TripStamp, ClampText } from "./CommunityUI";
 import { ago } from "../../data/communityData";
 
 // Six ways to carry one reply. The reply is the most repeated block in the
-// Lounge, so every pixel of chrome is paid once per answer, and a thread of
+// Community, so every pixel of chrome is paid once per answer, and a thread of
 // eight answers pays it eight times.
 //
 // Today's reply spends three stacked rows before the text even starts: the
@@ -259,7 +259,7 @@ export const REPLY_ROW_VARIANTS = [
     id: "textfirst", n: 4, name: "Answer first, byline under", tag: "90px off, the smallest",
     Comp: TextFirst,
     note: "One 22px line carries the whole footer: face, name, stamp, time, like, reply. Everything above it is the answer.",
-    cost: "You read the answer before you know who said it, and the Lounge is sold on who these people are. Six things on one 22px line also means the trip stamp clips first on a narrow screen.",
+    cost: "You read the answer before you know who said it, and the Community is sold on who these people are. Six things on one 22px line also means the trip stamp clips first on a narrow screen.",
   },
   {
     id: "menu", n: 5, name: "Like out, the rest in a menu", tag: "71px off each reply",

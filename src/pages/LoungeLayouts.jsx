@@ -154,7 +154,7 @@ function Mock({ o, d, questions }) {
         <ArrowLeft size={18} color={CC.ink} />
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: CC.ink }}>
-            Sunday Lounge
+            Sunday Community
           </span>
           <span style={{ display: "block", fontSize: 11.5, color: CC.body }}>
             {d.name} · {d.month}
@@ -208,7 +208,7 @@ function Mock({ o, d, questions }) {
           }}>
             <ShieldCheck size={12} color={CC.soft} />
             <span style={{ fontSize: 11, color: CC.body, textDecoration: "underline", textUnderlineOffset: 2 }}>
-              Lounge guidelines
+              Community guidelines
             </span>
           </span>
         </div>

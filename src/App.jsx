@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BrowserRouter, Routes, Route, useLocation, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import PhoneFrame from "./components/PhoneFrame";
 import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
@@ -15,7 +15,7 @@ import HomeV5 from "./pages/HomeV5";
 import HomeV5Clone from "./pages/HomeV5Clone";
 import HomeBannerLab from "./pages/HomeBannerLab";
 import HomeV6 from "./pages/HomeV6";
-import { HomeLabIndex, CtaLab, CardsLab, PlansLab, StatesLab, HOME_LAB_PAGES } from "./pages/home_lab";
+import { HomeLabIndex, CtaLab, CardsLab, PlansLab, StatesLab, LinesLab, ProofLab, CircleLineLab, BookedHome, BookedHomeIndex, MatchHome, HOME_LAB_PAGES } from "./pages/home_lab";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
@@ -61,7 +61,6 @@ import CommunityFeed from "./pages/CommunityFeed";
 import CommunityQuestion from "./pages/CommunityQuestion";
 import CommunitySearch from "./pages/CommunitySearch";
 import CommunitySaved from "./pages/CommunitySaved";
-import CommunityChat from "./pages/CommunityChat";
 import CommunityGuidelines from "./pages/CommunityGuidelines";
 import CommunityBookingConfirmed from "./pages/CommunityBookingConfirmed";
 import MyTripsCommunity from "./pages/MyTripsCommunity";
@@ -87,6 +86,7 @@ import CommunityProfile from "./pages/CommunityProfile";
 import CommunityMyPosts from "./pages/CommunityMyPosts";
 import CommunitySuggest from "./pages/CommunitySuggest";
 import LoungeRules from "./pages/LoungeRules";
+import RouteHelpLab from "./pages/RouteHelpLab";
 import GiftCardBuy from "./pages/GiftCardBuy";
 import GiftCardClaim from "./pages/GiftCardClaim";
 import GiftRegistry from "./pages/GiftRegistry";
@@ -102,6 +102,9 @@ import DiscoverRoutes from "./pages/DiscoverRoutes";
 import RoutesCouples from "./pages/RoutesCouples";
 import DiscoverWF from "./pages/DiscoverWF";
 import CityDetail from "./pages/CityDetail";
+import { Building } from "./pages/Build";
+import Generating from "./pages/Generating";
+import ChecksLab from "./pages/ChecksLab";
 import WishlistWF from "./pages/WishlistWF";
 import RoutesWF from "./pages/RoutesWF";
 import CompareVersions from "./pages/CompareVersions";
@@ -128,10 +131,15 @@ function DestinationLayout() {
 
 function AppContent({ userState, setUserState, otpVerified, setOtpVerified, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
-  const showNudge = pathname === "/";
+  // The floating card is off the home for everybody. A booked traveller has
+  // their trip at the top of the page already, and for a lead or a new visitor
+  // it sat over the content and had to be dismissed before the page could be
+  // read. The profile prompt is a different thing and stays.
+  const showNudge = false;
+  const showProfileGate = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const communityPaths = pathname.startsWith("/community") || pathname.startsWith("/lounge-");
+  const communityPaths = pathname.startsWith("/community") || pathname.startsWith("/community-");
   const giftPaths = pathname === "/wallet" || pathname.startsWith("/gift-cards") || pathname.startsWith("/gift/") || pathname.startsWith("/g/") || pathname.startsWith("/registry");
   const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || communityPaths || (pathname === "/plan" && userState === "new");
 
@@ -164,7 +172,9 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
       <ProfileDemoSync userState={userState} />
       {!shareLink && <UserToggle userState={userState} setUserState={setUserState} />}
       <Routes>
-        <Route path="/" element={<HomeV5 userState={userState} />} />
+        <Route path="/" element={<MatchHome userState={userState} />} />
+        {/* The home this replaced, kept reachable while it is still being reviewed. */}
+        <Route path="/home-v5" element={<HomeV5 userState={userState} />} />
         <Route path="/landing-clone" element={<HomeV5Clone userState={userState} />} />
         <Route path="/banner-lab" element={<HomeBannerLab userState={userState} />} />
         <Route path="/v3" element={<HomeV3 />} />
@@ -177,6 +187,15 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/home-lab/cards" element={<CardsLab />} />
         <Route path="/home-lab/plans" element={<PlansLab />} />
         <Route path="/home-lab/states" element={<StatesLab />} />
+        <Route path="/home-lab/lines" element={<LinesLab />} />
+        <Route path="/home-lab/proof" element={<ProofLab />} />
+        <Route path="/home-lab/line" element={<CircleLineLab />} />
+        {/* Both booked openings, forced to the booked state so neither needs the
+            demo switcher. The clip one is what the home itself now shows. */}
+        <Route path="/home-lab/booked-hero" element={<MatchHome userState="customer" bookedStyle="hero" />} />
+        <Route path="/home-lab/booked-flat" element={<MatchHome userState="customer" bookedStyle="flat" />} />
+        <Route path="/home-lab/booked" element={<BookedHomeIndex />} />
+        <Route path="/home-lab/booked/:n" element={<BookedHome />} />
         {HOME_LAB_PAGES.map((Page, i) => <Route key={i} path={`/home-lab/${i + 1}`} element={<Page userState={userState} />} />)}
         <Route path="/discover/:name" element={<Discover />} />
         <Route path="/discover/:name/routes" element={<DiscoverRoutes />} />
@@ -191,6 +210,14 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/maldives-quote" element={<MaldivesQuote />} />
         <Route path="/destination/:name" element={<DestinationLayout />} />
         <Route path="/destination/:destSlug/city/:citySlug" element={<CityDetail leadData={leadData} />} />
+        {/* The generating screen on its own route, so it can be looked at
+            without walking the whole wizard and catching 1.4 seconds of it. */}
+        <Route path="/building-lab" element={<Building dest="Thailand" />} />
+        {/* The reworked wait screen, two variants. The only difference is where
+            the questions sit; they never share the screen with the footage. */}
+        <Route path="/building-v1" element={<Generating leadData={leadData} />} />
+        <Route path="/checks-lab" element={<ChecksLab />} />
+        <Route path="/route-help-lab" element={<RouteHelpLab />} />
         <Route path="/old-bali-page" element={<Destination name="Bali" />} />
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />
@@ -238,38 +265,84 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/account" element={<Account userState={userState} leadData={leadData} setUserState={setUserState} setLeadData={setLeadData} />} />
         <Route path="/wallet" element={<Wallet userState={userState} leadData={leadData} />} />
         {/* Community: Q&A, the cohort, and the parallel My Trips with the card on it */}
-        <Route path="/lounge" element={<LoungeHome />} />
-        <Route path="/lounge/search" element={<CommunitySearch everywhere />} />
-        <Route path="/lounge/notifications" element={<CommunityNotifications />} />
-        <Route path="/lounge/settings" element={<CommunityNotifySettings />} />
-        <Route path="/lounge/profile" element={<CommunityProfile />} />
-        <Route path="/lounge/my-posts" element={<CommunityMyPosts />} />
-        <Route path="/lounge/suggest" element={<CommunitySuggest />} />
-        <Route path="/lounge-rules" element={<LoungeRules />} />
-        <Route path="/lounge-rooms" element={<LoungeRooms />} />
-        <Route path="/lounge-switcher" element={<LoungeSwitcher />} />
-        <Route path="/lounge-index" element={<LoungeDirectory />} />
-        <Route path="/lounge-paused" element={<LoungePaused />} />
-        <Route path="/lounge-pending" element={<LoungePending />} />
-        <Route path="/community" element={<CommunityIndex />} />
+        {/* The Community used to live at /lounge. Every old address still
+            lands on the new one, so links already shared keep working. */}
+        <Route path="/lounge" element={<Navigate to="/community" replace />} />
+        <Route path="/lounge/search" element={<Navigate to="/community/search" replace />} />
+        <Route path="/lounge/notifications" element={<Navigate to="/community/notifications" replace />} />
+        <Route path="/lounge/settings" element={<Navigate to="/community/settings" replace />} />
+        <Route path="/lounge/profile" element={<Navigate to="/community/profile" replace />} />
+        <Route path="/lounge/my-posts" element={<Navigate to="/community/my-posts" replace />} />
+        <Route path="/lounge/suggest" element={<Navigate to="/community/suggest" replace />} />
+        <Route path="/lounge-rules" element={<Navigate to="/community-rules" replace />} />
+        <Route path="/lounge-rooms" element={<Navigate to="/community-rooms" replace />} />
+        <Route path="/lounge-switcher" element={<Navigate to="/community-switcher" replace />} />
+        <Route path="/lounge-index" element={<Navigate to="/community-index" replace />} />
+        <Route path="/lounge-paused" element={<Navigate to="/community-paused" replace />} />
+        <Route path="/lounge-pending" element={<Navigate to="/community-pending" replace />} />
+        <Route path="/lounge-layouts" element={<Navigate to="/community-layouts" replace />} />
+        <Route path="/lounge-copy" element={<Navigate to="/community-copy" replace />} />
+        <Route path="/lounge-signals" element={<Navigate to="/community-signals" replace />} />
+        <Route path="/lounge-parts" element={<Navigate to="/community-parts" replace />} />
+        <Route path="/lounge-styles" element={<Navigate to="/community-styles" replace />} />
+        <Route path="/lounge-rows" element={<Navigate to="/community-rows" replace />} />
+        <Route path="/lounge-native" element={<Navigate to="/community-native" replace />} />
+        <Route path="/lounge-mix" element={<Navigate to="/community-mix" replace />} />
+        <Route path="/lounge-meta" element={<Navigate to="/community-meta" replace />} />
+        {/* And again from the Circle spelling. */}
+        <Route path="/circle" element={<Navigate to="/community" replace />} />
+        <Route path="/circle/search" element={<Navigate to="/community/search" replace />} />
+        <Route path="/circle/notifications" element={<Navigate to="/community/notifications" replace />} />
+        <Route path="/circle/settings" element={<Navigate to="/community/settings" replace />} />
+        <Route path="/circle/profile" element={<Navigate to="/community/profile" replace />} />
+        <Route path="/circle/my-posts" element={<Navigate to="/community/my-posts" replace />} />
+        <Route path="/circle/suggest" element={<Navigate to="/community/suggest" replace />} />
+        <Route path="/circle-rules" element={<Navigate to="/community-rules" replace />} />
+        <Route path="/circle-rooms" element={<Navigate to="/community-rooms" replace />} />
+        <Route path="/circle-switcher" element={<Navigate to="/community-switcher" replace />} />
+        <Route path="/circle-index" element={<Navigate to="/community-index" replace />} />
+        <Route path="/circle-paused" element={<Navigate to="/community-paused" replace />} />
+        <Route path="/circle-pending" element={<Navigate to="/community-pending" replace />} />
+        <Route path="/circle-layouts" element={<Navigate to="/community-layouts" replace />} />
+        <Route path="/circle-copy" element={<Navigate to="/community-copy" replace />} />
+        <Route path="/circle-signals" element={<Navigate to="/community-signals" replace />} />
+        <Route path="/circle-parts" element={<Navigate to="/community-parts" replace />} />
+        <Route path="/circle-styles" element={<Navigate to="/community-styles" replace />} />
+        <Route path="/circle-rows" element={<Navigate to="/community-rows" replace />} />
+        <Route path="/circle-native" element={<Navigate to="/community-native" replace />} />
+        <Route path="/circle-mix" element={<Navigate to="/community-mix" replace />} />
+        <Route path="/circle-meta" element={<Navigate to="/community-meta" replace />} />
+        <Route path="/community" element={<LoungeHome />} />
+        <Route path="/community/search" element={<CommunitySearch everywhere />} />
+        <Route path="/community/notifications" element={<CommunityNotifications />} />
+        <Route path="/community/settings" element={<CommunityNotifySettings />} />
+        <Route path="/community/profile" element={<CommunityProfile />} />
+        <Route path="/community/my-posts" element={<CommunityMyPosts />} />
+        <Route path="/community/suggest" element={<CommunitySuggest />} />
+        <Route path="/community-rules" element={<LoungeRules />} />
+        <Route path="/community-rooms" element={<LoungeRooms />} />
+        <Route path="/community-switcher" element={<LoungeSwitcher />} />
+        <Route path="/community-index" element={<LoungeDirectory />} />
+        <Route path="/community-paused" element={<LoungePaused />} />
+        <Route path="/community-pending" element={<LoungePending />} />
+        <Route path="/community-demo" element={<CommunityIndex />} />
         <Route path="/community/booking-confirmed" element={<CommunityBookingConfirmed />} />
         <Route path="/community/:dest" element={<CommunityFeed />} />
         <Route path="/community/:dest/search" element={<CommunitySearch />} />
         <Route path="/community/:dest/saved" element={<CommunitySaved />} />
         <Route path="/community/:dest/q/:qid" element={<CommunityQuestion />} />
-        <Route path="/community/:dest/chat" element={<CommunityChat />} />
         <Route path="/community/:dest/guidelines" element={<CommunityGuidelines />} />
         <Route path="/trips-community" element={<MyTripsCommunity userState={userState} leadData={leadData} />} />
         <Route path="/community-entries" element={<CommunityEntries />} />
-        <Route path="/lounge-layouts" element={<LoungeLayouts />} />
-        <Route path="/lounge-copy" element={<LoungeGoldCopy />} />
-        <Route path="/lounge-signals" element={<LoungeSignals />} />
-        <Route path="/lounge-parts" element={<LoungeParts />} />
-        <Route path="/lounge-styles" element={<LoungeStyles />} />
-        <Route path="/lounge-rows" element={<LoungeReplyRows />} />
-        <Route path="/lounge-native" element={<LoungeNative />} />
-        <Route path="/lounge-mix" element={<LoungeMix />} />
-        <Route path="/lounge-meta" element={<LoungeMeta />} />
+        <Route path="/community-layouts" element={<LoungeLayouts />} />
+        <Route path="/community-copy" element={<LoungeGoldCopy />} />
+        <Route path="/community-signals" element={<LoungeSignals />} />
+        <Route path="/community-parts" element={<LoungeParts />} />
+        <Route path="/community-styles" element={<LoungeStyles />} />
+        <Route path="/community-rows" element={<LoungeReplyRows />} />
+        <Route path="/community-native" element={<LoungeNative />} />
+        <Route path="/community-mix" element={<LoungeMix />} />
+        <Route path="/community-meta" element={<LoungeMeta />} />
         <Route path="/gift-cards" element={<GiftCards />} />
         <Route path="/gift-cards/buy" element={<GiftCardBuy />} />
         <Route path="/gift/:code" element={<GiftCardClaim />} />
@@ -281,7 +354,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/watch/:videoId" element={<WatchDeepLink />} />
       </Routes>
       {showNudge && (leadData?.salesRequest ? <CallbackNudge /> : <TripNudge userState={userState} />)}
-      {showNudge && <ProfileGate userState={userState} />}
+      {showProfileGate && <ProfileGate userState={userState} />}
       {!hideShell && <BottomNav userState={userState} />}
     </PhoneFrame>
   );

@@ -29,7 +29,7 @@ export default function LoungePending() {
 
   return (
     <Screen>
-      <TopBar title="A Post Being Checked" sub="Five ways" onBack={() => navigate("/lounge")} />
+      <TopBar title="A Post Being Checked" sub="Five ways" onBack={() => navigate("/community")} />
       <Body>
         <div style={{ padding: "14px 0 44px" }}>
           <p style={{ fontSize: 13.5, color: CC.body, margin: `0 ${PAD}px 12px`, lineHeight: "20px" }}>

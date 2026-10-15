@@ -28,11 +28,16 @@ export default function CrewHome({ userState }) {
         <PlanAction trip={trip} full size="lg" raised />
       </div>
 
-      {/* Fronds peek in from the page edges, the way they do on the site. The
-          block clips them, so only a corner of each is ever on screen. */}
-      <div style={{ position: "relative", overflow: "hidden", marginTop: GAP, paddingBottom: 8 }}>
-        <Leaf side="right" height={92} />
-        <Leaf side="left" height={104} style={{ bottom: "8%" }} />
+      {/* The block must not clip: the cards throw a soft shadow 54px past their
+          own edge, and cutting it off leaves a pale strip where the tint stops.
+          Only the fronds need clipping, so they get their own clipping layer,
+          and the block sits above the rest of the page so the shadow lands on
+          the yellow instead of being painted over by it. */}
+      <div style={{ position: "relative", zIndex: 3, marginTop: GAP, background: W.top }}>
+        <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+          <Leaf side="right" height={92} />
+          <Leaf side="left" height={104} style={{ bottom: "8%" }} />
+        </div>
         <div style={{ position: "relative" }}>
           <DisplayTitle title="Our Curations" />
           <PolaroidGrid items={LAB_SIX} />

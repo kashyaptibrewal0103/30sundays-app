@@ -28,7 +28,7 @@ export default function LoungeMix() {
   return (
     <Screen>
       <TopBar
-        title="Lounge, cohesive"
+        title="Community, cohesive"
         sub={`${v.n} of ${MIX_STYLES.length} · ${v.name}`}
         onBack={() => navigate("/community/thailand")}
       />

@@ -2,7 +2,7 @@ import { ShieldCheck, ChevronRight } from "lucide-react";
 import { CC } from "./tokens";
 import { PAD } from "./CommunityUI";
 
-// Five ways to put the rules on the Lounge home.
+// Five ways to put the rules on the Community home.
 //
 // The first attempt used the same card as a room, which made a document read
 // like a third destination. Everything here is trying to be findable without

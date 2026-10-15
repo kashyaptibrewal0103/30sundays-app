@@ -51,7 +51,7 @@ function GoldBand({ kicker, head, sub, unread, oneLine, onOpen }) {
         <span style={{
           flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
           fontSize: 13.5, fontWeight: 700, color: CC.goldInk,
-        }}>Visit Lounge <ArrowRight size={15} color={CC.gold} /></span>
+        }}>Visit the Community <ArrowRight size={15} color={CC.gold} /></span>
       </div>
     </button>
   );
@@ -65,7 +65,7 @@ export function GoldPeople({ d, cold, unread, onOpen }) {
   const n = d.cohort.members;
   return (
     <GoldBand
-      kicker="Sunday Lounge"
+      kicker="Sunday Community"
       head={cold
         ? `You are one of the first going to ${d.name} in ${month(d)}.`
         : `${n} travellers are going to ${d.name} in ${month(d)}.`}
@@ -86,7 +86,7 @@ export function GoldPromise({ d, cold, unread, onOpen }) {
   const n = d.cohort.members;
   return (
     <GoldBand
-      kicker="Sunday Lounge"
+      kicker="Sunday Community"
       head={`Ask anything about ${d.name}. Our team answers the same day.`}
       sub={cold
         ? "Travellers who have already been answer too."
@@ -106,7 +106,7 @@ export function GoldNamed({ d, cold, unread, onOpen }) {
   return (
     <GoldBand
       kicker={`${d.name}, ${d.month}`}
-      head={`Your ${d.name} Lounge is open.`}
+      head={`Your ${d.name} Community is open.`}
       sub={cold
         ? "Our team is on hand, and travellers join as they book."
         : `${n} travellers going in ${month(d)}, and our team on hand.`}
@@ -124,7 +124,7 @@ export function GoldDates({ d, cold, unread, onOpen }) {
   const n = d.cohort.members;
   return (
     <GoldBand
-      kicker="Sunday Lounge"
+      kicker="Sunday Community"
       head={`Everyone going to ${d.name} on your dates, in one room.`}
       sub={cold
         ? `Ask anything before you fly. Our team answers while ${month(d)} fills up.`
@@ -140,12 +140,12 @@ export function GoldDates({ d, cold, unread, onOpen }) {
 // with us in the last three months. A cohort has to fill up before it is worth
 // quoting; past travellers are there from the first hour.
 //
-// The number going this month moves inside the Lounge, where the group chat
+// The number going this month moves inside the Community, where the room
 // card already carries it. Two people-counts on one card cancel each other out.
 //
 // The rail sits between the headline and the footer. Its end marker is a
 // pointer at the end of a scroll, not a call to action, so the FAQ count and
-// Visit Lounge stay where they were.
+// Visit the Community stay where they were.
 
 export function GoldRecent({ d, answered, cold, unread, questions = [], onOpen }) {
   const been = d.recent3m || 0;
@@ -170,7 +170,7 @@ export function GoldRecent({ d, answered, cold, unread, questions = [], onOpen }
 
 export const GOLD_VARIANTS = [
   { id: "gold-recent", n: "E", name: "Who has actually been", leads: "Recent travellers",
-    note: "Leads with the one number that exists on launch day: who went with us in the last three months. The month cohort moves inside, where the group chat already carries it.",
+    note: "Leads with the one number that exists on launch day: who went with us in the last three months. The month cohort moves inside, where the room already carries it.",
     cold: "A destination with under 20 recent travellers falls back to the promise, so a thin month never shows a thin number.",
     Comp: GoldRecent },
   { id: "gold-people", n: "A", name: "The room is full of people", leads: "A fact, not a task",
@@ -182,7 +182,7 @@ export const GOLD_VARIANTS = [
     cold: "Unchanged. This is the treatment that needs nothing to exist yet.",
     Comp: GoldPromise },
   { id: "gold-named", n: "C", name: "Your room, by name", leads: "The name",
-    note: "Sunday Lounge moves out of the 10px label and into the headline. Open is the word doing the work.",
+    note: "Sunday Community moves out of the 10px label and into the headline. Open is the word doing the work.",
     cold: "Still open on day one, because a room can be open and quiet.",
     Comp: GoldNamed },
   { id: "gold-dates", n: "D", name: "Same dates as you", leads: "What makes it different",

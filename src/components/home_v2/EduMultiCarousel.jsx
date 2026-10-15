@@ -12,15 +12,17 @@ export default function EduMultiCarousel({
   lessons,
   valueTitle = "The full series",
   tagline,            // pass "" to suppress the byline on repeat SS sections
+  flush = false,      // drop the rules and the top gap when the page fades into
+                      // the yellow itself, so the fade is the only join
 }) {
   const [active, setActive] = useState(null);
   return (
     <div style={{
       background: "#FCF4CC",
-      padding: "26px 0 22px",
-      marginTop: 28,
-      borderTop: "1px solid rgba(180,130,30,0.22)",
-      borderBottom: "1px solid rgba(180,130,30,0.22)",
+      padding: flush ? "24px 0 8px" : "26px 0 22px",
+      marginTop: flush ? 0 : 28,
+      borderTop: flush ? "none" : "1px solid rgba(180,130,30,0.22)",
+      borderBottom: flush ? "none" : "1px solid rgba(180,130,30,0.22)",
     }}>
       <div style={{ padding: "0 16px" }}>
         <SundaySchoolMasthead valueTitle={valueTitle} tagline={tagline} />

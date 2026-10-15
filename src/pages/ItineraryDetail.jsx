@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
+import DestCommunitySection from "../components/Community/DestCommunitySection";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -1090,6 +1091,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             <ChevronRight size={14} color={C.sub} />
           </button>
         )}
+      </div>
+
+      <Divider />
+
+      {/* ═══ 3.5 Sunday Community ═══
+          After the days and before the hotels: by here the traveller knows what
+          the trip is, which is the point at which they start having questions
+          only somebody who has been can answer. */}
+      <div style={{ padding: "0 16px" }}>
+        <DestCommunitySection name={it.dest} surface="itinerary" />
       </div>
 
       <Divider />

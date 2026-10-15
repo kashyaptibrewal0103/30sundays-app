@@ -33,7 +33,7 @@ export default function LoungeStyles() {
       `}</style>
 
       <TopBar
-        title="Lounge styles"
+        title="Community styles"
         sub={`${v.n} of ${STYLE_DIRECTIONS.length} · ${v.name}`}
         onBack={() => navigate("/community/thailand")}
       />

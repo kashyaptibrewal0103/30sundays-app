@@ -29,7 +29,7 @@ export default function LoungeNative() {
   return (
     <Screen>
       <TopBar
-        title="Lounge, app native"
+        title="Community, app native"
         sub={`${v.n} of ${NATIVE_STYLES.length} · ${v.name}`}
         onBack={() => navigate("/community/thailand")}
       />

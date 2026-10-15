@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { ME, QUESTIONS, CHAT_BY_DEST, checkPost, track } from "../data/communityData";
+import { ME, QUESTIONS, checkPost, track } from "../data/communityData";
 
-// Anything a traveller does in the Lounge lives here, so a question they ask or
+// Anything a traveller does in the Community lives here, so a question they ask or
 // an answer they write is still there when they come back to the feed.
 //
 // The moderation check runs after a post lands, never before it. A post is
@@ -25,11 +25,9 @@ function seed() {
   return {
     asked: [],          // questions this traveller posted
     answers: {},        // questionId -> answers this traveller posted
-    messages: [],       // group messages this traveller sent
     likes: {},          // postId -> true
     bookmarks: {},      // questionId -> true
     welcomeSeen: {},    // destination -> true
-    chatRead: {},       // destination -> true once the chat has been opened
     rulesSeen: {},      // destination -> true once the guidelines note is closed
     helpSeen: {},       // destination -> true once the help note is closed
     reports: {},        // postId -> the reason it was reported
@@ -43,7 +41,7 @@ function seed() {
     profile: { about: "", photo: null }, // what a traveller chooses to say about themselves
     notify: { answers: true, helpful: true, moderation: true, rooms: true },
     mutedQuestions: {}, // questionId -> true, a thread that stopped being worth a ping
-    suggestions: [],    // what travellers sent the team about the Lounge itself
+    suggestions: [],    // what travellers sent the team about the Community itself
   };
 }
 
@@ -199,14 +197,6 @@ export function CommunityProvider({ children }) {
     return a;
   }, [patch]);
 
-  const sendMessage = useCallback(({ dest, text, image }) => {
-    const m = {
-      id: uid("ch"), dest, text: text.trim(), image, mine: true,
-      author: { name: ME.name, city: ME.city }, postedAt: Date.now(), minsAgo: 0,
-    };
-    patch(p => ({ ...p, messages: [...p.messages, m] }));
-    return m;
-  }, [patch]);
 
   // Editing a held or refused post sends it back through the check, which is
   // the whole point of offering the edit.
@@ -297,9 +287,6 @@ export function CommunityProvider({ children }) {
     ...p, rulesSeen: { ...p.rulesSeen, [dest]: true },
   })), [patch]);
 
-  const readChat = useCallback((dest) => patch(p => (
-    p.chatRead[dest] ? p : { ...p, chatRead: { ...p.chatRead, [dest]: true } }
-  )), [patch]);
 
   // ── Posting state ──
 
@@ -412,19 +399,11 @@ export function CommunityProvider({ children }) {
     (state.answers[questionId] || []).filter(a => a.status && a.status !== "live"),
   [state.answers]);
 
-  const messagesFor = useCallback((dest) => [
-    ...(CHAT_BY_DEST[dest] || []),
-    ...state.messages.filter(m => m.dest === dest),
-  ], [state.messages]);
 
   const answeredCount = useCallback((dest) =>
     liveQuestionsFor(dest).filter(q => ((q.answers || []).length + (state.answers[q.id] || []).length) > 0).length,
   [liveQuestionsFor, state.answers]);
 
-  const unreadFor = useCallback((dest) => {
-    if (state.chatRead[dest]) return 0;
-    return (CHAT_BY_DEST[dest] || []).filter(m => (m.minsAgo ?? 0) <= 1440).length;
-  }, [state.chatRead]);
 
   const canPostNow = state.posting === "unlocked";
   const unreadNotifications = state.notifications.filter(n => !n.read).length;
@@ -433,20 +412,20 @@ export function CommunityProvider({ children }) {
     ...state,
     canPostNow, unreadNotifications,
     askQuestion, editQuestion, deleteQuestion, postAnswer, editAnswer, deleteAnswer,
-    sendMessage, toggleLike, toggleBookmark, reportPost,
-    seeWelcome, seeRules, seeHelp, readChat, addStrike, clearStrikes, resetCommunity,
+    toggleLike, toggleBookmark, reportPost,
+    seeWelcome, seeRules, seeHelp, addStrike, clearStrikes, resetCommunity,
     seePausedScreen, seeConsent, seeComposeRules, appeal, setCancelled, readNotifications,
     saveProfile, setNotify, toggleMute, sendSuggestion, deleteMyPosts,
     questionsFor, liveQuestionsFor, pendingFor, findQuestion, answersFor, pendingAnswersFor,
-    messagesFor, answeredCount, unreadFor,
+    answeredCount,
   }), [state, canPostNow, unreadNotifications,
       askQuestion, editQuestion, deleteQuestion, postAnswer, editAnswer, deleteAnswer,
-      sendMessage, toggleLike, toggleBookmark, reportPost,
-      seeWelcome, seeRules, seeHelp, readChat, addStrike, clearStrikes, resetCommunity,
+      toggleLike, toggleBookmark, reportPost,
+      seeWelcome, seeRules, seeHelp, addStrike, clearStrikes, resetCommunity,
       seePausedScreen, seeConsent, seeComposeRules, appeal, setCancelled, readNotifications,
       saveProfile, setNotify, toggleMute, sendSuggestion, deleteMyPosts,
       questionsFor, liveQuestionsFor, pendingFor, findQuestion, answersFor, pendingAnswersFor,
-      messagesFor, answeredCount, unreadFor]);
+      answeredCount]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

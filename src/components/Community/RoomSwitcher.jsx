@@ -6,9 +6,9 @@ import { getDest, roomOrder, track } from "../../data/communityData";
 // The room name in the bar, and the sheet it opens.
 //
 // Back inside a room undoes the last step: somebody who opened Thailand from
-// their trip goes back to their trip. That leaves the rest of the Lounge with
+// their trip goes back to their trip. That leaves the rest of the Community with
 // no door, so the title becomes one. Tapping it lists every room, which is
-// what people actually want when they leave a room, and a link to the Lounge
+// what people actually want when they leave a room, and a link to the Community
 // itself underneath.
 
 
@@ -86,7 +86,7 @@ export function SwitcherSheet({ current, onPick, onAll, onClose }) {
           cursor: "pointer", fontFamily: "inherit", textAlign: "left",
           fontSize: 14.5, fontWeight: 700, color: CC.pink,
         }}>
-          Sunday Lounge Home <ChevronRight size={16} color={CC.pink} />
+          Sunday Community Home <ChevronRight size={16} color={CC.pink} />
         </button>
       </div>
     </Sheet>

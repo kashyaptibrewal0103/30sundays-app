@@ -28,9 +28,11 @@ export default function PinnedHome({ userState }) {
         </div>
       </div>
 
-      <div style={{ position: "relative", zIndex: 2, marginTop: -30, borderRadius: "28px 28px 0 0", background: W.top, paddingTop: 10, overflow: "hidden", boxShadow: "0 -12px 34px rgba(42,22,14,0.22)" }}>
+      <div style={{ position: "relative", zIndex: 3, marginTop: -30, borderRadius: "28px 28px 0 0", background: W.top, paddingTop: 10, boxShadow: "0 -12px 34px rgba(42,22,14,0.22)" }}>
         <div style={{ width: 40, height: 4, borderRadius: 2, background: W.line, margin: "0 auto 16px" }} />
-        <Leaf side="right" height={86} style={{ top: 18 }} />
+        <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", borderRadius: "28px 28px 0 0" }}>
+          <Leaf side="right" height={86} style={{ top: 18 }} />
+        </div>
         <DisplayTitle title="Our Curations" style={{ position: "relative" }} />
         <PolaroidGrid items={LAB_SIX} style={{ position: "relative" }} />
       </div>

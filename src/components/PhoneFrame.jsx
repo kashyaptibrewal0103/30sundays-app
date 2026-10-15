@@ -7,7 +7,7 @@ const MOBILE_BREAKPOINT = 768;
 
 // Pages where BottomNav is rendered. Mirror BottomNav.showOn so the scroll
 // container only reserves space when the nav is actually visible.
-const NAV_PATHS = new Set(["/", "/ai", "/plan", "/trips", "/account", ...HOME_LAB_ROUTES]);
+const NAV_PATHS = new Set(["/", "/ai", "/plan", "/trips", "/account", "/home-v5", ...HOME_LAB_ROUTES]);
 
 export default function PhoneFrame({ children }) {
   const scrollRef = useRef(null);

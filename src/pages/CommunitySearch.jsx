@@ -28,7 +28,7 @@ function rank(q, needle, answersOf) {
 }
 
 // One screen, two scopes. Inside a room it searches that room; reached from
-// Lounge home it searches every room. The header always says which, because a
+// Community home it searches every room. The header always says which, because a
 // result list that does not say where it looked is a result list nobody trusts.
 export default function CommunitySearch({ everywhere }) {
   const { dest = "thailand" } = useParams();
@@ -48,8 +48,8 @@ export default function CommunitySearch({ everywhere }) {
     : questionsFor(dest).map(q => ({ ...q, room: dest }));
   const scopeLabel = everywhere ? "Everywhere" : `In ${d.name}`;
   const placeholder = everywhere
-    ? "Search the Lounge"
-    : `Search in ${d.everyone ? d.name : `${d.name} Lounge`}`;
+    ? "Search the Community"
+    : `Search in ${d.everyone ? d.name : `${d.name} Community`}`;
   const roomOf = (q) => q.room || dest;
 
   useEffect(() => { field.current?.focus(); }, []);
@@ -95,7 +95,7 @@ export default function CommunitySearch({ everywhere }) {
         padding: `10px ${PAD}px`, borderBottom: `1px solid ${CC.line}`, background: CC.white,
       }}>
         <button
-          onClick={() => navigate(everywhere ? "/lounge" : `/community/${dest}`)}
+          onClick={() => navigate(everywhere ? "/community" : `/community/${dest}`)}
           aria-label="Back"
           style={{
             width: 36, height: 36, flexShrink: 0, borderRadius: "50%", border: "none",
@@ -165,7 +165,7 @@ export default function CommunitySearch({ everywhere }) {
               canAsk={canPost(dest)}
               onWiden={() => {
                 track("community_search_no_results_action", { action: "widen", term: needle });
-                navigate(`/lounge/search?q=${encodeURIComponent(term.trim())}`);
+                navigate(`/community/search?q=${encodeURIComponent(term.trim())}`);
               }}
               onAsk={() => {
                 track("community_search_no_results_action", { action: "ask", term: needle });
@@ -200,7 +200,7 @@ function Nothing({ term, name, everywhere, canAsk, onWiden, onAsk }) {
       </h3>
       <p style={{ fontSize: 13.5, color: CC.body, margin: 0, lineHeight: "20px" }}>
         Nobody has asked about &ldquo;{term.trim()}&rdquo;
-        {everywhere ? " anywhere in the Lounge" : ` in ${name}`}.
+        {everywhere ? " anywhere in the Community" : ` in ${name}`}.
         {canAsk ? " Ask it and our team answers the same day." : ""}
       </p>
 

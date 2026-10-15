@@ -93,7 +93,7 @@ export default function CommunityMyPosts() {
                     }}>
                       <span>{it.kind === "question" ? "You Asked" : "You Answered"}</span>
                       <span>·</span>
-                      <span>{it.dest ? getDest(it.dest).name : "Lounge"}</span>
+                      <span>{it.dest ? getDest(it.dest).name : "Community"}</span>
                       <span>·</span>
                       <span>{ago(Math.max(0, Math.round((Date.now() - it.ts) / 60000)))}</span>
                       {state && (

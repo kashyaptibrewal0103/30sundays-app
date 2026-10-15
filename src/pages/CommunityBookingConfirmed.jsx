@@ -44,7 +44,7 @@ export default function CommunityBookingConfirmed() {
             borderRadius: 16, border: `1px solid ${CC.line}`, background: CC.white,
             padding: 18,
           }}>
-            <Kicker style={{ color: CC.tealInk }}>Sunday Lounge</Kicker>
+            <Kicker style={{ color: CC.tealInk }}>Sunday Community</Kicker>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: CC.ink, margin: "8px 0 0", letterSpacing: "-0.3px", lineHeight: "26px" }}>
               Connect with everyone going to {d.name} in {d.month.split(" ")[0]}
             </h2>
@@ -61,7 +61,7 @@ export default function CommunityBookingConfirmed() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "18px 0 20px" }}>
-              <Point icon={Users} text={`A group chat for everyone going in ${d.month.split(" ")[0]}`} />
+              <Point icon={Users} text={`Travellers going in ${d.month.split(" ")[0]}, and everyone who has been`} />
               <Point icon={MessageCircleQuestion} text="Questions answered by our team, usually the same day" />
               <Point icon={BadgeCheck} text="Every answer carries a verified trip stamp" />
             </div>

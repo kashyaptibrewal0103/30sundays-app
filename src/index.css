@@ -22,6 +22,18 @@
   .hide-scrollbar::-webkit-scrollbar { display: none; }
 }
 
+/* A rail that scrolls sideways clips top and bottom too, because setting one
+   axis of overflow makes the other one clip as well. The cards inside throw a
+   soft shadow, and cutting it off leaves a straight line where the tint stops.
+   The padding gives the shadow room inside the clip and the negative margin
+   puts the layout back exactly where it was. */
+.soft-rail .hs {
+  padding-top: 14px;
+  margin-top: -14px;
+  padding-bottom: 22px;
+  margin-bottom: -18px;
+}
+
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
@@ -250,14 +262,44 @@
   50% { opacity: 1; }
 }
 
-/* The line over the home hero. It arrives from the right, settles, and on the
-   way out slides further left as it fades, so the clip and the words change
-   together instead of cutting. */
-@keyframes heroLineIn {
-  from { transform: translateX(30px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
+/* Hero line swaps. In every one of these the outgoing line finishes before the
+   incoming one starts, so the two are never on screen together. */
+
+/* 1. Slide: out to the left, in from the right. */
+@keyframes lineOutLeft  { from { transform: translateX(0);    opacity: 1 } to { transform: translateX(-38px); opacity: 0 } }
+@keyframes lineInRight  { from { transform: translateX(38px); opacity: 0 } to { transform: translateX(0);     opacity: 1 } }
+
+/* 2. Dissolve: no movement at all. */
+@keyframes lineOutFade  { from { opacity: 1 } to { opacity: 0 } }
+@keyframes lineInFade   { from { opacity: 0 } to { opacity: 1 } }
+
+/* 3. Lift: out upwards, in from below. */
+@keyframes lineOutUp    { from { transform: translateY(0);    opacity: 1 } to { transform: translateY(-24px); opacity: 0 } }
+@keyframes lineInUp     { from { transform: translateY(24px); opacity: 0 } to { transform: translateY(0);     opacity: 1 } }
+
+/* 4. Wipe: erased left to right, then written back the same way. */
+@keyframes lineOutWipe  { from { clip-path: inset(0 0 0 0) }    to { clip-path: inset(0 0 0 100%) } }
+@keyframes lineInWipe   { from { clip-path: inset(0 100% 0 0) } to { clip-path: inset(0 0 0 0) } }
+
+/* 5. Word by word: each word rises on its own beat. */
+@keyframes wordOut      { from { transform: translateY(0);    opacity: 1 } to { transform: translateY(-12px); opacity: 0 } }
+@keyframes wordIn       { from { transform: translateY(16px); opacity: 0 } to { transform: translateY(0);     opacity: 1 } }
+
+/* 6. Blur swap: softens away and sharpens back, no direction. */
+@keyframes lineOutBlur  { from { filter: blur(0);    opacity: 1; transform: scale(1) }   to { filter: blur(9px); opacity: 0; transform: scale(1.05) } }
+@keyframes lineInBlur   { from { filter: blur(9px);  opacity: 0; transform: scale(0.96) } to { filter: blur(0);  opacity: 1; transform: scale(1) } }
+
+/* A like should feel like it landed. One quick overshoot on the thumb, and
+   nothing at all for anybody who asked for less movement. */
+@keyframes likePop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.32) rotate(-7deg); }
+  70%  { transform: scale(0.94) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
-@keyframes heroLineOut {
-  from { transform: translateX(0); opacity: 1; }
-  to   { transform: translateX(-30px); opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes likePop {
+    0%, 100% { transform: scale(1); }
+  }
 }

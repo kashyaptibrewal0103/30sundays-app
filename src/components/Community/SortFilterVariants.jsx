@@ -1,9 +1,9 @@
 import { useState } from "react";
 import {
-  SlidersHorizontal, ChevronDown, Check, X as XIcon, Edit3, ArrowUpDown,
+  SlidersHorizontal, ChevronDown, Check, Edit3, ArrowUpDown,
 } from "lucide-react";
 import { CC } from "./tokens";
-import { Sheet, Primary, Secondary } from "../Gift/GiftUI";
+import { Sheet, Primary } from "../Gift/GiftUI";
 
 // Six ways to sort and narrow the questions.
 //
@@ -52,54 +52,71 @@ const rail = {
 
 // The sheet three of the six share. Sort on one tab, subject on the other,
 // and a count so nobody applies a filter that empties the screen.
-export function SortFilterSheet({ sort, onSort, tags, tag, onTag, counts, matches, onClose }) {
-  const [tab, setTab] = useState("Sort");
+export function SortFilterSheet({ sort, onSort, tags, tag, onTag, counts, onClose }) {
+  // Nothing moves behind the sheet until Apply. Picking a sort and a subject
+  // is one decision, so it gets one commit rather than two live changes.
+  const [pickSort, setPickSort] = useState(sort);
+  const [pickTag, setPickTag] = useState(tag);
+  const touched = pickSort !== "top" || pickTag !== null;
+
   return (
     <Sheet
       title="Sort and filter"
       onClose={onClose}
       footer={
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <Primary onClick={onClose}>Show {matches} questions</Primary>
-          <Secondary onClick={() => { onSort("recent"); onTag(null); }}>Reset</Secondary>
-        </div>
+        <Primary onClick={() => { onSort(pickSort); onTag(pickTag); onClose(); }}>
+          Apply
+        </Primary>
       }
     >
-      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-        {["Sort", "Subject"].map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            flex: 1, minHeight: 40, borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-            fontSize: 13.5, fontWeight: 700,
-            border: `1px solid ${tab === t ? CC.ink : CC.line}`,
-            background: tab === t ? CC.ink : CC.white,
-            color: tab === t ? "#fff" : CC.body,
-          }}>{t}</button>
+      {/* Clearing is not the other half of applying, so it is a word rather
+          than a second button competing with it. */}
+      <div style={{
+        display: "flex", alignItems: "baseline", justifyContent: "space-between",
+        gap: 10, minHeight: 22, marginBottom: 6,
+      }}>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: CC.soft }}>
+          Sort By
+        </p>
+        {touched && (
+          <button onClick={() => { setPickSort("top"); setPickTag(null); }} style={{
+            border: "none", background: "none", cursor: "pointer", fontFamily: "inherit",
+            padding: 0, fontSize: 13, fontWeight: 700, color: CC.pinkInk,
+            textDecoration: "underline", textUnderlineOffset: 3,
+          }}>Clear all</button>
+        )}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {SORTS.map((o, i) => (
+          <button key={o.id} onClick={() => setPickSort(o.id)} style={{
+            display: "flex", alignItems: "center", gap: 10, minHeight: 46,
+            background: "none", border: "none", borderTop: i ? `1px solid ${CC.line}` : "none",
+            cursor: "pointer", fontFamily: "inherit", textAlign: "left", padding: "0 2px",
+          }}>
+            <span style={{
+              flex: 1, fontSize: 15, color: CC.ink,
+              fontWeight: pickSort === o.id ? 700 : 400,
+            }}>{o.label}</span>
+            {pickSort === o.id && <Check size={17} color={CC.teal} />}
+          </button>
         ))}
       </div>
 
-      {tab === "Sort" ? (
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {SORTS.map((s, i) => (
-            <button key={s.id} onClick={() => onSort(s.id)} style={{
-              display: "flex", alignItems: "center", gap: 10, minHeight: 50,
-              background: "none", border: "none", borderTop: i ? `1px solid ${CC.line}` : "none",
-              cursor: "pointer", fontFamily: "inherit", textAlign: "left", padding: "0 2px",
-            }}>
-              <span style={{ flex: 1, fontSize: 15, color: CC.ink }}>{s.label}</span>
-              {sort === s.id && <Check size={17} color={CC.pink} />}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Chip on={!tag} onClick={() => onTag(null)} pink>All</Chip>
-          {tags.map(t => (
-            <Chip key={t} on={tag === t} onClick={() => onTag(tag === t ? null : t)} pink>
-              {t}{counts?.[t] ? ` ${counts[t]}` : ""}
-            </Chip>
-          ))}
-        </div>
-      )}
+      {/* The same decision continued, not a second screen behind a tab. */}
+      <div style={{ height: 1, background: CC.line, margin: "18px 0 14px" }} />
+
+      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 800, color: CC.soft }}>
+        Topic
+      </p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Chip on={!pickTag} onClick={() => setPickTag(null)} pink>All</Chip>
+        {tags.map(t => (
+          <Chip key={t} on={pickTag === t} onClick={() => setPickTag(pickTag === t ? null : t)} pink>
+            {t}{counts?.[t] ? ` ${counts[t]}` : ""}
+          </Chip>
+        ))}
+      </div>
     </Sheet>
   );
 }
@@ -129,7 +146,7 @@ export function FiltersTwoRows({ sort, onSort, tags, tag, onTag }) {
 // Straight off Change day plan: subjects scroll, a rule, then a sliders button
 // with a count on it. Sorting lives in the sheet, where it is used least.
 
-export function FiltersChipsAndSliders({ sort, onSort, tags, tag, onTag, counts, matches }) {
+export function FiltersChipsAndSliders({ sort, onSort, tags, tag, onTag, counts }) {
   const [open, setOpen] = useState(false);
   const active = (sort !== "recent" ? 1 : 0) + (tag ? 1 : 0);
   return (
@@ -164,7 +181,7 @@ export function FiltersChipsAndSliders({ sort, onSort, tags, tag, onTag, counts,
       {open && (
         <SortFilterSheet
           sort={sort} onSort={onSort} tags={tags} tag={tag} onTag={onTag}
-          counts={counts} matches={matches} onClose={() => setOpen(false)}
+          counts={counts} onClose={() => setOpen(false)}
         />
       )}
     </>
@@ -175,7 +192,7 @@ export function FiltersChipsAndSliders({ sort, onSort, tags, tag, onTag, counts,
 // The hotel listing's move. One line saying what is on, and a pencil to change
 // it. Smallest footprint of any option that keeps the state visible.
 
-export function FiltersSummaryBar({ sort, onSort, tags, tag, onTag, counts, matches }) {
+export function FiltersSummaryBar({ sort, onSort, tags, tag, onTag, counts }) {
   const [open, setOpen] = useState(false);
   const touched = sort !== "recent" || tag;
   return (
@@ -196,7 +213,7 @@ export function FiltersSummaryBar({ sort, onSort, tags, tag, onTag, counts, matc
       {open && (
         <SortFilterSheet
           sort={sort} onSort={onSort} tags={tags} tag={tag} onTag={onTag}
-          counts={counts} matches={matches} onClose={() => setOpen(false)}
+          counts={counts} onClose={() => setOpen(false)}
         />
       )}
     </>
@@ -288,7 +305,7 @@ export function FiltersSegmented({ sort, onSort, tags, tag, onTag, counts }) {
       </div>
 
       {open && (
-        <Sheet title="Subject" onClose={() => setOpen(false)}>
+        <Sheet title="Topic" onClose={() => setOpen(false)}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Chip on={!tag} onClick={() => { onTag(null); setOpen(false); }} pink>All</Chip>
             {tags.map(t => (
@@ -341,7 +358,7 @@ export function FiltersOneRow({ sort, onSort, tags, tag, onTag, counts, matches 
       {open && (
         <SortFilterSheet
           sort={sort} onSort={onSort} tags={tags} tag={tag} onTag={onTag}
-          counts={counts} matches={matches} onClose={() => setOpen(false)}
+          counts={counts} onClose={() => setOpen(false)}
         />
       )}
     </>

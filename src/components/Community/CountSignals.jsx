@@ -13,7 +13,7 @@ import { CC } from "./tokens";
 
 /* ═══════════ The gold band shell ═══════════ */
 
-export function GoldShell({ kicker = "Sunday Lounge", meta, head, sub, rail, onOpen }) {
+export function GoldShell({ kicker = "Sunday Community", meta, head, sub, rail, onOpen }) {
   return (
     <div style={{
       width: "calc(100% + 32px)", margin: "0 -16px",
@@ -52,7 +52,7 @@ export function GoldShell({ kicker = "Sunday Lounge", meta, head, sub, rail, onO
           <span style={{
             flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
             fontSize: 13.5, fontWeight: 700, color: CC.goldInk,
-          }}>Visit Lounge <ArrowRight size={15} color={CC.gold} /></span>
+          }}>Visit the Community <ArrowRight size={15} color={CC.gold} /></span>
         </button>
       )}
     </div>
@@ -88,7 +88,7 @@ export const MetaDot = ({ unread }) =>
 //    an aside", so it reads second without a colour or a second element.
 export const MetaInKicker = () => null;
 export const kickerWithCount = (unread) =>
-  unread > 0 ? `Sunday Lounge (${unread} new)` : "Sunday Lounge";
+  unread > 0 ? `Sunday Community (${unread} new)` : "Sunday Community";
 
 // 4. Weight, not hue. Bold deep green against the grey around it.
 export const MetaBold = ({ unread }) =>
@@ -97,7 +97,7 @@ export const MetaBold = ({ unread }) =>
   ) : null;
 
 // 5. Lagoon. On brand, and it already means "something real happened here"
-//    everywhere else in the Lounge.
+//    everywhere else in the Community.
 export const MetaLagoon = ({ unread }) =>
   unread > 0 ? (
     <span style={{ ...metaText, color: CC.tealInk, fontWeight: 700 }}>{unread} new messages</span>
@@ -117,7 +117,7 @@ export const META_VARIANTS = [
     note: "Deep green against the grey around it. Contrast does the pointing, so nothing is taken from the palette.",
     Comp: MetaBold },
   { id: "lagoon", n: 5, name: "Lagoon", how: "On-brand colour",
-    note: "Lagoon already means “something real happened here” everywhere else in the Lounge, so it carries this without borrowing from the primary action.",
+    note: "Lagoon already means “something real happened here” everywhere else in the Community, so it carries this without borrowing from the primary action.",
     Comp: MetaLagoon },
 ];
 

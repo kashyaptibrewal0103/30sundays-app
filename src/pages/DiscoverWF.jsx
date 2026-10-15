@@ -10,6 +10,7 @@ import { weatherData, seasonLabel } from "../data/weatherData";
 import EduSingleCard from "../components/home_v2/EduSingleCard";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import ItineraryCard from "../components/ItineraryCard";
+import DestCommunitySection from "../components/Community/DestCommunitySection";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const PAD = 16;
@@ -401,6 +402,12 @@ function MoreFromDest({ dest, navigate }) {
           </div>
         </div>
       )}
+
+      {/* Sunday Community, above the reviews. A review is what somebody said
+          once; the Community is somebody you can still ask. */}
+      <div style={{ margin: `28px ${PAD}px 0` }}>
+        <DestCommunitySection name={dest} surface="destination" />
+      </div>
 
       {/* Reviews */}
       <div style={{ margin: `28px ${PAD}px 0` }}>

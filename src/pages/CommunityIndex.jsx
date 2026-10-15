@@ -21,14 +21,14 @@ export default function CommunityIndex() {
 
   return (
     <Screen>
-      <TopBar title="Sunday Lounge" sub="Phase 1 prototype" onBack={() => navigate("/account")} />
+      <TopBar title="Sunday Community" sub="Phase 1 prototype" onBack={() => navigate("/account")} />
       <Body>
         <div style={{ padding: "14px 0 40px" }}>
 
           <div style={{ padding: `0 ${PAD}px 14px` }}>
             <p style={{ fontSize: 14, color: CC.body, margin: 0, lineHeight: "21px" }}>
               Questions about a destination, answered by our team and by travellers who
-              have already been. Plus a group chat for everyone going the same month.
+              have already been.
             </p>
           </div>
 
@@ -53,13 +53,11 @@ export default function CommunityIndex() {
           <Group>
             <Row icon={MessageCircleQuestion} tint={CC.well} iconColor={CC.ink} title="Questions"
               desc="The landing surface" onClick={go("/community/thailand")} />
-            <Row icon={MessagesSquare} tint={CC.well} iconColor={CC.ink} title="Group chat"
-              desc="19 travellers going, two checkpoints from our team" onClick={go("/community/thailand/chat")} />
             <Row icon={Users} tint={CC.well} iconColor={CC.ink} title="A long thread"
               desc="Three answers, one of them a quote reply" onClick={go("/community/thailand/q/t1")} />
             <Row icon={CheckCircle2} tint={CC.tealTint} iconColor={CC.teal} title="A solved question"
               desc="Accepted answer pinned to the top" onClick={go("/community/thailand/q/t3")} />
-            <Row icon={ShieldCheck} tint={CC.well} iconColor={CC.body} title="Lounge guidelines"
+            <Row icon={ShieldCheck} tint={CC.well} iconColor={CC.body} title="Community guidelines"
               desc="Pinned and locked, no replies" onClick={go("/community/thailand/guidelines")} last />
           </Group>
 
@@ -69,10 +67,10 @@ export default function CommunityIndex() {
           <Group>
             <Row icon={Inbox} tint={CC.well} iconColor={CC.body} title="No questions yet"
               desc="Only the pinned rows" onClick={go("/community/thailand?state=empty")} />
-            <Row icon={Users} tint={CC.well} iconColor={CC.body} title="No group chat yet"
+            <Row icon={Users} tint={CC.well} iconColor={CC.body} title="A quiet room"
               desc="Mauritius, below the threshold of eight" onClick={go("/community/mauritius")} />
-            <Row icon={MessagesSquare} tint={CC.well} iconColor={CC.body} title="A closed chat"
-              desc="Vietnam, the month has passed. Read only" onClick={go("/community/vietnam/chat")} />
+            <Row icon={MessagesSquare} tint={CC.well} iconColor={CC.body} title="A month that has passed"
+              desc="Vietnam, closed but still readable" onClick={go("/community/vietnam")} />
             <Row icon={Loader} tint={CC.well} iconColor={CC.body} title="Loading"
               desc="Skeleton feed" onClick={go("/community/thailand?state=loading")} />
             <Row icon={WifiOff} tint={CC.goldTint} iconColor={CC.goldInk} title="Failed to post"

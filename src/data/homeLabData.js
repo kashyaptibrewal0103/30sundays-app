@@ -48,6 +48,16 @@ export const USPS = [
   { key: "traps", t: "No Tourist Traps", s: "Only hotels rated 8 and above, and hand picked activities." },
 ];
 
+// "Why we're the perfect match": the marketing site's own section, word for
+// word, with the site's own hand drawn icons. Do not reword it here.
+export const MATCH_INTRO = "Overwhelmed by itineraries that leave you no time to relax together? Suspect your 'friendly' travel agent isn't so friendly to your wallet? Then give us a try!";
+
+export const MATCH_CARDS = [
+  { key: "couples", icon: "uspCouples", t: "Made for Couples", s: "Vacations curated solely with couples in mind" },
+  { key: "price", icon: "uspPrice", t: "Price Transparency", s: "Only travel company to provide a split of Flights, Hotels & Activities" },
+  { key: "traps", icon: "uspTraps", t: "No Tourist Traps", s: "Only 8+ rated hotels; hand-picked authentic activities" },
+];
+
 export function inr(n) {
   return `₹${Math.round(n).toLocaleString("en-IN")}`;
 }
@@ -81,6 +91,7 @@ export const VARIANTS = [
   { n: 3, title: "Pinned clip", desc: "The clip never scrolls away. The countries ride on a panel that slides over it." },
   { n: 4, title: "Fill in the blank", desc: "A sentence you complete, then the six countries as a plain list." },
   { n: 5, title: "Poster stack", desc: "Photo one side, handwriting the other, alternating down the page." },
+  { n: 6, title: "Perfect match", desc: "One fixed line on the clip, and the site's own three reasons under the countries." },
 ];
 
-export const HOME_LAB_ROUTES = [...VARIANTS.map((v) => `/home-lab/${v.n}`), "/home-lab/cta", "/home-lab/cards", "/home-lab/plans", "/home-lab/states"];
+export const HOME_LAB_ROUTES = [...VARIANTS.map((v) => `/home-lab/${v.n}`), "/home-lab/cta", "/home-lab/cards", "/home-lab/plans", "/home-lab/states", "/home-lab/lines", "/home-lab/proof", "/home-lab/line", "/home-lab/booked-hero", "/home-lab/booked-flat", ...[1, 2, 3, 4, 5].map((n) => `/home-lab/booked/${n}`)];

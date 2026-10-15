@@ -8,18 +8,18 @@ import { ENTRY_VARIANTS } from "../components/Community/TripEntryVariants";
 import { getDest, PEOPLE, questionsFor } from "../data/communityData";
 import { useCommunity } from "../state/useCommunity";
 
-// Six ways Community can sit on the trip screen, one after the other, in the
+// Every way Community can sit on the trip screen, one after the other, in the
 // place and at the width they would really appear. Nothing here is wired into
 // a trip; this screen exists to pick a shape.
 
-const RECOMMENDED = "preview";
+const RECOMMENDED = "lounge-scene";
 
 const FACES = [PEOPLE.aisha, PEOPLE.gaurav, PEOPLE.farah, PEOPLE.lakshmi];
 
 export default function CommunityEntries() {
   const navigate = useNavigate();
   const [picked, setPicked] = useState(null);
-  const { answeredCount, unreadFor } = useCommunity();
+  const { answeredCount } = useCommunity();
 
   const d = getDest("thailand");
   const questions = questionsFor("thailand");
@@ -30,7 +30,6 @@ export default function CommunityEntries() {
     d,
     count: questions.length,
     answered: answeredCount("thailand"),
-    unread: unreadFor("thailand"),
     faces: FACES,
     top,
     questions,
@@ -40,8 +39,8 @@ export default function CommunityEntries() {
   return (
     <Screen>
       <TopBar
-        title="Sunday Lounge on a trip"
-        sub="Eleven layouts, same content"
+        title="Sunday Community on a trip"
+        sub="Forty-five layouts, same content"
         onBack={() => navigate("/trips/trip-1")}
       />
       <Body>
@@ -56,16 +55,33 @@ export default function CommunityEntries() {
               <p style={{
                 fontSize: 12, fontWeight: 800,
                 color: CC.goldInk, margin: 0,
-              }}>One Door, Eleven Ways</p>
+              }}>One Door, Forty-Five Ways</p>
               <p style={{ fontSize: 14, color: CC.ink, margin: "7px 0 0", lineHeight: "21px" }}>
-                All eleven are a single tap target that opens the Lounge. The group
-                chat sits one tap further in, where it already has a card of its own.
+                All of them are a single tap target that opens the Community. The
+                room sits one tap further in, where it already has a screen of its own.
               </p>
               <p style={{ fontSize: 13.5, color: CC.body, margin: "8px 0 0", lineHeight: "20px" }}>
                 Numbers 1 to 6 differ on how much weight this pulls next to
-                payments, documents and the itinerary. Numbers 5 and 7 to 11 are
-                the tinted band, identical in anatomy, varying only the ground
-                behind the type.
+                payments, documents and the itinerary. Numbers 5 and 7 to 12 are
+                the tinted band, varying only the ground behind the type.
+                Numbers 13 to 27 are the artistic set: the destination's own
+                photo, and the objects a trip leaves behind. A postcard, a
+                ticket, a stamp, a tag, a key, a map. Number 28 is the lounge
+                entrance, drawn as one scene.
+              </p>
+              <p style={{ fontSize: 13.5, color: CC.body, margin: "8px 0 0", lineHeight: "20px" }}>
+                Number 28 is the one on the trip screen now. It is the boarding
+                pass story taken one step further: the pass gets you into a
+                lounge, so here is the lounge, with the host at the door.
+              </p>
+              <p style={{ fontSize: 13.5, color: CC.body, margin: "8px 0 0", lineHeight: "20px" }}>
+                Numbers 29 to 35 are the Sunday Community set. Everything before
+                them is an object or a place, and neither has a person in it.
+                These put the travellers in instead, and each one uses a
+                different material: speech, stamps, handwriting, print,
+                photography, paper and plain type. None of them leans on a live
+                question, a reply count or a timestamp, so they all hold up on
+                launch day, when there is nothing in the room yet.
               </p>
             </div>
           </div>

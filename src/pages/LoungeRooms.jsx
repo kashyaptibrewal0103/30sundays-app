@@ -30,7 +30,7 @@ export default function LoungeRooms() {
       <TopBar
         title="Rooms list"
         sub={`${v.n} of ${ROOM_VARIANTS.length} · ${v.name}`}
-        onBack={() => navigate("/lounge")}
+        onBack={() => navigate("/community")}
       />
 
       <Body>
@@ -84,7 +84,7 @@ export default function LoungeRooms() {
               background: CC.well, border: `1px solid ${CC.line}`,
             }}>
               <Search size={17} color={CC.soft} />
-              <span style={{ fontSize: 15, color: CC.soft }}>Search everything in the Lounge</span>
+              <span style={{ fontSize: 15, color: CC.soft }}>Search everything in the Community</span>
             </div>
           </div>
 

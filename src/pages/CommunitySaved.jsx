@@ -8,7 +8,7 @@ import { PAD, QuestionCard } from "../components/Community/CommunityUI";
 
 // Saved threads, and nothing else. The cards and the thread behind them are
 // the same ones as the feed, so this is a filter with a door rather than a
-// second way of reading the Lounge.
+// second way of reading the Community.
 
 export default function CommunitySaved() {
   const { dest = "thailand" } = useParams();
