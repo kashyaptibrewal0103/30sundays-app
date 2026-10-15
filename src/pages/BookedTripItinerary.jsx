@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, FileText, Receipt, FolderOpen, Ticket, ChevronRight, ChevronDown, ChevronUp,
   Share2, MapPin, Star, MessageCircle, Plane, Users, PalmtreeIcon,
@@ -14,6 +14,7 @@ import { getTripById, getCountdown } from "../data/tripData";
 import { getMauritiusInclusionsByName } from "../data/mauritiusData";
 import ConsultantCard from "../components/ConsultantCard";
 import AddOnsSection from "../components/AddOnsSection";
+import TripAddOns from "../components/TripAddOns";
 import VisaSection from "../components/VisaSection";
 import AddOnDetailList from "../components/AddOnDetailList";
 import InclusionsDrawer from "../components/InclusionsDrawer";
@@ -2028,6 +2029,7 @@ function DayWiseTab({ trip }) {
 // ─── Main Trip Details Page ───
 export default function BookedTripItinerary() {
   const { tripId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const trip = getTripById(tripId);
   const [detailTab, setDetailTab] = useState("details");
@@ -2160,10 +2162,6 @@ export default function BookedTripItinerary() {
 
           <DocumentsSection trip={trip} navigate={navigate} />
           <SectionDivider />
-          {trip.addOns?.visa && <VisaSection visa={trip.addOns.visa} destination={trip.destination} travelers={[trip.leadTraveler, ...(trip.coTravelers || [])].filter(Boolean)} />}
-          <SectionDivider />
-          {trip.addOns && <AddOnsSection collapsible addOns={trip.addOns} travelers={[trip.leadTraveler, ...(trip.coTravelers || [])].filter(Boolean)} />}
-          <SectionDivider />
           <CoTravelersSection trip={trip} />
           <SectionDivider />
           <ItineraryGlance trip={trip} setDetailTab={setDetailTab} />
@@ -2184,6 +2182,14 @@ export default function BookedTripItinerary() {
           )}
           <SectionDivider />
           <HotelsSection hotels={trip.hotels} tripId={trip.id} />
+          {/* Add-ons sit under the stays, the last booked thing on the page.
+              ?addons=docs shows the variation with each add-on's documents. */}
+          <TripAddOns
+            addOns={trip.addOns}
+            travelers={[trip.leadTraveler, ...(trip.coTravelers || [])].filter(Boolean)}
+            variant={searchParams.get("addons") === "docs" ? "docs" : "plain"}
+            divider={<SectionDivider />}
+          />
           <SectionDivider />
           <TripJourneyMap trip={trip} />
 

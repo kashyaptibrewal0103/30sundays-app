@@ -48,7 +48,12 @@ export const mockTrips = [
     coTravelers: [{ name: "Priya Sharma", phone: "+91 98765 43211", role: "Co-traveler" }],
     consultant: { name: "Riya Shah", phone: "+919876500011" },
     addOns: {
-      visa: { type: "paid", purchased: true, documentUrl: null, stayInfo: "Single-entry, 60-day stay, issued by the Royal Thai Embassy" },
+      visa: {
+        type: "paid", purchased: true, documentUrl: null,
+        stayInfo: "Single-entry, 60-day stay, issued by the Royal Thai Embassy",
+        title: "Thailand Tourist e-Visa",
+        description: "Single entry, valid for a 60 day stay, issued by the Royal Thai Embassy. It is arranged for every traveller on this trip, so there is nothing to apply for before you fly.",
+      },
       insurance: { purchased: false },
       forex: { enabled: true },
     },
@@ -510,8 +515,16 @@ export const mockTrips = [
     coTravelers: [{ name: "Vikram Reddy", phone: "+91 90000 12346", role: "Co-traveler" }],
     consultant: { name: "Aarav Mehta", phone: "+919876500022" },
     addOns: {
-      visa: { purchased: true, documentUrl: "#" },
-      insurance: { purchased: true, documentUrl: "#" },
+      visa: {
+        purchased: true, documentUrl: "#",
+        title: "Indonesia Visa on Arrival",
+        description: "Single entry, valid for a 30 day stay. It is arranged for every traveller on this trip, so there is nothing to apply for before you fly.",
+      },
+      insurance: {
+        purchased: true, documentUrl: "#",
+        title: "Travel insurance",
+        description: "Medical, cancellation and baggage cover for every traveller, for the full length of the trip. Your policy is in your trip documents.",
+      },
       forex: { enabled: true },
     },
     itineraryDays: [
@@ -818,7 +831,11 @@ export const mockTrips = [
     consultant: { name: "Sana Kapoor", phone: "+919876500044" },
     addOns: {
       visa: { purchased: false },
-      insurance: { purchased: true, documentUrl: "#" },
+      insurance: {
+        purchased: true, documentUrl: "#",
+        title: "Travel insurance",
+        description: "Medical, cancellation and baggage cover for every traveller, for the full length of the trip. Your policy is in your trip documents.",
+      },
       forex: { enabled: true },
     },
     itineraryDays: [
