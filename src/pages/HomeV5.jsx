@@ -52,13 +52,18 @@ export function DestCircles() {
 }
 
 // Traveller moments reels (same as HomeV2's "From the road").
-export function TravellerMomentsReels() {
+// Heading props are optional. A page that groups this under a header of its
+// own passes kicker={null} and its own title and line; everyone else gets the
+// original copy.
+export function TravellerMomentsReels({
+  kicker = "Couples who trusted us", title = "Traveller moments", sub = "Real couples. Real reels.", titleStyle,
+}) {
   return (
     <div style={{ marginTop: 28 }}>
       <div style={{ padding: `0 ${PAD}px`, marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1.4px", color: C.p600, textTransform: "uppercase", marginBottom: 4 }}>Couples who trusted us</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.head, letterSpacing: "-0.3px", margin: 0 }}>Traveller moments</h2>
-        <p style={{ fontSize: 13, color: C.sub, margin: "3px 0 0" }}>Real couples. Real reels.</p>
+        {kicker && <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1.4px", color: C.p600, textTransform: "uppercase", marginBottom: 4 }}>{kicker}</div>}
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.head, letterSpacing: "-0.3px", margin: 0, ...titleStyle }}>{title}</h2>
+        {sub && <p style={{ fontSize: 13, color: C.sub, margin: "3px 0 0" }}>{sub}</p>}
       </div>
       <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD }}>
         {travellerReels.map((r, i) => <TravellerReel key={i} item={r} />)}
@@ -117,12 +122,16 @@ function CoupleFaces() {
 }
 
 // Reviews block (same as HomeV2's "What couples say").
-export function LovedByCouples() {
+// Same optional heading props as the moments rail above.
+export function LovedByCouples({
+  kicker = "What couples say", title = "Loved by 1,000+ couples", sub = null, titleStyle,
+}) {
   return (
     <div style={{ margin: "28px 16px 0" }}>
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1.4px", color: C.p600, textTransform: "uppercase", marginBottom: 4 }}>What couples say</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.head, letterSpacing: "-0.3px", margin: 0 }}>Loved by 1,000+ couples</h2>
+        {kicker && <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1.4px", color: C.p600, textTransform: "uppercase", marginBottom: 4 }}>{kicker}</div>}
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.head, letterSpacing: "-0.3px", margin: 0, ...titleStyle }}>{title}</h2>
+        {sub && <p style={{ fontSize: 13, color: C.sub, margin: "3px 0 0" }}>{sub}</p>}
       </div>
       <div style={{ background: `linear-gradient(135deg, ${C.p100} 0%, #fff 100%)`, border: `1px solid ${C.p100}`, borderRadius: 18, padding: "20px 18px", marginBottom: 16, boxShadow: "0 4px 18px rgba(137,18,62,0.08)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>

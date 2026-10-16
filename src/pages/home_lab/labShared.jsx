@@ -8,7 +8,7 @@ import EduMultiCarousel from "../../components/home_v2/EduMultiCarousel";
 import LeadCloseCTA from "../../components/home_shared/LeadCloseCTA";
 import { TravellerMomentsReels, LovedByCouples } from "../HomeV5";
 import Logo from "../../components/Logo";
-import { MATCH_CARDS, MATCH_INTRO, PROMISES, USPS } from "../../data/homeLabData";
+import { MATCH_CARDS, PROMISES, USPS } from "../../data/homeLabData";
 
 export const PAD = 18;
 // One gap between sections everywhere. It matches the space the live page
@@ -445,11 +445,13 @@ export function DisplayTitle({ title, sub, size = 22, style }) {
 //
 // It sits on the page rather than on the clip, because the button overlaps the
 // clip's bottom edge and everything under it is already cream.
-export function ProofLine({ rating = "4.6", travellers = "25,000+ travellers", style }) {
+// `onVideo` is the same line in white, for when it sits on the clip itself.
+export function ProofLine({ rating = "4.6", travellers = "25,000+ travellers", style, onVideo = false }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
-      fontSize: 12.5, color: C.sub, ...style,
+      fontSize: 12.5, color: onVideo ? "rgba(255,255,255,0.92)" : C.sub,
+      textShadow: onVideo ? "0 1px 8px rgba(0,0,0,0.55)" : "none", ...style,
     }}>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
         <svg width="13" height="13" viewBox="0 0 48 48" role="img" aria-label="Google" style={{ display: "block", flexShrink: 0 }}>
@@ -458,10 +460,10 @@ export function ProofLine({ rating = "4.6", travellers = "25,000+ travellers", s
           <path fill="#FBBC05" d="M11.5 28.3c-.5-1.4-.8-2.8-.8-4.3s.3-3 .8-4.3l-7.2-5.6C2.9 17 2 20.4 2 24s.9 7 2.3 9.9l7.2-5.6z" />
           <path fill="#EA4335" d="M24 10.7c4.1 0 6.9 1.8 8.5 3.3l6.2-6C34.9 4.5 30 2 24 2 15.4 2 7.9 7 4.3 14.1l7.2 5.6C13.3 14.5 18.2 10.7 24 10.7z" />
         </svg>
-        <b style={{ fontWeight: 800, color: NAVY }}>{rating}</b>
+        <b style={{ fontWeight: 800, color: onVideo ? "#fff" : NAVY }}>{rating}</b>
         <Star size={11} color="#FBBC05" fill="#FBBC05" strokeWidth={0} />
       </span>
-      <span style={{ width: 1, height: 12, background: W.line }} />
+      <span style={{ width: 1, height: 12, background: onVideo ? "rgba(255,255,255,0.45)" : W.line }} />
       <span>{travellers}</span>
     </div>
   );
@@ -492,7 +494,7 @@ export function PolaroidGrid({ items, photoHeight = 118, style }) {
 export function PerfectMatch({ style }) {
   return (
     <div style={{ position: "relative", ...style }}>
-      <DisplayTitle title="Why we're the perfect match" sub={MATCH_INTRO} />
+      <DisplayTitle title="Why we're the perfect match" />
       <div style={{ padding: `0 ${PAD}px`, display: "grid", gap: 12 }}>
         {MATCH_CARDS.map((m) => (
           <div key={m.key} style={{ display: "flex", alignItems: "center", gap: 14, background: W.card, borderRadius: 16, padding: "14px 16px", boxShadow: W.shadow }}>
@@ -529,7 +531,11 @@ export function DestRow({ d, to }) {
 // grid is left out: every variant now shows the six up top, so keeping it would
 // say the same thing twice. No ground of its own, so the page stays one colour
 // from the clip all the way down.
-export function LabLower({ top }) {
+// Sub-sections under a group header step down a size, so the group reads as
+// one block with three parts rather than four headings of equal weight.
+const SUB_TITLE = { fontSize: 18, fontWeight: 700, color: NAVY };
+
+export function LabLower({ top, afterSchool, travellers }) {
   const lessons = COMPARE_REELS.map((c) => ({ poster: c.poster, videoUrl: c.videoUrl, duration: c.duration, tag: `${c.a} vs ${c.b}`, topics: c.topics }));
   return (
     // Sits above a pinned hero, which is a positioned element and would
@@ -547,8 +553,21 @@ export function LabLower({ top }) {
           which is what read as the page changing. The clouds went with it: they
           only made sense against a sky. */}
       <div style={{ position: "relative", paddingTop: 6, background: W.page }}>
-        <TravellerMomentsReels />
-        <LovedByCouples />
+        {/* Optional. Sunday School is where a country gets chosen; what other
+            travellers actually booked there is the next thing worth seeing. */}
+        {travellers && <DisplayTitle title={travellers.title} sub={travellers.sub} style={{ marginTop: 28, marginBottom: 0 }} />}
+        {afterSchool}
+        {travellers ? (
+          <>
+            <TravellerMomentsReels kicker={null} {...travellers.moments} titleStyle={SUB_TITLE} />
+            <LovedByCouples kicker={null} {...travellers.reviews} titleStyle={SUB_TITLE} />
+          </>
+        ) : (
+          <>
+            <TravellerMomentsReels />
+            <LovedByCouples />
+          </>
+        )}
       </div>
       <LeadCloseCTA tone="clean" pad={PAD} />
       <div style={{ height: 80 }} />
@@ -559,12 +578,12 @@ export function LabLower({ top }) {
 // Page shell: warm scroll container, the variant's top, then the shared lower
 // half. `overlay` sits outside the scroller so a sheet pins to the bottom of
 // the phone rather than the bottom of a very long page.
-export function LabPage({ children, overlay, lower = true, preSchool }) {
+export function LabPage({ children, overlay, lower = true, preSchool, afterSchool, travellers }) {
   return (
     <div style={{ position: "relative", height: "100%" }}>
       <div data-lab-scroll className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: W.page }}>
         {children}
-        {lower && <LabLower top={preSchool} />}
+        {lower && <LabLower top={preSchool} afterSchool={afterSchool} travellers={travellers} />}
       </div>
       {overlay}
     </div>
