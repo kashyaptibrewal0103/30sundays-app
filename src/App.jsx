@@ -87,6 +87,7 @@ import CommunityMyPosts from "./pages/CommunityMyPosts";
 import CommunitySuggest from "./pages/CommunitySuggest";
 import LoungeRules from "./pages/LoungeRules";
 import RouteHelpLab from "./pages/RouteHelpLab";
+import BookedBadgeLab from "./pages/BookedBadgeLab";
 import GiftCardBuy from "./pages/GiftCardBuy";
 import GiftCardClaim from "./pages/GiftCardClaim";
 import GiftRegistry from "./pages/GiftRegistry";
@@ -192,6 +193,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/home-lab/line" element={<CircleLineLab />} />
         {/* Both booked openings, forced to the booked state so neither needs the
             demo switcher. The clip one is what the home itself now shows. */}
+        <Route path="/home-lab/compact" element={<MatchHome userState={userState} compact />} />
         <Route path="/home-lab/booked-hero" element={<MatchHome userState="customer" bookedStyle="hero" />} />
         <Route path="/home-lab/booked-flat" element={<MatchHome userState="customer" bookedStyle="flat" />} />
         <Route path="/home-lab/booked" element={<BookedHomeIndex />} />
@@ -218,6 +220,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/building-v1" element={<Generating leadData={leadData} />} />
         <Route path="/checks-lab" element={<ChecksLab />} />
         <Route path="/route-help-lab" element={<RouteHelpLab />} />
+        <Route path="/booked-badge-lab" element={<BookedBadgeLab />} />
         <Route path="/old-bali-page" element={<Destination name="Bali" />} />
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />
