@@ -88,6 +88,8 @@ import CommunitySuggest from "./pages/CommunitySuggest";
 import LoungeRules from "./pages/LoungeRules";
 import RouteHelpLab from "./pages/RouteHelpLab";
 import BookedBadgeLab from "./pages/BookedBadgeLab";
+import TravellersLab from "./pages/TravellersLab";
+import JournalTitlesLab from "./pages/JournalTitlesLab";
 import GiftCardBuy from "./pages/GiftCardBuy";
 import GiftCardClaim from "./pages/GiftCardClaim";
 import GiftRegistry from "./pages/GiftRegistry";
@@ -173,7 +175,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
       <ProfileDemoSync userState={userState} />
       {!shareLink && <UserToggle userState={userState} setUserState={setUserState} />}
       <Routes>
-        <Route path="/" element={<MatchHome userState={userState} />} />
+        <Route path="/" element={<MatchHome userState={userState} compact />} />
         {/* The home this replaced, kept reachable while it is still being reviewed. */}
         <Route path="/home-v5" element={<HomeV5 userState={userState} />} />
         <Route path="/landing-clone" element={<HomeV5Clone userState={userState} />} />
@@ -194,6 +196,8 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         {/* Both booked openings, forced to the booked state so neither needs the
             demo switcher. The clip one is what the home itself now shows. */}
         <Route path="/home-lab/compact" element={<MatchHome userState={userState} compact />} />
+        {/* The home before the compact opening became the default, kept to compare. */}
+        <Route path="/home-lab/standard" element={<MatchHome userState={userState} />} />
         <Route path="/home-lab/booked-hero" element={<MatchHome userState="customer" bookedStyle="hero" />} />
         <Route path="/home-lab/booked-flat" element={<MatchHome userState="customer" bookedStyle="flat" />} />
         <Route path="/home-lab/booked" element={<BookedHomeIndex />} />
@@ -221,6 +225,8 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/checks-lab" element={<ChecksLab />} />
         <Route path="/route-help-lab" element={<RouteHelpLab />} />
         <Route path="/booked-badge-lab" element={<BookedBadgeLab />} />
+        <Route path="/travellers-lab" element={<TravellersLab />} />
+        <Route path="/journal-titles-lab" element={<JournalTitlesLab />} />
         <Route path="/old-bali-page" element={<Destination name="Bali" />} />
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />

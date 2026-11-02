@@ -552,15 +552,15 @@ export function LabLower({ top, afterSchool, travellers }) {
           across 1,200px of scroll and every card sat on a different shade of it,
           which is what read as the page changing. The clouds went with it: they
           only made sense against a sky. */}
-      <div style={{ position: "relative", paddingTop: 6, background: W.page }}>
+      <div style={{ position: "relative", paddingTop: 6, background: travellers?.ground || W.page }}>
         {/* Optional. Sunday School is where a country gets chosen; what other
             travellers actually booked there is the next thing worth seeing. */}
-        {travellers && <DisplayTitle title={travellers.title} sub={travellers.sub} style={{ marginTop: 28, marginBottom: 0 }} />}
+        {travellers?.title && <DisplayTitle title={travellers.title} sub={travellers.sub} style={{ marginTop: 28, marginBottom: 0 }} />}
         {afterSchool}
         {travellers ? (
           <>
-            <TravellerMomentsReels kicker={null} {...travellers.moments} titleStyle={SUB_TITLE} />
-            <LovedByCouples kicker={null} {...travellers.reviews} titleStyle={SUB_TITLE} />
+            <TravellerMomentsReels kicker={null} {...travellers.moments} titleStyle={SUB_TITLE} top={22} />
+            <LovedByCouples kicker={null} {...travellers.reviews} titleStyle={SUB_TITLE} top={22} />
           </>
         ) : (
           <>

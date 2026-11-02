@@ -113,7 +113,7 @@ function SortFilterSheet({ tab, setTab, f, setF, matchCount, onClose }) {
 // The rail answers "show me something"; this answers "show me the one I want",
 // which is where filters belong. They sit along the bottom, in reach of the
 // thumb and after the list rather than in front of it.
-function AllTripsSheet({ onClose }) {
+export function AllTripsSheet({ onClose }) {
   const [closing, setClosing] = useState(false);
   const [f, setF] = useState({ dests: [], budgets: [], sort: "recommended" });
   const [sheet, setSheet] = useState(false);
@@ -219,11 +219,18 @@ function AllTripsSheet({ onClose }) {
 // `style` lets a page with its own ground (the warm lab homes) host the rail
 // without a white band across it, and `titleColor` matches that page's
 // headings. The cards stay white either way.
-export default function BookedTripsRail({ style, titleColor = C.head, title = "Real traveller itineraries", sub = null, titleStyle }) {
+// `header` swaps the title row for a page's own (the journal header on the new
+// home); View all then moves under the cards. `decorate(i)` draws something on
+// each card, like the journal's tape.
+export default function BookedTripsRail({
+  style, titleColor = C.head, title = "Real traveller itineraries", sub = null, titleStyle,
+  header, decorate, linkColor = C.p600,
+}) {
   const [all, setAll] = useState(false);
 
   return (
     <div style={{ marginTop: 32, background: C.white, ...style }}>
+      {header || (
       <div style={{ display: "flex", alignItems: sub ? "flex-start" : "center", gap: 10, padding: `0 ${PAD}px`, marginBottom: 13 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: titleColor, letterSpacing: "-0.5px", ...titleStyle }}>
@@ -237,10 +244,26 @@ export default function BookedTripsRail({ style, titleColor = C.head, title = "R
           fontSize: 12.5, fontWeight: 700, color: C.p600,
         }}>View all <ArrowRight size={13} /></button>
       </div>
+      )}
 
-      <div className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch" }}>
-        {BOOKED_TRIPS.map((t) => <BookedCard key={t.key} t={t} />)}
+      <div className="hs" style={{ gap: decorate ? 14 : 13, paddingLeft: PAD, paddingRight: PAD, paddingTop: decorate ? 10 : 0, alignItems: "stretch" }}>
+        {BOOKED_TRIPS.map((t, i) => decorate ? (
+          <div key={t.key} style={{ position: "relative", display: "flex", flexShrink: 0 }}>
+            <BookedCard t={t} />
+            {decorate(i)}
+          </div>
+        ) : <BookedCard key={t.key} t={t} />)}
       </div>
+
+      {header && (
+        <div style={{ padding: `12px ${PAD}px 0` }}>
+          <button onClick={() => setAll(true)} style={{
+            display: "inline-flex", alignItems: "center", gap: 4, padding: 0,
+            border: "none", background: "none", cursor: "pointer", fontFamily: "inherit",
+            fontSize: 13, fontWeight: 700, color: linkColor,
+          }}>View all <ArrowRight size={14} /></button>
+        </div>
+      )}
 
       {/* Rendered at the top of the page, not inside the rail. A host page can
           sit in a low layer (the lab homes do, to stay above their pinned

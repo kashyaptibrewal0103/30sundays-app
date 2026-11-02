@@ -1,6 +1,7 @@
 import { LAB_SIX, byName } from "../../data/homeLabData";
 import { BoardingPassCard, LoungeBlock, useBookedTrip } from "./BookedHomes";
 import BookedTripsRail from "../../components/BookedTripsRail";
+import { JournalHeader, PAPER, Tape } from "../../components/booked_lab/Journal";
 import { DisplayTitle, GAP, HeroScrim, JOIN, LabPage, LabVideo, NAVY, PAD, Leaf, PerfectMatch, PolaroidGrid, PlanAction, TopBar, W, useLeadTrip, useRotate, ProofLine } from "./labShared";
 
 // The Crew layout with two changes. The clip carries one fixed promise instead
@@ -81,22 +82,24 @@ export default function MatchHome({ userState, bookedStyle = "hero", compact = f
   return (
     <LabPage
       preSchool={<PerfectMatch style={{ padding: `${GAP}px 0 16px` }} />}
-      // Everything other travellers did with us, as one group: what they
-      // booked, what they filmed, what they said. Straight after Sunday School,
-      // where the shared prototype puts the itineraries. On the warm ground.
+      // Everything other travellers did with us, as one group: bookings,
+      // moments, reviews. Straight after Sunday School, where the shared
+      // prototype puts the itineraries. On the warm ground. Plain nouns, no
+      // pronouns, and no subtitles: each title says what is under it.
+      // The journal look (option D at /travellers-lab): dotted paper under the
+      // whole block, "Just booked" leading it, the cards taped down.
       travellers={{
-        title: "Our travellers",
-        sub: "What they booked, filmed and said.",
-        moments: { title: "On their trips", sub: "Reels from their holidays." },
-        reviews: { title: "In their words" },
+        title: null,
+        ground: PAPER,
+        moments: { title: "Traveller Moments", sub: null },
+        reviews: { title: "Traveller Reviews", sub: null },
       }}
       afterSchool={
         <BookedTripsRail
-          title="What they booked"
-          sub="Real itineraries, from recent bookings."
-          titleColor={NAVY}
-          titleStyle={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.3px" }}
-          style={{ background: "transparent", marginTop: 20, marginBottom: 8 }}
+          header={<JournalHeader />}
+          decorate={(i) => <Tape i={i} />}
+          linkColor={NAVY}
+          style={{ background: "transparent", marginTop: 30, marginBottom: 0 }}
         />
       }
     >
