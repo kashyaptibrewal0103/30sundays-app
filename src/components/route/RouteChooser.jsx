@@ -355,8 +355,6 @@ export default function RouteChooser({
         frame={frame}
         dest={dest}
         cities={picked.cities}
-        reason="route"
-        summary={`${picked.cities.join(" · ")} · ${total} nights`}
         onDone={() => { setBuilding(false); onSave(picked.route); }}
       />
     );

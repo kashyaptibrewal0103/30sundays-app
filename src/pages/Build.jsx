@@ -302,9 +302,12 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
         customizations: { leadName: name, selectedDayOptions: {}, selectedHotels: {}, travelDates: { fromDate: startDate, nights: it.nights, travelers: travellers }, builtItinerary: it },
         indicativePrice: Number(String(it.price).replace(/,/g, "")) || 0,
       });
+      // The loader was the wait. What it built is saved as V1 on the spot,
+      // rather than landing as a draft that asks to be saved again.
+      dealsCtx.requestPricing(dealId, versionId, Number(String(it.price).replace(/,/g, "")) || 0);
       // Skip the reveal: drop straight onto the itinerary screen. Replace so
       // Back from the itinerary doesn't return into the half-built wizard.
-      navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${versionId}`, { replace: true });
+      navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${versionId}&saved=1`, { replace: true });
     }, BUILD_WAIT);
   };
 
@@ -360,9 +363,11 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
       },
       indicativePrice: Number(String(it.price).replace(/,/g, "")) || 0,
     });
+    // Saved as the next version straight away, the same as a new trip.
+    dealsCtx.requestPricing(editDealId, newVer, Number(String(it.price).replace(/,/g, "")) || 0);
     dealsCtx.setCustomItinerary(editDealId, it);
     // Replace the editor entry so Back lands on the itinerary, not the wizard.
-    navigate(`/itinerary/${it.id}?dealId=${editDealId}&versionId=${newVer}`, { replace: true });
+    navigate(`/itinerary/${it.id}?dealId=${editDealId}&versionId=${newVer}&saved=1`, { replace: true });
   };
 
   // The route has to spend every night the dates bought. Fewer nights in the
@@ -1558,14 +1563,14 @@ function ActivityReel({ a, dest, on, onToggle, onClose }) {
 
 // ════════════════════ Building ════════════════════
 // The same wait the itinerary shows when a trip is built again: a countdown,
-// the five areas it works through, what goes into every trip, and reels from
+// the five areas it works through, and reels from
 // the destination. The real build takes about a minute, which is what the
 // countdown says; the prototype lands on the itinerary after a few seconds,
 // so the screen is a preview of the wait rather than the whole of it.
 function Building({ dest, cities = [] }) {
   return (
     <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.bg }}>
-      <BuildingView dest={dest} cities={cities} />
+      <BuildingView dest={dest} cities={cities} checks={false} />
     </div>
   );
 }

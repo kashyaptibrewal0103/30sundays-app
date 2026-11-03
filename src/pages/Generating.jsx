@@ -239,25 +239,11 @@ const Gallery = memo(function Gallery({ dest, clips, onOpen }) {
   );
 });
 
-// ─── What a rebuild changes ───
-// Only on a rebuild from the itinerary. Says what is being built again and
-// why, so nobody wonders why their hotel changed when all they did was add a
-// night, and that the version they had is not lost.
-function Change({ summary, why }) {
-  return (
-    <div style={{ ...CARD, padding: "14px 16px 14px" }}>
-      <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: INK, letterSpacing: "-0.3px" }}>What changes</h2>
-      {summary && <p style={{ margin: "4px 0 0", fontSize: 13.5, fontWeight: 700, color: C.p600 }}>{summary}</p>}
-      <p style={{ margin: "8px 0 0", fontSize: 13.5, lineHeight: "19px", color: C.sub }}>{why}</p>
-      <p style={{ margin: "8px 0 0", fontSize: 12.5, lineHeight: "17px", color: C.inact }}>Your previous version stays saved in My Plans.</p>
-    </div>
-  );
-}
-
 // ─── The view ───
 // The screen without its routing, so the itinerary can show the same wait
-// over itself when a trip is built again. `change` adds the rebuild card.
-export function BuildingView({ dest, cities = [], startAt = 0, onBack, onLeave, change }) {
+// over itself when a trip is built again. `checks={false}` leaves just the
+// timeline and the reels, which is what the wizard and every rebuild show.
+export function BuildingView({ dest, cities = [], startAt = 0, onBack, onLeave, checks = true }) {
   const clips = useMemo(() => galleryForDest(dest, cities, 12), [dest, cities]);
   const [reelAt, setReelAt] = useState(null);
   const openReel = useCallback((i) => setReelAt(i), []);
@@ -277,8 +263,7 @@ export function BuildingView({ dest, cities = [], startAt = 0, onBack, onLeave, 
 
       <div style={{ padding: "8px 14px 28px", display: "flex", flexDirection: "column", gap: 10 }}>
         <StatusCard dest={dest} startAt={startAt} onLeave={onLeave} />
-        {change && <Change {...change} />}
-        <Checks />
+        {checks && <Checks />}
         <Gallery dest={dest} clips={clips} onOpen={openReel} />
       </div>
 

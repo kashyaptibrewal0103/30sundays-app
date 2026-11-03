@@ -680,8 +680,6 @@ export default function RouteEditor({
         <BuildingScreen
           dest={dest}
           cities={cities}
-          reason="route"
-          summary={`${cities.join(" · ")} · ${nightsWord(total)}`}
           onDone={() => { setBuilding(false); onSave(route); }}
         />
       )}

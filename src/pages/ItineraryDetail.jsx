@@ -825,10 +825,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Cities, dates and the party all send the trip back to the builder: a new
   // version with new hotels, day plans and prices, and only the destination
   // (and, unless the party is what changed, the travellers) carried over.
-  // That takes a moment, and the moment has a screen that says what is being
-  // built and why; the change itself runs when the screen is done.
-  const [building, setBuilding] = useState(null); // { reason, summary, run }
-  const startBuild = (reason, summary, run) => setBuilding({ reason, summary, run });
+  // That takes a moment, and the moment has a screen of its own; the change
+  // itself runs when the screen is done.
+  const [building, setBuilding] = useState(null); // { run }
+  const startBuild = (run) => setBuilding({ run });
 
   // The route this trip is made of, however it was saved: the built route when
   // there is one, otherwise read back off the days.
@@ -864,13 +864,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       },
       indicativePrice: Number(String(built.price).replace(/,/g, "")) || 0,
     });
+    // The building screen was the wait, so the new version is saved as it
+    // lands. Asking for Save again straight after it would be a second loader
+    // for the same change.
+    dealsCtx.requestPricing(dealId, newVer, Number(String(built.price).replace(/,/g, "")) || 0);
     dealsCtx.setCustomItinerary(dealId, built);
-    navigate(`/itinerary/${built.id}?dealId=${dealId}&versionId=${newVer}`, { replace: true });
+    navigate(`/itinerary/${built.id}?dealId=${dealId}&versionId=${newVer}&saved=1`, { replace: true });
   };
 
   const applyCities = (nextRoute) => {
     setCitiesScreen(false);
-    startBuild("route", `${nextRoute.map((r) => r.city).join(" · ")} · ${routeNights(nextRoute)} nights`, () => rebuild(nextRoute, tripStart));
+    startBuild(() => rebuild(nextRoute, tripStart));
   };
 
   // New dates, same length or not: the plan is built again for those days,
@@ -878,10 +882,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // length changed.
   const applyDates = (d0, n) => {
     const nextRoute = n && n !== (it.nights || 0) ? respread(tripRoute, n) : tripRoute;
-    const from = new Date(d0);
-    const to = new Date(from.getTime() + routeNights(nextRoute) * 86400000);
-    const day = (x) => x.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-    startBuild("dates", `${day(from)} to ${day(to)}`, () => rebuild(nextRoute, d0));
+    startBuild(() => rebuild(nextRoute, d0));
   };
 
   // A different party: rooms, prices and the plan built for it.
@@ -1360,6 +1361,20 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [copiedFlag]);
 
+  // ─── Saved on arrival ───
+  // A trip fresh out of the wizard, or rebuilt for new dates or cities, lands
+  // already saved. The toast says which version it became, then the flag goes
+  // so a reload does not say it again. A copied trip has its own message.
+  const savedFlag = params.get("saved");
+  useEffect(() => {
+    if (savedFlag !== "1" || copiedFlag === "1" || !version) return;
+    showToast(`Itinerary saved as V${version.num}`);
+    const next = new URLSearchParams(params);
+    next.delete("saved");
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedFlag, versionId]);
+
   // How tall the bottom bar is right now. It changes as strips come and go, so
   // it is watched rather than read once.
   useEffect(() => {
@@ -1569,10 +1584,29 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       };
       setFetchingPrice(false);
       setLiveResult(clean);
-      const live = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
-      dealsCtx.requestPricing(dealId, versionId, live);
-      showToast(`Quote ready · ₹${live.toLocaleString("en-IN")}/person · PDF generated ✓`);
+      const saved = saveVersion();
+      if (saved === versionId) showToast(`Itinerary saved as V${version.num}`);
     }, 1800);
+  };
+
+  // ─── Saving is a version ───
+  //
+  // A version that was never saved is saved as itself. One that was saved
+  // already, and has had its day plans or hotels changed since, becomes the
+  // next version: the edits go into the new one, and the old one goes back to
+  // what it was when it was saved, so V3 still reads as V3 did. Returns the
+  // version that was saved.
+  const saveVersion = ({ stay = true } = {}) => {
+    const live = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
+    if (!quoted) {
+      dealsCtx.requestPricing(dealId, versionId, live);
+      return versionId;
+    }
+    const { versionId: nextVer } = dealsCtx.forkVersion(dealId, versionId);
+    dealsCtx.updateDraft(dealId, versionId, { customizations: version.committed });
+    dealsCtx.requestPricing(dealId, nextVer, live);
+    if (stay) navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${nextVer}&saved=1`, { replace: true });
+    return nextVer;
   };
   const handleDownloadPdf = () => showToast(viewOnly
     ? "Itinerary PDF downloaded. No traveller details in it."
@@ -1631,8 +1665,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     navigate(-1);
   };
   const createItineraryAndLeave = () => {
-    const live = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
-    dealsCtx.requestPricing(dealId, versionId, live);
+    saveVersion({ stay: false });
     setLeavePrompt(false);
     navigate(-1);
   };
@@ -2936,8 +2969,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           frame={overlayFrame}
           dest={it.dest}
           cities={tripRoute.map((r) => r.city)}
-          reason={building.reason}
-          summary={building.summary}
           onDone={() => { const run = building.run; setBuilding(null); run(); }}
         />
       )}
