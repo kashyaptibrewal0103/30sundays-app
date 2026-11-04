@@ -1,23 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ChevronDown, Check, Loader2, Heart, GraduationCap } from "lucide-react";
-
-// Animate a number from 0 to target over `duration`. Used in trust card.
-function useCountUp(target, duration = 1400, start = true) {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    const t0 = Date.now();
-    const id = setInterval(() => {
-      const t = Math.min((Date.now() - t0) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setValue(target * eased);
-      if (t >= 1) clearInterval(id);
-    }, 24);
-    return () => clearInterval(id);
-  }, [target, duration, start]);
-  return value;
-}
+import { ChevronLeft, ChevronDown, Check, Loader2, MessageSquareText, X as XIcon } from "lucide-react";
 
 // Official WhatsApp logo asset.
 const WhatsAppIcon = ({ size = 20 }) => (
@@ -30,97 +13,22 @@ const WhatsAppIcon = ({ size = 20 }) => (
   />
 );
 
-
-// ─── Brand illustrations ───
-// Each is ~240x160, brand-coloured, scene-style. Reads as a value vignette,
-// not a floating icon.
-
-const IlloCustomise = () => (
-  <svg width="240" height="160" viewBox="0 0 240 160" fill="none" aria-hidden="true">
-    {/* soft blush halo */}
-    <ellipse cx="120" cy="100" rx="105" ry="48" fill="#FFE4E8" opacity="0.6" />
-    {/* back card */}
-    <rect x="32" y="34" width="148" height="86" rx="14" fill="#FFD4DC" />
-    {/* front card */}
-    <rect x="48" y="46" width="148" height="86" rx="14" fill="#fff" stroke="#FFE4E8" strokeWidth="1.5" />
-    {/* day rows */}
-    <rect x="62" y="62" width="58" height="6" rx="3" fill="#E31B53" />
-    <rect x="62" y="76" width="100" height="4" rx="2" fill="#FFE4E8" />
-    <rect x="62" y="86" width="80" height="4" rx="2" fill="#FFE4E8" />
-    <rect x="62" y="100" width="46" height="14" rx="7" fill="#FFE4E8" />
-    {/* drag/pencil action */}
-    <circle cx="180" cy="56" r="14" fill="#E31B53" />
-    <path d="M174 60l4-8h2l-4 8h-2zm8-8l2 1 4-1 1-2-3-1-2 1-2 2z" fill="#fff" />
-  </svg>
-);
-
-const IlloDiscover = () => (
-  <svg width="240" height="160" viewBox="0 0 240 160" fill="none" aria-hidden="true">
-    {/* soft blush halo */}
-    <ellipse cx="120" cy="100" rx="110" ry="50" fill="#FFE4E8" opacity="0.6" />
-    {/* globe / ocean ring */}
-    <circle cx="120" cy="86" r="50" fill="#fff" stroke="#FFE4E8" strokeWidth="2" />
-    <path d="M80 70c12 16 60 16 80 0M80 102c12-12 60-12 80 0M120 36c-16 20-16 80 0 100M120 36c16 20 16 80 0 100" stroke="#FFC4CF" strokeWidth="1.4" fill="none" />
-    {/* pins */}
-    <g transform="translate(90 64)">
-      <path d="M0 0c0-6 5-11 11-11s11 5 11 11c0 9-11 18-11 18S0 9 0 0z" fill="#E31B53" />
-      <circle cx="11" cy="0" r="4" fill="#fff" />
-    </g>
-    <g transform="translate(132 50)">
-      <path d="M0 0c0-6 5-11 11-11s11 5 11 11c0 9-11 18-11 18S0 9 0 0z" fill="#E31B53" />
-      <circle cx="11" cy="0" r="4" fill="#fff" />
-    </g>
-    <g transform="translate(118 96)">
-      <path d="M0 0c0-6 5-11 11-11s11 5 11 11c0 9-11 18-11 18S0 9 0 0z" fill="#E31B53" />
-      <circle cx="11" cy="0" r="4" fill="#fff" />
-    </g>
-    {/* sparkles */}
-    <path d="M52 50l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6z" fill="#FEA3B4" />
-    <path d="M194 110l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5 1.5-4z" fill="#FEA3B4" />
-  </svg>
-);
-
-const IlloManage = () => (
-  <svg width="240" height="160" viewBox="0 0 240 160" fill="none" aria-hidden="true">
-    {/* soft blush halo */}
-    <ellipse cx="120" cy="100" rx="105" ry="50" fill="#FFE4E8" opacity="0.6" />
-    {/* phone frame */}
-    <rect x="84" y="22" width="72" height="118" rx="14" fill="#fff" stroke="#FFE4E8" strokeWidth="2" />
-    <rect x="100" y="28" width="40" height="4" rx="2" fill="#FFE4E8" />
-    {/* ticket inside */}
-    <rect x="92" y="44" width="56" height="32" rx="6" fill="#E31B53" />
-    <circle cx="92" cy="60" r="4" fill="#fff" />
-    <circle cx="148" cy="60" r="4" fill="#fff" />
-    <rect x="100" y="52" width="34" height="4" rx="2" fill="#fff" opacity="0.9" />
-    <rect x="100" y="62" width="22" height="3" rx="1.5" fill="#fff" opacity="0.7" />
-    {/* day card below */}
-    <rect x="92" y="82" width="56" height="22" rx="6" fill="#FFE4E8" />
-    <rect x="100" y="89" width="22" height="3" rx="1.5" fill="#E31B53" />
-    <rect x="100" y="96" width="38" height="3" rx="1.5" fill="#FEA3B4" />
-    {/* check badge */}
-    <circle cx="156" cy="48" r="14" fill="#E31B53" />
-    <path d="M150 48l4 4 8-8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-  </svg>
-);
-
-// Google "G" logo
-const GoogleG = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
-    <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
-    <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
-    <path fill="#FBBC05" d="M11.69 28.18c-.44-1.32-.69-2.73-.69-4.18s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24s.85 6.91 2.34 9.88l7.35-5.7z"/>
-    <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
-  </svg>
+// The palm-and-sun mark on its own: the left of the full lockup, cropped.
+const LogoMark = ({ height = 96 }) => (
+  <div style={{ width: height * 1.02, height, overflow: "hidden", margin: "0 auto" }}>
+    <img src="/logo.png" alt="30 Sundays" style={{ height: height * 1.12, width: "auto", maxWidth: "none", display: "block", marginTop: -height * 0.06 }} />
+  </div>
 );
 
 // ─── Design tokens ───
 const T = {
   coral: "#E31B53",
-  blush: "#FFE4E8",       // brand light pink - used for filled OTP, dropdown highlight
+  blush: "#FFE4E8",
   navy: "#181D27",
-  muted: "#6B7280",
-  line: "rgba(0,0,0,0.06)",
-  surface: "#F7F8FB",     // soft neutral for inputs on a white page
+  muted: "#717680",
+  line: "#E4E4E7",
+  field: "#F4F4F5",
+  ok: "#2E7D32",
 };
 
 // ─── Country codes ───
@@ -133,585 +41,401 @@ const countryCodes = [
   { code: "+971", country: "AE", name: "UAE", flag: "🇦🇪", digits: 9 },
 ];
 
-// Value props shown as a checklist in the hero
-const VALUE_PROPS = [
-  "See and customise your itinerary",
-  "Explore all destinations we offer",
-  "Vouchers, day plans & 24/7 support",
-];
+const CHANNEL = {
+  sms: { label: "SMS", sentBy: "by SMS" },
+  whatsapp: { label: "WhatsApp", sentBy: "on WhatsApp" },
+};
 
-// Wrap any word in `highlights` with a coral span; preserves \n line breaks
-function renderWithHighlights(text, highlights, color) {
-  if (!highlights || highlights.length === 0) return text;
-  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`(${highlights.map(escape).join("|")})`, "gi");
-  const parts = text.split(pattern);
-  return parts.map((p, i) =>
-    highlights.some((h) => h.toLowerCase() === p.toLowerCase())
-      ? <span key={i} style={{ color }}>{p}</span>
-      : p
-  );
-}
+const RESEND_SECONDS = 60;
+const OTP_LEN = 6;
+const emptyOtp = () => Array(OTP_LEN).fill("");
 
-
-// ─── Static hero: logo + 3 value ticks (no title, no circle bg on tick) ───
-function StaticHero({ collapsed, onSkip, onBack, hideSkip = false }) {
-  return (
-    <div style={{
-      position: "absolute", inset: 0, overflow: "hidden",
-      background: `radial-gradient(circle at 50% 28%, ${T.blush}DD 0%, ${T.blush}55 30%, #fff 70%)`,
-    }}>
-      {/* Top bar */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, zIndex: 6,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 18px",
-        paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)",
-      }}>
-        <button
-          onClick={onBack}
-          aria-label="Back"
-          style={{
-            width: 36, height: 36, borderRadius: "50%",
-            background: "#fff", border: `1px solid ${T.line}`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", padding: 0,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-            animation: "lv2FadeIn 0.5s ease-out both",
-          }}
-        >
-          <ArrowLeft size={18} color={T.navy} />
-        </button>
-        {!hideSkip && <button
-          onClick={onSkip}
-          className="lv2-skip-link"
-          style={{
-            background: "transparent", border: "none", padding: "6px 2px",
-            fontSize: 14, fontWeight: 700, letterSpacing: 0.1,
-            color: T.muted, cursor: "pointer",
-            opacity: collapsed ? 0 : 1,
-            pointerEvents: collapsed ? "none" : "auto",
-            transition: "opacity 200ms ease, color 200ms ease",
-            display: "inline-flex", alignItems: "center", gap: 4,
-            animation: "lv2FadeIn 0.5s ease-out 80ms both",
-          }}
-        >
-          <span>Skip</span>
-          <ArrowRight size={14} className="lv2-skip-arrow" />
-        </button>}
-      </div>
-
-      {/* Centered content: logo + 3 ticks */}
-      <div style={{
-        position: "absolute",
-        left: 24, right: 24,
-        top: "50%", transform: "translateY(-50%)",
-        color: T.navy,
-        textAlign: "center",
-      }}>
-        <img
-          src="/logo.png"
-          alt="30 Sundays"
-          style={{
-            height: collapsed ? 52 : 64,
-            width: "auto",
-            display: "block",
-            margin: collapsed ? "0 auto 28px" : "0 auto 44px",
-            transition: "height 280ms ease, margin 280ms ease",
-            animation: "lv2Up 0.7s cubic-bezier(0.4,0,0.2,1) 60ms both",
-          }}
-        />
-
-        {/* 3 value ticks - colored check only, no circle bg */}
-        <ul style={{
-          listStyle: "none", padding: 0,
-          margin: 0,
-          display: "flex", flexDirection: "column", gap: 12,
-          textAlign: "left", maxWidth: 320, marginLeft: "auto", marginRight: "auto",
-        }}>
-          {VALUE_PROPS.map((line, i) => (
-            <li
-              key={i}
-              style={{
-                display: "flex", alignItems: "center", gap: 12,
-                fontSize: 15, color: T.navy, lineHeight: 1.4, fontWeight: 500,
-                animation: `lv2Up 0.6s cubic-bezier(0.4,0,0.2,1) ${180 + i * 90}ms both`,
-              }}
-            >
-              <Check size={22} color={T.coral} strokeWidth={3.2} style={{ flexShrink: 0 }} />
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-// ─── Trust card: 3 stats with inline icons + animated count-up ───
-function TrustCard() {
-  const rating = useCountUp(4.6, 1400);
-  const trips  = useCountUp(10000, 1600);
-
-  return (
-    <div style={{
-      margin: "0 16px 12px",
-      background: "#fff",
-      border: `0.5px solid ${T.line}`,
-      borderRadius: 16,
-      padding: "12px 4px",
-      display: "flex", alignItems: "stretch",
-      boxShadow: "0 4px 14px rgba(227,27,83,0.06)",
-      animation: "lv2Up 0.6s cubic-bezier(0.4,0,0.2,1) 460ms both",
-    }}>
-      <Stat>
-        <StatRow>
-          <GoogleG size={14} />
-          <StatTitle>{rating.toFixed(1)} / 5</StatTitle>
-        </StatRow>
-        <StatSub>Google reviews</StatSub>
-      </Stat>
-      <Divider />
-      <Stat>
-        <StatRow>
-          <Heart size={13} color={T.coral} fill={T.coral} strokeWidth={0} />
-          <StatTitle>{Math.round(trips).toLocaleString()}+</StatTitle>
-        </StatRow>
-        <StatSub>Trips planned</StatSub>
-      </Stat>
-      <Divider />
-      <Stat>
-        <StatRow>
-          <GraduationCap size={14} color={T.coral} strokeWidth={2.4} />
-          <StatTitle>IIT-IIM</StatTitle>
-        </StatRow>
-        <StatSub>Founders</StatSub>
-      </Stat>
-    </div>
-  );
-}
-
-const Stat = ({ children }) => (
-  <div style={{
-    flex: 1, display: "flex", flexDirection: "column",
-    alignItems: "center", gap: 3, padding: "4px 6px",
-  }}>
-    {children}
-  </div>
-);
-
-const StatRow = ({ children }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 5, lineHeight: 1.2 }}>
-    {children}
-  </div>
-);
-
-const StatTitle = ({ children }) => (
-  <div style={{
-    fontSize: 14, fontWeight: 800, color: T.navy,
-    letterSpacing: -0.2, lineHeight: 1.2,
-    fontVariantNumeric: "tabular-nums",
-  }}>
-    {children}
-  </div>
-);
-
-const StatSub = ({ children }) => (
-  <div style={{ fontSize: 10, color: T.muted, fontWeight: 600, letterSpacing: 0.1 }}>
-    {children}
-  </div>
-);
-
-const Divider = () => (
-  <div style={{ width: 0.5, background: T.line }} />
-);
+// 9971019664 -> 99710 19664
+const fmtPhone = (p) => (p.length === 10 ? `${p.slice(0, 5)} ${p.slice(5)}` : p);
 
 // ─── Main screen ───
+// The code goes by SMS first. WhatsApp is the second way, offered next to it
+// on the number screen and again on every resend.
+//
+// Skip is shown only on the very first screen of the app (showSkip). Reached
+// from the trip wizard, a lead form or Account, logging in is the point, so
+// there is nothing to skip to.
+//
 // Props (all optional - defaults make this work as a standalone /login-v2 page):
-//   onComplete({ country, phone, otp })  - called after OTP verifies successfully
-//   onSkip()                              - called when Skip tapped (default: navigate("/"))
-//   validateOtp(otpString) -> string|null - return error string to keep on OTP screen, or null/undefined to proceed
-export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp, hideSkip = false }) {
+//   onComplete({ country, phone, otp, channel }) - called after OTP verifies successfully
+//   showSkip                                     - first app launch only
+//   onSkip()                                     - called when Skip tapped (default: navigate("/"))
+//   onBack()                                     - back from the number screen (default: navigate(-1))
+//   validateOtp(otpString) -> string|null        - return error string to keep on OTP screen, or null/undefined to proceed
+export default function LoginV2({ onComplete, onSkip: onSkipProp, onBack: onBackProp, validateOtp, showSkip = false }) {
   const navigate = useNavigate();
   const [phase, setPhase] = useState("phone"); // phone | otp
   const [country, setCountry] = useState(countryCodes[0]);
   const [countryOpen, setCountryOpen] = useState(false);
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [otp, setOtp] = useState(emptyOtp);
+  const [focusIdx, setFocusIdx] = useState(0);
+  const [verifying, setVerifying] = useState(false);
   const [otpError, setOtpError] = useState("");
-  const [resendTimer, setResendTimer] = useState(28);
-  const [canResend, setCanResend] = useState(false);
-  const [collapsed, setCollapsed] = useState(false); // hero shrinks when input focused
-  const [sending, setSending] = useState(false);     // Send OTP loading state
+  const [channel, setChannel] = useState("sms");
+  const [sending, setSending] = useState(null);   // channel being sent on, while it sends
+  const [resendTimer, setResendTimer] = useState(RESEND_SECONDS);
+  const [resentNote, setResentNote] = useState("");
   const otpRefs = useRef([]);
+  const timerRef = useRef(null);
 
-  // Resend countdown
-  useEffect(() => {
-    if (phase !== "otp") return;
-    setResendTimer(28);
-    setCanResend(false);
-    const t = setInterval(() => {
+  const startTimer = () => {
+    clearInterval(timerRef.current);
+    setResendTimer(RESEND_SECONDS);
+    timerRef.current = setInterval(() => {
       setResendTimer((prev) => {
-        if (prev <= 1) { setCanResend(true); clearInterval(t); return 0; }
+        if (prev <= 1) { clearInterval(timerRef.current); return 0; }
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(t);
-  }, [phase]);
-
-  const handleResend = () => {
-    if (!canResend) return;
-    setOtp(["", "", "", ""]);
-    setOtpError("");
-    setResendTimer(28);
-    setCanResend(false);
   };
-
-  // visualViewport - collapse when keyboard pushes viewport up
-  useEffect(() => {
-    if (!window.visualViewport) return;
-    const baseline = window.visualViewport.height;
-    const onResize = () => {
-      const shrunk = baseline - window.visualViewport.height > 150;
-      setCollapsed(shrunk);
-    };
-    window.visualViewport.addEventListener("resize", onResize);
-    return () => window.visualViewport.removeEventListener("resize", onResize);
-  }, []);
+  useEffect(() => () => clearInterval(timerRef.current), []);
 
   const phoneValid = phone.length === country.digits;
-  const otpValid = otp.every((d) => d.length === 1);
 
-  const handlePhone = (v) => {
-    const digits = v.replace(/\D/g, "").slice(0, country.digits);
-    setPhone(digits);
-  };
+  const handlePhone = (v) => setPhone(v.replace(/\D/g, "").slice(0, country.digits));
+  // One digit per box. A whole code arriving at once (pasted, or filled in
+  // from the SMS) spreads across the boxes. The last digit verifies on its
+  // own; there is no button to press.
   const handleOtpChange = (i, v) => {
-    const d = v.replace(/\D/g, "").slice(-1);
-    const next = [...otp]; next[i] = d; setOtp(next);
+    const digits = v.replace(/\D/g, "");
+    const next = [...otp];
+    if (digits.length > 1) {
+      digits.slice(0, OTP_LEN - i).split("").forEach((d, k) => { next[i + k] = d; });
+    } else {
+      next[i] = digits;
+    }
+    setOtp(next);
     if (otpError) setOtpError("");
-    if (d && i < 3) otpRefs.current[i + 1]?.focus();
+    if (!digits) return;
+    const firstEmpty = next.findIndex((d) => !d);
+    if (firstEmpty === -1) { otpRefs.current[i]?.blur(); verify(next); }
+    else otpRefs.current[Math.min(firstEmpty, OTP_LEN - 1)]?.focus();
   };
   const handleOtpKey = (i, e) => {
     if (e.key === "Backspace" && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
   };
 
-  const onPrimary = () => {
-    if (phase === "phone" && phoneValid && !sending) {
-      setSending(true);
-      // Brief loading state so the moment of commitment feels real.
-      setTimeout(() => {
-        setSending(false);
-        setPhase("otp");
-      }, 2400);
-    } else if (phase === "otp" && otpValid) {
-      const otpStr = otp.join("");
-      if (validateOtp) {
-        const err = validateOtp(otpStr);
-        if (err) { setOtpError(err); return; }
+  // Send (or resend) the code on a channel. A brief wait so the moment of
+  // commitment feels real, then the code screen with a fresh countdown.
+  const send = (ch) => {
+    if (!phoneValid || sending) return;
+    setSending(ch);
+    setTimeout(() => {
+      setSending(null);
+      setChannel(ch);
+      setOtp(emptyOtp());
+      setOtpError("");
+      if (phase === "otp") {
+        setResentNote(`New code sent ${CHANNEL[ch].sentBy}`);
+        setTimeout(() => setResentNote(""), 2600);
+        otpRefs.current[0]?.focus();
+      }
+      setPhase("otp");
+      startTimer();
+    }, phase === "otp" ? 900 : 1400);
+  };
+
+  const verify = (code) => {
+    const otpStr = code.join("");
+    setVerifying(true);
+    setTimeout(() => {
+      setVerifying(false);
+      const err = validateOtp ? validateOtp(otpStr) : null;
+      if (err) {
+        setOtpError(err);
+        setOtp(emptyOtp());
+        otpRefs.current[0]?.focus();
+        return;
       }
       setOtpError("");
-      if (onComplete) onComplete({ country, phone, otp: otpStr });
+      if (onComplete) onComplete({ country, phone, otp: otpStr, channel });
       else console.log("[LoginV2] Verify OTP", otpStr);
-    }
+    }, 700);
   };
-  const skip = () => {
-    if (onSkipProp) onSkipProp();
-    else navigate("/");
+
+  const skip = () => (onSkipProp ? onSkipProp() : navigate("/"));
+  const back = () => {
+    if (phase === "otp") { setPhase("phone"); clearInterval(timerRef.current); return; }
+    if (onBackProp) onBackProp(); else navigate(-1);
   };
 
   return (
-    <div style={{
-      position: "absolute", inset: 0,
-      background: "#fff",
-      display: "flex", flexDirection: "column",
-      overflow: "hidden",
+    <div data-testid="login-screen" style={{
+      position: "absolute", inset: 0, zIndex: 40,
+      display: "flex", flexDirection: "column", overflow: "hidden",
       color: T.navy,
+      // The app's soft morning wash: peach in one corner, pink in the other,
+      // settling to near white where the form sits.
+      background: [
+        "radial-gradient(120% 60% at 0% 0%, rgba(253,220,190,0.55) 0%, rgba(253,220,190,0) 55%)",
+        "radial-gradient(110% 55% at 100% 0%, rgba(255,214,228,0.75) 0%, rgba(255,214,228,0) 60%)",
+        "linear-gradient(180deg, #FFFBFA 0%, #F7F6F5 100%)",
+      ].join(", "),
     }}>
-      {/* ─── Static hero (logo + headline + 3 value ticks) ─── */}
-      {phase === "phone" && (
-        <div style={{
-          position: "relative",
-          height: collapsed ? "44%" : "60%",
-          transition: "height 320ms cubic-bezier(0.4,0,0.2,1)",
-          flexShrink: 0,
-        }}>
-          <StaticHero
-            collapsed={collapsed}
-            onSkip={skip}
-            onBack={() => navigate(-1)}
-            hideSkip={hideSkip}
-          />
-        </div>
-      )}
-
-      {/* ─── Trust card above the form ─── */}
-      {phase === "phone" && (
-        <div style={{
-          opacity: collapsed ? 0 : 1,
-          maxHeight: collapsed ? 0 : 100,
-          overflow: "hidden",
-          transition: "opacity 200ms ease, max-height 280ms ease",
-          flexShrink: 0,
-        }}>
-          <TrustCard />
-        </div>
-      )}
-
-      {/* ─── Phone form ─── */}
-      {phase === "phone" && (
-        <div style={{
-          flex: 1, minHeight: 0,
-          padding: 16,
-          display: "flex", flexDirection: "column",
-          background: "#fff",
-        }}>
-          {/* Country code + phone */}
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={() => setCountryOpen((v) => !v)}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "0 12px", height: 52,
-                background: T.surface,
-                border: `0.5px solid ${T.line}`,
-                borderRadius: 16,
-                fontSize: 14, fontWeight: 600, color: T.navy,
-                cursor: "pointer",
-              }}
-            >
-              <span style={{ fontSize: 18 }}>{country.flag}</span>
-              <span>{country.code}</span>
-              <ChevronDown size={14} color={T.muted} />
-            </button>
-            <input
-              type="tel"
-              inputMode="numeric"
-              maxLength={country.digits}
-              placeholder="Mobile number"
-              value={phone}
-              disabled={sending}
-              onChange={(e) => handlePhone(e.target.value)}
-              onFocus={() => setCollapsed(true)}
-              onBlur={() => setTimeout(() => setCollapsed(false), 120)}
-              style={{
-                flex: 1, height: 52, padding: "0 16px",
-                background: T.surface,
-                border: `0.5px solid ${T.line}`,
-                borderRadius: 16,
-                fontSize: 15, fontWeight: 500, color: T.navy,
-                outline: "none",
-                opacity: sending ? 0.6 : 1,
-              }}
-            />
-          </div>
-
-          {/* Country dropdown */}
-          {countryOpen && (
-            <div style={{
-              marginTop: 8,
-              background: "#fff", borderRadius: 16, padding: 6,
-              boxShadow: "0 12px 40px rgba(0,0,0,0.16)",
-              border: `0.5px solid ${T.line}`,
-              maxHeight: 220, overflowY: "auto",
-            }}>
-              {countryCodes.map((c) => (
-                <button
-                  key={c.code}
-                  onClick={() => { setCountry(c); setCountryOpen(false); setPhone(""); }}
-                  style={{
-                    width: "100%", display: "flex", alignItems: "center", gap: 10,
-                    padding: "10px 12px", borderRadius: 10,
-                    background: c.code === country.code ? T.blush : "transparent",
-                    border: "none", cursor: "pointer", textAlign: "left",
-                  }}
-                >
-                  <span style={{ fontSize: 18 }}>{c.flag}</span>
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: T.navy }}>{c.name}</span>
-                  <span style={{ fontSize: 12, color: T.muted }}>{c.code}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* CTA: Send OTP with WhatsApp signal + loading state */}
-          <button
-            onClick={onPrimary}
-            disabled={!phoneValid || sending}
-            className={phoneValid && !sending ? "lv2-cta-pulse" : ""}
-            style={{
-              marginTop: 12, height: 52, borderRadius: 16,
-              // Brand pink primary CTA in all states; opacity signals disabled
-              background: T.coral,
-              color: "#fff",
-              border: "none", fontSize: 15, fontWeight: 700,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-              cursor: phoneValid && !sending ? "pointer" : (sending ? "default" : "not-allowed"),
-              boxShadow: (phoneValid || sending) ? "0 8px 20px rgba(227,27,83,0.3)" : "0 4px 12px rgba(227,27,83,0.18)",
-              transition: "opacity 200ms ease, box-shadow 200ms ease, transform 120ms ease",
-              opacity: (phoneValid || sending) ? 1 : 0.5,
-            }}
-          >
-            {sending ? (
-              <>
-                <Loader2 size={16} className="lv2-spin" />
-                Sending OTP...
-              </>
-            ) : (
-              <>
-                <WhatsAppIcon size={18} />
-                Send OTP
-              </>
-            )}
+      {/* Top bar */}
+      <div style={{
+        flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "10px 12px 0", paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)",
+      }}>
+        <button onClick={back} aria-label="Back" style={{ width: 40, height: 40, border: "none", background: "transparent", display: "grid", placeItems: "center", cursor: "pointer", padding: 0 }}>
+          <ChevronLeft size={28} color={T.navy} strokeWidth={2} />
+        </button>
+        {showSkip && phase === "phone" && (
+          <button onClick={skip} data-testid="login-skip" style={{
+            background: "transparent", border: "none", padding: "8px 8px",
+            fontSize: 14, fontWeight: 600, color: T.muted, cursor: "pointer", fontFamily: "inherit",
+          }}>
+            Skip
           </button>
+        )}
+      </div>
 
-          {/* Footer: legal microcopy */}
-          <p style={{
-            fontSize: 11, color: T.muted, textAlign: "center",
-            margin: "auto 0 4px", lineHeight: 1.5,
-          }}>
-            By continuing, you agree to our{" "}
-            <span style={{ color: T.coral, fontWeight: 600 }}>Terms</span> &{" "}
-            <span style={{ color: T.coral, fontWeight: 600 }}>Privacy Policy</span>.
-          </p>
-        </div>
-      )}
-
-      {/* ─── OTP phase ─── */}
-      {phase === "otp" && (
-        <div style={{
-          flex: 1, padding: "12px 16px 16px",
-          display: "flex", flexDirection: "column",
-          background: "#fff",
-        }}>
-          {/* Top bar - in-flow so the phone frame status bar isn't overlapped */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            marginBottom: 24,
-          }}>
-            <button
-              onClick={() => setPhase("phone")}
-              style={{
-                background: "transparent", border: "none", color: T.coral,
-                fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0,
-              }}
-            >
-              ← Change number
-            </button>
-            {!hideSkip && <button onClick={skip} style={{
-              background: "rgba(0,0,0,0.04)",
-              border: `0.5px solid ${T.line}`,
-              borderRadius: 999, padding: "7px 14px",
-              fontSize: 12, fontWeight: 600, color: T.muted,
-              cursor: "pointer",
-            }}>
-              Skip →
-            </button>}
+      {/* ─── Phone number ─── */}
+      {phase === "phone" && (
+        <>
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", padding: "0 28px" }}>
+            <div style={{ animation: "lv2Up 0.6s cubic-bezier(0.4,0,0.2,1) both" }}>
+              <LogoMark height={88} />
+            </div>
+            <h1 style={{ margin: "26px 0 0", fontSize: 25, fontWeight: 800, letterSpacing: -0.4, color: T.navy, animation: "lv2Up 0.6s cubic-bezier(0.4,0,0.2,1) 80ms both" }}>
+              Let's plan your getaway
+            </h1>
+            <p style={{ margin: "10px 0 0", fontSize: 14.5, lineHeight: 1.5, color: T.muted, maxWidth: 320, animation: "lv2Up 0.6s cubic-bezier(0.4,0,0.2,1) 140ms both" }}>
+              Your number helps our travel consultant reach you with a personalised itinerary
+            </p>
           </div>
 
-          <h2 style={{ fontSize: 24, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: -0.3 }}>
-            Check your messages
-          </h2>
-          <p style={{ fontSize: 14, color: T.muted, margin: "8px 0 0", lineHeight: 1.5 }}>
-            We sent a 4-digit code to{" "}
-            <span style={{ fontWeight: 700, color: T.navy }}>{country.code} {phone}</span>
-          </p>
-
-          <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
-            {otp.map((d, i) => (
+          <div style={{ flexShrink: 0, padding: "0 18px 28px" }}>
+            {/* Country code + number, one field */}
+            <div style={{
+              display: "flex", alignItems: "center", height: 58,
+              background: T.field, borderRadius: 18,
+              border: `1.5px solid ${phoneValid ? T.ok : T.line}`,
+              transition: "border-color 160ms ease",
+            }}>
+              <button
+                onClick={() => setCountryOpen(true)}
+                style={{ display: "flex", alignItems: "center", gap: 7, height: "100%", padding: "0 12px 0 16px", background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+              >
+                <span style={{ fontSize: 17 }}>{country.flag}</span>
+                <span style={{ fontSize: 16, fontWeight: 500, color: T.navy }}>{country.code}</span>
+                <ChevronDown size={15} color={T.navy} strokeWidth={2.4} />
+              </button>
+              <span style={{ width: 1, height: 26, background: T.line }} />
               <input
-                key={i}
-                ref={(el) => (otpRefs.current[i] = el)}
                 type="tel"
                 inputMode="numeric"
-                maxLength={1}
-                value={d}
-                autoFocus={i === 0}
-                onChange={(e) => handleOtpChange(i, e.target.value)}
-                onKeyDown={(e) => handleOtpKey(i, e)}
+                maxLength={country.digits}
+                placeholder="Mobile number"
+                value={phone}
+                disabled={!!sending}
+                onChange={(e) => handlePhone(e.target.value)}
+                data-testid="login-phone"
                 style={{
-                  width: 64, height: 64, padding: 0, boxSizing: "border-box",
-                  background: otpError ? "#FEF3F2" : d ? T.blush : T.surface,
-                  border: otpError
-                    ? "1.5px solid #B42318"
-                    : d
-                      ? `1.5px solid ${T.coral}`
-                      : `0.5px solid ${T.line}`,
-                  borderRadius: 16, textAlign: "center",
-                  fontSize: 24, fontWeight: 700, color: T.navy,
-                  outline: "none",
-                  transition: "border-color 160ms, background 160ms",
+                  flex: 1, minWidth: 0, height: "100%", padding: "0 12px 0 14px",
+                  background: "transparent", border: "none", outline: "none",
+                  fontSize: 18, fontWeight: 500, letterSpacing: 1, color: T.navy, fontFamily: "inherit",
                 }}
               />
-            ))}
+              {phoneValid && <Check size={20} color={T.ok} strokeWidth={2.4} style={{ marginRight: 16, flexShrink: 0 }} />}
+            </div>
+
+            {/* Primary: SMS */}
+            <button
+              onClick={() => send("sms")}
+              disabled={!phoneValid || !!sending}
+              data-testid="send-otp-sms"
+              style={{
+                marginTop: 14, width: "100%", height: 54, borderRadius: 999,
+                background: T.coral, color: "#fff", border: "none",
+                fontSize: 16, fontWeight: 700, fontFamily: "inherit",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+                cursor: phoneValid && !sending ? "pointer" : "default",
+                opacity: phoneValid || sending === "sms" ? 1 : 0.45,
+                boxShadow: phoneValid ? "0 8px 20px rgba(227,27,83,0.28)" : "none",
+                transition: "opacity 200ms ease, box-shadow 200ms ease",
+              }}
+            >
+              {sending === "sms"
+                ? <><Loader2 size={17} className="lv2-spin" /> Sending OTP...</>
+                : <>Send OTP <MessageSquareText size={18} /></>}
+            </button>
+
+            {/* Secondary: WhatsApp */}
+            <button
+              onClick={() => send("whatsapp")}
+              disabled={!phoneValid || !!sending}
+              data-testid="send-otp-whatsapp"
+              style={{
+                marginTop: 10, width: "100%", height: 50, borderRadius: 999,
+                background: "#fff", color: T.navy, border: `1px solid ${T.line}`,
+                fontSize: 14.5, fontWeight: 600, fontFamily: "inherit",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                cursor: phoneValid && !sending ? "pointer" : "default",
+                opacity: phoneValid || sending === "whatsapp" ? 1 : 0.5,
+                transition: "opacity 200ms ease",
+              }}
+            >
+              {sending === "whatsapp"
+                ? <><Loader2 size={16} className="lv2-spin" /> Sending on WhatsApp...</>
+                : <><WhatsAppIcon size={18} /> Get OTP on WhatsApp</>}
+            </button>
+
+            <p style={{ margin: "14px 0 0", fontSize: 12.5, color: T.muted, textAlign: "center" }}>
+              We'll send a 6-digit code by SMS
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* ─── Code ─── */}
+      {phase === "otp" && (
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "6px 18px 28px", overflowY: "auto" }}>
+          <div style={{ marginTop: 36, animation: "lv2Up 0.5s cubic-bezier(0.4,0,0.2,1) both" }}>
+            <LogoMark height={88} />
+          </div>
+          <h2 style={{ fontSize: 25, fontWeight: 800, color: T.navy, margin: "28px 0 0", letterSpacing: -0.4 }}>
+            Verify your number
+          </h2>
+          <p style={{ fontSize: 14.5, color: T.muted, margin: "10px 0 0", lineHeight: 1.5, maxWidth: 330 }}>
+            {channel === "whatsapp"
+              ? "We've sent you a verification code to your WhatsApp number"
+              : "We've sent you a verification code by SMS to"}{" "}
+            <span style={{ fontWeight: 700, color: T.navy, whiteSpace: "nowrap" }}>{country.code} {fmtPhone(phone)}</span>
+          </p>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 30, width: "100%" }}>
+            {otp.map((d, i) => {
+              const on = focusIdx === i;
+              return (
+                <input
+                  key={i}
+                  ref={(el) => (otpRefs.current[i] = el)}
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete={i === 0 ? "one-time-code" : "off"}
+                  value={d}
+                  autoFocus={i === 0}
+                  onFocus={() => setFocusIdx(i)}
+                  onBlur={() => setFocusIdx((f) => (f === i ? -1 : f))}
+                  onChange={(e) => handleOtpChange(i, e.target.value)}
+                  onKeyDown={(e) => handleOtpKey(i, e)}
+                  data-testid={`otp-${i}`}
+                  style={{
+                    flex: 1, minWidth: 0, height: 60, padding: 0, boxSizing: "border-box",
+                    background: otpError ? "#FEF3F2" : on ? "#FFF5F7" : "rgba(255,255,255,0.6)",
+                    border: `1.5px solid ${otpError ? "#B42318" : on ? T.coral : T.line}`,
+                    borderRadius: 14, textAlign: "center",
+                    fontSize: 22, fontWeight: 700, color: T.navy, fontFamily: "inherit",
+                    outline: "none", transition: "border-color 160ms, background 160ms",
+                  }}
+                />
+              );
+            })}
           </div>
 
           {otpError && (
-            <p style={{ fontSize: 12, color: "#B42318", margin: "10px 0 0", fontWeight: 600 }}>
-              {otpError}
+            <p style={{ fontSize: 13, color: "#B42318", margin: "12px 0 0", fontWeight: 600 }}>{otpError}</p>
+          )}
+          {verifying && (
+            <p style={{ fontSize: 13, color: T.muted, margin: "12px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
+              <Loader2 size={14} className="lv2-spin" /> Verifying...
             </p>
           )}
 
-          <p style={{ fontSize: 12, color: T.muted, margin: "16px 0 0" }}>
-            Didn't get it?{" "}
-            {canResend ? (
-              <span onClick={handleResend} style={{ color: T.coral, fontWeight: 600, cursor: "pointer" }}>
-                Resend OTP
-              </span>
-            ) : (
-              <span style={{ color: T.muted, fontWeight: 600 }}>Resend in {resendTimer}s</span>
+          {/* Resend: a countdown, then both ways to get a new code */}
+          <div style={{ marginTop: 34, width: "100%" }} data-testid="otp-resend">
+            {/* Both ways are on screen from the start, so nobody waits a
+                minute to find out WhatsApp was an option. They wake up when
+                the countdown ends. */}
+            <p style={{ margin: 0, fontSize: 14.5, color: T.navy }}>
+              Didn't receive?{" "}
+              {resendTimer > 0
+                ? <span style={{ color: T.muted, fontVariantNumeric: "tabular-nums" }}>Resend in {resendTimer}s</span>
+                : "Get a new code on"}
+            </p>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <ResendChip onClick={() => send("sms")} busy={sending === "sms"} disabled={!!sending || resendTimer > 0} testId="resend-sms">
+                <MessageSquareText size={17} color={T.navy} /> SMS
+              </ResendChip>
+              <ResendChip onClick={() => send("whatsapp")} busy={sending === "whatsapp"} disabled={!!sending || resendTimer > 0} testId="resend-whatsapp">
+                <WhatsAppIcon size={17} /> WhatsApp
+              </ResendChip>
+            </div>
+            {resentNote && (
+              <p style={{ margin: "12px 0 0", fontSize: 13, fontWeight: 600, color: T.ok, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                <Check size={14} strokeWidth={2.6} /> {resentNote}
+              </p>
             )}
-          </p>
+          </div>
+        </div>
+      )}
 
-          <button
-            onClick={onPrimary}
-            disabled={!otpValid}
-            style={{
-              marginTop: 28, height: 54, borderRadius: 16,
-              background: T.coral,
-              color: "#fff",
-              border: "none", fontSize: 15, fontWeight: 700,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              cursor: otpValid ? "pointer" : "not-allowed",
-              boxShadow: otpValid ? "0 8px 20px rgba(227,27,83,0.3)" : "0 4px 12px rgba(227,27,83,0.18)",
-              opacity: otpValid ? 1 : 0.5,
-              transition: "opacity 200ms ease, box-shadow 200ms ease",
-            }}
-          >
-            Verify & Continue <ArrowRight size={16} />
-          </button>
+      {/* Country picker */}
+      {countryOpen && (
+        <div style={{ position: "absolute", inset: 0, zIndex: 5, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <div onClick={() => setCountryOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(24,29,39,0.45)" }} />
+          <div style={{ position: "relative", background: "#fff", borderRadius: "20px 20px 0 0", padding: "10px 0 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", padding: "6px 16px 10px" }}>
+              <p style={{ flex: 1, margin: 0, fontSize: 16, fontWeight: 800, color: T.navy }}>Country code</p>
+              <button onClick={() => setCountryOpen(false)} aria-label="Close" style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: T.field, display: "grid", placeItems: "center", cursor: "pointer" }}>
+                <XIcon size={15} color={T.muted} />
+              </button>
+            </div>
+            {countryCodes.map((c) => (
+              <button
+                key={c.code}
+                onClick={() => { setCountry(c); setCountryOpen(false); setPhone(""); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "transparent", border: "none", borderTop: `1px solid ${T.field}`, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}
+              >
+                <span style={{ fontSize: 18 }}>{c.flag}</span>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: c.code === country.code ? 700 : 500, color: T.navy }}>{c.name}</span>
+                <span style={{ fontSize: 13, color: T.muted }}>{c.code}</span>
+                {c.code === country.code && <Check size={16} color={T.coral} />}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       <style>{`
-        @keyframes lv2SlideUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
         @keyframes lv2Up {
           from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes lv2FadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
         }
         @keyframes lv2Spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
-        @keyframes lv2CtaPulse {
-          0%, 100% { box-shadow: 0 8px 20px rgba(227,27,83,0.30); }
-          50%      { box-shadow: 0 8px 28px rgba(227,27,83,0.55); }
-        }
         .lv2-spin { animation: lv2Spin 0.9s linear infinite; }
-        .lv2-cta-pulse { animation: lv2CtaPulse 2.2s ease-in-out infinite; }
-        .lv2-cta-pulse:active { transform: scale(0.98); }
-        .lv2-skip-link { transition: color 200ms ease; }
-        .lv2-skip-link:hover { color: ${T.coral} !important; }
-        .lv2-skip-arrow { transition: transform 200ms ease; }
-        .lv2-skip-link:hover .lv2-skip-arrow { transform: translateX(3px); }
       `}</style>
     </div>
+  );
+}
+
+function ResendChip({ onClick, busy, disabled, testId, children }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      data-testid={testId}
+      style={{
+        flex: 1, height: 44, borderRadius: 999,
+        background: "#fff", border: `1px solid ${T.line}`,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+        fontSize: 14, fontWeight: 600, color: T.navy, fontFamily: "inherit",
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled && !busy ? 0.45 : 1,
+        transition: "opacity 200ms ease",
+      }}
+    >
+      {busy ? <><Loader2 size={15} className="lv2-spin" /> Sending...</> : children}
+    </button>
   );
 }

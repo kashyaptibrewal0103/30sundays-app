@@ -13,8 +13,8 @@ export default function LoginLayer() {
     <FrameLayer zIndex={230} background="#fff">
       <LoginV2
         onComplete={onLoginCompleted}
-        onSkip={() => setSheet(null)}
-        validateOtp={(otp) => (otp === "0000" ? "Invalid OTP. Please try again." : null)}
+        onBack={() => setSheet(null)}
+        validateOtp={(otp) => (otp === "000000" ? "Invalid OTP. Please try again." : null)}
       />
     </FrameLayer>
   );

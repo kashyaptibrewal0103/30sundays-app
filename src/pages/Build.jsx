@@ -478,7 +478,6 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   if (showAuth) {
     return (
       <LoginV2
-        hideSkip
         onComplete={() => {
           setOtpVerified?.(true);
           setShowAuth(false);
@@ -486,7 +485,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
           pendingBuildRef.current = null;
           fn?.();
         }}
-        validateOtp={(otp) => (otp === "0000" ? "Invalid OTP. Please try again." : null)}
+        validateOtp={(otp) => (otp === "000000" ? "Invalid OTP. Please try again." : null)}
       />
     );
   }

@@ -207,7 +207,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/saved/hotel/:id" element={<WishlistHotelDetail />} />
         <Route path="/saved/activity/:id" element={<WishlistActivityDetail />} />
         <Route path="/build" element={<Build userState={userState} otpVerified={otpVerified} setOtpVerified={setOtpVerified} />} />
-        <Route path="/login-v2" element={<LoginV2 />} />
+        <Route path="/login-v2" element={<LoginV2 showSkip />} />
         <Route path="/logo-anim" element={<LogoAnim />} />
         <Route path="/media-lab" element={<MediaLab />} />
         <Route path="/route-lab" element={<RouteCardLab />} />

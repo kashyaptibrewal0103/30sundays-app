@@ -91,6 +91,11 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   // Returning users (lead / customer / trip done) go straight to their plans.
   // Only a brand-new user is asked to log in first.
   const isReturning = userState !== "new";
+  // Signed out, the My Plans tab is the start of a plan, not a form: it opens
+  // the trip wizard on its destination step. "Log in / Sign up" (from Account
+  // or My Trips) opens the sign-up screen on its own. The lead form is kept
+  // only for a destination the wizard can't build (Maldives, Mauritius...).
+  const toWizard = !isReturning && !returnTo && !preselectedDest;
 
   useEffect(() => {
     if (isReturning) {
@@ -102,13 +107,15 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
         // Already known to us, show the plans directly
         setPhase("success");
       }
+    } else if (toWizard) {
+      navigate("/build", { replace: true });
     }
   }, []);
 
   // phase: "details" | "auth" | "curating" | "success"
   // The lead form comes first; phone/OTP ("auth", handled by LoginV2) is the
   // last step, after the form is filled.
-  const [phase, setPhase] = useState(isReturning ? "success" : "details");
+  const [phase, setPhase] = useState(isReturning ? "success" : returnTo ? "auth" : "details");
   const [countryIdx, setCountryIdx] = useState(0);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
@@ -238,6 +245,8 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   const finalizeLead = () => {
     if (returnTo === "trips") { navigate("/trips", { replace: true }); return; }
     if (returnTo === "account") { navigate("/account", { replace: true }); return; }
+    // Signed in from "Already in touch?": their plans, nothing to curate.
+    if (returnTo === "plans") { setPhase("success"); return; }
     setPhase("curating");
     if (leadData?.salesRequest) setTimeout(() => navigate("/"), 2400);
     else setTimeout(() => { setPhase("success"); setShowWelcome(true); }, 2400);
@@ -248,17 +257,15 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
     setPhone(p);
     setCountryIdx(countryCodes.findIndex((cc) => cc.code === c.code));
     setLeadData((d) => ({ ...(d || {}), phone: p, countryCode: c.code }));
+    setUserState("lead");
     finalizeLead();
   };
 
   // OTP validation that LoginV2 calls - keep the legacy "0000 = invalid" rule
   const validateOtp = (otpStr) => {
-    if (otpStr === "0000") return "Invalid OTP. Please try again.";
+    if (otpStr === "000000") return "Invalid OTP. Please try again.";
     return null;
   };
-
-  // Skip the OTP step - still finalise the lead (we already have the details).
-  const handleAuthSkip = () => finalizeLead();
 
   const ctaAction = () => {
     if (phase === "details") {
@@ -296,6 +303,18 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   const successDests = (leadData?.dests?.length ? leadData.dests : (dests.length ? dests : DEFAULT_PLAN_DESTS));
 
   // ─── RENDER ───
+  if (toWizard) return null;
+  // AUTH (phone + OTP), handled by LoginV2. Rendered on its own, like the
+  // wizard does, so it fills the whole screen.
+  if (phase === "auth") {
+    return (
+      <LoginV2
+        onComplete={handleAuthComplete}
+        onBack={() => (returnTo ? navigate(-1) : setPhase("details"))}
+        validateOtp={validateOtp}
+      />
+    );
+  }
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 700, background: C.white, position: "relative" }}>
 
@@ -467,15 +486,6 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
             <XIcon size={16} color={C.sub} />
           </button>
         </div>
-      )}
-
-      {/* ═══ AUTH (phone + OTP) - handled by LoginV2 ═══ */}
-      {phase === "auth" && (
-        <LoginV2
-          onComplete={handleAuthComplete}
-          onSkip={handleAuthSkip}
-          validateOtp={validateOtp}
-        />
       )}
 
       {/* ═══ TRIP DETAILS SCREEN ═══ */}

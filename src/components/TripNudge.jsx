@@ -183,7 +183,7 @@ export default function TripNudge({ userState }) {
   const linkTo =
     userState === "lead" ? baliLink :
     userState === "customer" ? "/trips/trip-3" :
-    userState === "new" ? "/plan" :
+    userState === "new" ? "/plan?return=plans" :
     "/plan";
   return (
     <Link

@@ -210,11 +210,14 @@ export default function Account({ userState, leadData, setUserState, setLeadData
                   display: "grid", placeItems: "center", flexShrink: 0,
                   border: `2px solid ${C.p300}`, fontSize: 17, fontWeight: 700, color: C.p600,
                 }}>
-                  {initialsOf(pv.name || profile.name)}
+                  {pv.name || profile.name ? initialsOf(pv.name || profile.name) : <User size={24} color={C.p600} />}
                 </div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 17, fontWeight: 600, color: C.head, margin: 0 }}>{pv.name || profile.name}</p>
+                {/* Just signed up with a number: there is no name yet, so ask for it. */}
+                {pv.name || profile.name
+                  ? <p style={{ fontSize: 17, fontWeight: 600, color: C.head, margin: 0 }}>{pv.name || profile.name}</p>
+                  : <p style={{ fontSize: 17, fontWeight: 600, color: C.p600, margin: 0 }}>Add your name</p>}
                 <p style={{ fontSize: 13, color: C.sub, margin: "3px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {formatPhone(profile)}
                 </p>
