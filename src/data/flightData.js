@@ -33,6 +33,10 @@ export const airports = {
   MAA: { city: "Chennai", country: "India", code: "MAA" },
   CCU: { city: "Kolkata", country: "India", code: "CCU" },
   AMD: { city: "Ahmedabad", country: "India", code: "AMD" },
+  HYD: { city: "Hyderabad", country: "India", code: "HYD" },
+  PNQ: { city: "Pune", country: "India", code: "PNQ" },
+  COK: { city: "Kochi", country: "India", code: "COK" },
+  JAI: { city: "Jaipur", country: "India", code: "JAI" },
   // Bali
   DPS: { city: "Denpasar", country: "Indonesia", code: "DPS" },
   LBJ: { city: "Labuan Bajo", country: "Indonesia", code: "LBJ" },
@@ -68,6 +72,7 @@ export const airports = {
 export const cityToAirport = {
   "Indore": "IDR", "Delhi": "DEL", "Mumbai": "BOM", "Bengaluru": "BLR",
   "Chennai": "MAA", "Kolkata": "CCU", "Ahmedabad": "AMD",
+  "Hyderabad": "HYD", "Pune": "PNQ", "Kochi": "COK", "Jaipur": "JAI",
   // Bali cities all use DPS
   "Ubud": "DPS", "Seminyak": "DPS", "Canggu": "DPS", "Sanur": "DPS",
   "Nusa Dua": "DPS", "Nusa Penida": "DPS", "Uluwatu": "DPS",
@@ -550,7 +555,7 @@ export function generateFlightsForRoute(from, to, date, pax = 2) {
 }
 
 // ─── Get flight legs for an itinerary ───
-export function getFlightLegs(itinerary, homeCity = "Indore") {
+export function getFlightLegs(itinerary, homeCity = "Indore", startLabel = "Jun 20") {
   const homeAirport = cityToAirport[homeCity] || "IDR";
   const days = itinerary.days;
   if (!days || days.length === 0) return [];
@@ -577,7 +582,7 @@ export function getFlightLegs(itinerary, homeCity = "Indore") {
     fromCity: homeCity,
     to: firstApt.code,
     toCity: firstApt.city,
-    date: "Jun 20",
+    date: startLabel,
     label: `${homeCity} → ${airports[firstApt.code]?.city || firstApt.city}`,
   });
 
@@ -597,7 +602,7 @@ export function getFlightLegs(itinerary, homeCity = "Indore") {
         }
         if (dayApt === next.code) break;
       }
-      const internalDate = addDaysToDate("Jun 20", nightsSoFar);
+      const internalDate = addDaysToDate(startLabel, nightsSoFar);
 
       legs.push({
         type: "internal",
@@ -614,7 +619,7 @@ export function getFlightLegs(itinerary, homeCity = "Indore") {
 
   // International return: last destination → home
   const totalNights = days.reduce((sum, d) => sum + d.n, 0);
-  const returnDate = addDaysToDate("Jun 20", totalNights);
+  const returnDate = addDaysToDate(startLabel, totalNights);
 
   legs.push({
     type: "international",
@@ -738,4 +743,14 @@ export function formatPrice(num) {
     return otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + lastThree;
   }
   return lastThree;
+}
+
+// Indian cities a trip can fly from, in the order the picker lists them.
+export const HOME_CITIES = ["Delhi", "Mumbai", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Ahmedabad", "Pune", "Kochi", "Jaipur", "Indore"];
+
+// "2027-02-11" -> "Feb 11", the label the flight legs are dated with.
+export function legDateLabel(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "Jun 20";
+  return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]} ${d.getDate()}`;
 }

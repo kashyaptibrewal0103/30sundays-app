@@ -251,6 +251,19 @@ export function DealsProvider({ children }) {
     }));
   }, []);
 
+  // Merge a few customization keys into a copy, leaving the rest as they are.
+  // Two edits landing together (a new route, then its flights) cannot undo
+  // each other this way.
+  const patchCustomizations = useCallback((dealId, versionId, patch) => {
+    setDeals(prev => prev.map(d => d.id !== dealId ? d : {
+      ...d,
+      versions: d.versions.map(v => v.id !== versionId ? v : {
+        ...v,
+        customizations: { ...(v.customizations || {}), ...patch },
+      }),
+    }));
+  }, []);
+
   // Price the copy into a Quote and snapshot the committed customizations, so
   // later edits surface as "changes since your last version".
   const requestPricing = useCallback((dealId, versionId, livePrice) => {
@@ -363,7 +376,7 @@ export function DealsProvider({ children }) {
   }, []);
 
   const value = {
-    deals, createDeal, updateDraft, requestPricing, forkVersion,
+    deals, createDeal, updateDraft, patchCustomizations, requestPricing, forkVersion,
     deleteDeal, discardVersion, getDeal, getVersion,
     findCustomItinerary, setCustomItinerary,
     wished, toggleWish, isWished,

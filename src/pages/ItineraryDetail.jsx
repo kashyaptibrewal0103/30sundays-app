@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
-import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
+import { getFlightLegs, generateFlightsForRoute, airports, formatPrice, legDateLabel } from "../data/flightData";
+import { FlightsSection, FlightChooser, FlightDetailSheet, CitySheet, useTripFlights, resolveTrip, materialize, recheck, flightChanges } from "../components/flights/TripFlights";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
 import { Camera, Volume2, VolumeX, FileText, ChevronLeft, Compass, Route, BedDouble, Headphones, Map as MapIcon, IndianRupee, Moon, Car, Baby, User } from "lucide-react";
 import ChangeDayScreen from "./ChangeDayScreen";
@@ -705,12 +706,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Persist edits back into the copy as they happen (draft or quote).
   useEffect(() => {
     if (!it || !inDeal || !hydratedRef.current) return;
-    dealsCtx.updateDraft(dealId, versionId, {
-      // Preserve other customization keys (e.g. a built trip's `builtItinerary`)
-      // while patching the edit state.
-      customizations: { ...(version?.customizations || {}), selectedDayOptions, selectedHotels: selectedHotelOptions, travelDates },
-      indicativePrice: computePrice(it.price, selectedDayOptions, selectedHotelOptions),
-    });
+    // Merged, not replaced, so the other keys (a built trip's itinerary, its
+    // flights) are never written back from a stale copy.
+    dealsCtx.patchCustomizations(dealId, versionId, { selectedDayOptions, selectedHotels: selectedHotelOptions, travelDates });
+    dealsCtx.updateDraft(dealId, versionId, { indicativePrice: computePrice(it.price, selectedDayOptions, selectedHotelOptions) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayOptions, selectedHotelOptions, travelDates, inDeal]);
 
@@ -839,9 +838,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Cities and length both land here, because they are the same change: the
   // shape of the trip. A different set of towns, or a different number of
   // nights in them, is a different plan, so it is rebuilt the way the wizard
-  // builds it and forked into a version of its own, which is what a version is
-  // for. Hotels and day picks do not survive it, which is why the old version
-  // stays where it was.
+  // builds it, with new hotels and day plans. It lands on this screen as an
+  // unsaved change, like a new hotel does: nothing is a version, and no price
+  // is final, until Save fetches the latest prices. The saved version stays as
+  // it was underneath, which is what Discard goes back to.
   const rebuild = (nextRoute, startIso, pax = travellers) => {
     const built = synthesizeItinerary({
       dest: it.dest,
@@ -854,22 +854,19 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       id: it.custom ? it.id : undefined,
     });
     built._vibes = it._vibes || [];
-    const { versionId: newVer } = dealsCtx.forkVersion(dealId, versionId);
-    dealsCtx.updateDraft(dealId, newVer, {
-      customizations: {
-        selectedDayOptions: {},
-        selectedHotels: {},
-        travelDates: { fromDate: startIso, nights: built.nights, travelers: pax },
-        builtItinerary: built,
-      },
-      indicativePrice: Number(String(built.price).replace(/,/g, "")) || 0,
+    const nextDates = { fromDate: startIso, nights: built.nights, travelers: pax };
+    dealsCtx.patchCustomizations(dealId, versionId, {
+      selectedDayOptions: {},
+      selectedHotels: {},
+      travelDates: nextDates,
+      builtItinerary: built,
     });
-    // The building screen was the wait, so the new version is saved as it
-    // lands. Asking for Save again straight after it would be a second loader
-    // for the same change.
-    dealsCtx.requestPricing(dealId, newVer, Number(String(built.price).replace(/,/g, "")) || 0);
-    dealsCtx.setCustomItinerary(dealId, built);
-    navigate(`/itinerary/${built.id}?dealId=${dealId}&versionId=${newVer}&saved=1`, { replace: true });
+    dealsCtx.updateDraft(dealId, versionId, { indicativePrice: Number(String(built.price).replace(/,/g, "")) || 0 });
+    setSelectedDayOptions({});
+    setSelectedHotelOptions({});
+    setTravelDates(nextDates);
+    navigate(`/itinerary/${built.id}?dealId=${dealId}&versionId=${versionId}`, { replace: true });
+    showToast("Your trip is updated with new hotels and day plans. Save the itinerary to get the latest prices");
   };
 
   const applyCities = (nextRoute) => {
@@ -1019,7 +1016,85 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     (!deptChanged && (intlMode === "roundtrip" || retAdded) && selRet ? selRet.price : 0) +
     domesticLegs.reduce((s, { i }) => s + (getFlightForLeg(i)?.price || 0), 0)
   );
-  const hasChosenFlights = flightPerPerson > 0;
+
+  // ─── Flights the couple adds ───
+  //
+  // Everything but a trip being read runs on this: the city they fly from,
+  // and one pick (or a removal) per leg. A trip they built starts without
+  // flights; one their consultant made starts with them from Delhi. When the
+  // route or the dates move, the legs move with them: what still fits stays,
+  // what does not is fetched again and marked, and the section says so.
+  // On a plan (a deal), flights live in the version with everything else, so
+  // they are saved, compared and discarded with it. A trip read outside a
+  // plan keeps them on this device.
+  const [localTf, saveLocalTf] = useTripFlights(`trip:${it.id}`, !!it.custom);
+  const tf = inDeal ? (version.customizations?.flights || (it.custom ? { city: null, picks: {} } : { city: "Delhi", picks: {} })) : localTf;
+  const saveTf = (next) => (inDeal ? dealsCtx.patchCustomizations(dealId, versionId, { flights: next }) : saveLocalTf(next));
+  const [flightFlow, setFlightFlow] = useState(null); // { step: "city", changing } | { step: "choose", city, legIdxs, mode, initial, fresh, manualFirst }
+  const [flightDetail, setFlightDetail] = useState(null);
+  // Only hops the trip really flies count as flights; a ferry or a drive
+  // between two airports is not one.
+  const legsFrom = (city) => getFlightLegs(it, city, legDateLabel(tripStart))
+    .filter((l) => l.type !== "internal" || (hop(it.dest, l.fromCity, l.toCity)?.mode || "flight") === "flight");
+  const tfLegs = useMemo(() => (tf.city ? legsFrom(tf.city) : []), [it, tf.city, tripStart]);
+  const tfTrip = useMemo(() => resolveTrip(tfLegs, tf.picks), [tfLegs, tf.picks]);
+  const tfChosen = tfTrip.chosen;
+  const tfPerPerson = tfChosen.reduce((sum, f) => sum + (f?.price || 0), 0);
+  const useNewFlights = !viewOnly && !noFlights;
+  // A moved trip fetches its flights again: the section holds a loader while it does.
+  const movedKey = [...tfTrip.changed, ...tfTrip.failedNow].map((i) => tfLegs[i] && `${tfLegs[i].from}-${tfLegs[i].to}-${tfLegs[i].date}`).join("|");
+  const [flightsRefreshing, setFlightsRefreshing] = useState(false);
+  useEffect(() => {
+    if (!movedKey) return;
+    setFlightsRefreshing(true);
+    const t = setTimeout(() => setFlightsRefreshing(false), 1800);
+    return () => clearTimeout(t);
+  }, [movedKey]);
+  const legName = (l) => l.type === "international" ? (l.direction === "outbound" ? "Outbound flight" : "Return flight") : `${airports[l.from]?.city || l.fromCity} to ${airports[l.to]?.city || l.toCity} flight`;
+  const removeLegs = (idxs) => {
+    const before = tf;
+    const next = [...tfChosen];
+    idxs.forEach((i) => { next[i] = null; });
+    saveTf({ city: tf.city, picks: materialize(tfLegs, next, tfTrip.failed) });
+    showToast(idxs.length === 1 ? `${legName(tfLegs[idxs[0]])} removed` : "Flights removed", { flights: before });
+  };
+  const flightHandlers = {
+    onAddFlights: () => setFlightFlow({ step: "city", changing: false }),
+    onChangeCity: () => setFlightFlow({ step: "city", changing: true }),
+    onChangeLegs: (idxs) => setFlightFlow({ step: "choose", city: tf.city, legIdxs: idxs, mode: "change", initial: Object.fromEntries(idxs.map((i) => [i, tfChosen[i]?.id])) }),
+    onAddLeg: (idxs) => setFlightFlow({ step: "choose", city: tf.city, legIdxs: idxs, mode: "add", initial: {} }),
+    onManualLeg: (i) => setFlightFlow({ step: "choose", city: tf.city, legIdxs: [i], mode: "add", initial: {}, manualFirst: true }),
+    onRemoveLegs: (idxs) => removeLegs(idxs),
+    onDetails: (items) => setFlightDetail(items),
+    onDismissChanges: () => saveTf({ city: tf.city, picks: materialize(tfLegs, tfChosen, tfTrip.failed) }),
+  };
+  const pickFlightCity = (city) => {
+    const changing = flightFlow?.changing && tf.city && tfChosen.some(Boolean);
+    if (changing && city === tf.city) { setFlightFlow(null); return; }
+    const legs = legsFrom(city);
+    // A new city only changes the flights to and from India; the ones inside
+    // the country stay as they were.
+    const legIdxs = changing
+      ? legs.map((l, i) => (l.type === "international" ? i : -1)).filter((i) => i >= 0)
+      : legs.map((_, i) => i);
+    setFlightFlow({ step: "choose", city, legIdxs, mode: "add", initial: {}, fresh: !changing });
+  };
+  // Done in the chooser: the flights go on the itinerary, unsaved.
+  const finishFlightChoice = (picked) => {
+    const f = flightFlow;
+    const legs = legsFrom(f.city);
+    // Legs not in this choice keep what they had. A new city leaves the
+    // domestic legs where they were in the list, so their places still match.
+    const next = legs.map((_, i) => (i in picked ? picked[i] : f.fresh ? null : (tfChosen[i] || null)));
+    const stillFailed = f.fresh ? [] : tfTrip.failed.filter((i) => !(i in picked));
+    saveTf({ city: f.city, picks: materialize(legs, next, stillFailed) });
+    setFlightFlow(null);
+    const added = Object.values(picked).filter(Boolean);
+    if (added.length && added.every((x) => x.manual)) showToast("Flight added. Your consultant will check it and add the fare");
+    else if (added.length) showToast(`${f.mode === "change" ? "Flight changed" : added.length === 1 ? "Flight added" : "Flights added"}. Save the itinerary to fetch the latest fares`);
+  };
+  const flightPerPersonAll = useNewFlights ? tfPerPerson : flightPerPerson;
+  const hasChosenFlights = flightPerPersonAll > 0;
 
   const d = destData[it.dest];
   const daysWithActivities = getDayActivities(it);
@@ -1150,7 +1225,26 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       title: `Hotel · ${baseHotels[si]?.city || ""}`,
       detail: h.roomName ? `${h.hotelName} · ${h.roomName}` : h.hotelName,
     }));
-  const changes = [...dayChanges, ...hotelChanges];
+  // The shape of the trip and its flights are changes too, once there is a
+  // saved version to compare with.
+  const cur = version?.customizations || {};
+  const routeOf = (c) => (c?.builtItinerary?.route || []).map((r) => `${r.city} ${r.n}N`).join(" · ");
+  const datesOf = (c) => c?.travelDates?.fromDate ? `${c.travelDates.fromDate.slice(0, 10)}:${c.travelDates.nights}` : "";
+  const shapeChanges = !quoted ? [] : [
+    routeOf(cur) !== routeOf(committed) && { kind: "trip", key: "route", title: "Route", detail: routeOf(cur) || "Changed" },
+    datesOf(cur) !== datesOf(committed) && { kind: "trip", key: "dates", title: "Travel dates", detail: dateLabel },
+  ].filter(Boolean);
+  // One line per flight, against what was saved. A saved version that never
+  // wrote its flights down had the default ones: none on a built trip, the
+  // consultant's from Delhi on a ready-made one.
+  const committedTf = committed.flights || (committed.builtItinerary ? { city: null, picks: {} } : { city: "Delhi", picks: {} });
+  const flightLines = !quoted || !useNewFlights ? [] : flightChanges({
+    legs: tfLegs, chosen: tfChosen, failed: tfTrip.failed, city: tf.city,
+    before: committedTf,
+    beforeLegs: committedTf.city && !Object.keys(committedTf.picks || {}).length ? legsFrom(committedTf.city) : [],
+  });
+  const flightChangesList = flightLines.map((l) => ({ kind: "flights", ...l }));
+  const changes = [...shapeChanges, ...dayChanges, ...hotelChanges, ...flightChangesList];
   const hasChanges = changes.length > 0;
   const validQuote = quoted && !hasChanges && !isExpired(version);
 
@@ -1167,8 +1261,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const estHotelPP = (idx) => Math.round(((landPP * 0.62) / totalNights) * (it.days[idx]?.n || 0));
   const hotelDeductionPP = [...selfBookedStays].reduce((s, idx) => s + estHotelPP(idx), 0);
   const netLandPP = Math.max(0, landPP - hotelDeductionPP);
-  const grandTotal = (netLandPP + flightPerPerson) * travellers;
-  const flightsLine = flightPerPerson * travellers;
+  const grandTotal = (netLandPP + flightPerPersonAll) * travellers;
+  const flightsLine = flightPerPersonAll * travellers;
   const costSplit = (() => {
     const tcs = Math.round((grandTotal * 2) / 102);          // 2% added on top
     const discount = grandTotal > 60000 ? 5000 : 0;          // flat promo credit
@@ -1180,8 +1274,36 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     return { hotels, activities, flights: flightsLine, gst, discount, tcs, total: grandTotal };
   })();
 
+  // Back to the saved shape of the trip: its route, dates, hotels and day
+  // plans all came together, so they go back together.
+  const revertShape = () => {
+    dealsCtx.patchCustomizations(dealId, versionId, {
+      builtItinerary: committed.builtItinerary,
+      travelDates: committed.travelDates,
+      selectedDayOptions: committedDays,
+      selectedHotels: committedHotels,
+    });
+    setSelectedDayOptions(committedDays);
+    setSelectedHotelOptions(committedHotels);
+    setTravelDates(committed.travelDates || null);
+    const backId = committed.builtItinerary?.id ?? dealsCtx.getDeal(dealId)?.itineraryId ?? it.id;
+    if (backId !== it.id) navigate(`/itinerary/${backId}?dealId=${dealId}&versionId=${versionId}`, { replace: true });
+  };
+
   // Revert one change back to the committed (last-version) value.
   const undoChange = (ch) => {
+    if (ch.kind === "trip") { revertShape(); return; }
+    if (ch.kind === "flights") {
+      if (ch.revertAll) { dealsCtx.patchCustomizations(dealId, versionId, { flights: committed.flights }); return; }
+      // Put back just this flight, as it was saved, or take it out again.
+      const picks = materialize(tfLegs, tfChosen, tfTrip.failed);
+      const cur = picks[ch.sig] || {};
+      picks[ch.sig] = ch.restore
+        ? { id: ch.restore.id, role: ch.restore.role, label: ch.restore.label, airline: ch.restore.airline || null, fare: ch.restore.fare ?? null, manual: ch.restore.manual || null, name: ch.restore.name || null, dep: ch.restore.dep || null, failed: false }
+        : { ...cur, id: null, airline: null, fare: null, manual: null, name: null, dep: null, failed: false };
+      saveTf({ city: tf.city, picks });
+      return;
+    }
     if (ch.kind === "day") {
       setSelectedDayOptions(prev => {
         const next = { ...prev };
@@ -1200,6 +1322,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Discard all unsaved changes: revert to the quote, or drop the copy if never finalized.
   const handleDiscardChanges = () => {
     if (!quoted) { handleDiscardCopy(); return; }
+    if (shapeChanges.length) revertShape();
+    if (flightLines.length) dealsCtx.patchCustomizations(dealId, versionId, { flights: committed.flights });
     setSelectedDayOptions(committedDays);
     setSelectedHotelOptions(committedHotels);
     setShowChanges(false);
@@ -1366,11 +1490,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // already saved. The toast says which version it became, then the flag goes
   // so a reload does not say it again. A copied trip has its own message.
   const savedFlag = params.get("saved");
+  const fareNote = (d) => (d ? `. Latest flight fares are ${d > 0 ? "up" : "down"} ₹${formatPrice(Math.abs(d))}` : "");
   useEffect(() => {
     if (savedFlag !== "1" || copiedFlag === "1" || !version) return;
-    showToast(`Itinerary saved as V${version.num}`);
+    showToast(`Itinerary saved as V${version.num}${fareNote(Number(params.get("fare")) || 0)}`);
     const next = new URLSearchParams(params);
     next.delete("saved");
+    next.delete("fare");
     setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedFlag, versionId]);
@@ -1477,6 +1603,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
   const handleUndo = () => {
     if (!toast?.undoData) return;
+    if (toast.undoData.flights) {
+      saveTf(toast.undoData.flights);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      setToast(null);
+      return;
+    }
     const { dayIndex, previousOption } = toast.undoData;
     if (previousOption) {
       setSelectedDayOptions(prev => ({ ...prev, [dayIndex]: previousOption }));
@@ -1584,8 +1716,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       };
       setFetchingPrice(false);
       setLiveResult(clean);
-      const saved = saveVersion();
-      if (saved === versionId) showToast(`Itinerary saved as V${version.num}`);
+      // Flights are fetched again with everything else: the fares on the
+      // saved version are today's, and a fare that moved is said out loud.
+      let fareDelta = 0;
+      if (useNewFlights && tf.city && tfChosen.some(Boolean)) {
+        const checked = tfChosen.map((f) => (f ? recheck(f) : null));
+        fareDelta = checked.reduce((d, f) => d + (f?.was != null ? (f.price - f.was) * travellers : 0), 0);
+        saveTf({ city: tf.city, picks: materialize(tfLegs, checked, tfTrip.failed) });
+      }
+      const saved = saveVersion({ fareDelta });
+      if (saved === versionId) showToast(`Itinerary saved as V${version.num}${fareNote(fareDelta)}`);
     }, 1800);
   };
 
@@ -1596,7 +1736,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // next version: the edits go into the new one, and the old one goes back to
   // what it was when it was saved, so V3 still reads as V3 did. Returns the
   // version that was saved.
-  const saveVersion = ({ stay = true } = {}) => {
+  const saveVersion = ({ stay = true, fareDelta = 0 } = {}) => {
     const live = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
     if (!quoted) {
       dealsCtx.requestPricing(dealId, versionId, live);
@@ -1605,7 +1745,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     const { versionId: nextVer } = dealsCtx.forkVersion(dealId, versionId);
     dealsCtx.updateDraft(dealId, versionId, { customizations: version.committed });
     dealsCtx.requestPricing(dealId, nextVer, live);
-    if (stay) navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${nextVer}&saved=1`, { replace: true });
+    if (stay) navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${nextVer}&saved=1${fareDelta ? `&fare=${fareDelta}` : ""}`, { replace: true });
     return nextVer;
   };
   const handleDownloadPdf = () => showToast(viewOnly
@@ -2125,7 +2265,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {!noFlights && (
       <>
       <div ref={setSectionEl("flights")}>
-      {(() => {
+      {useNewFlights ? (
+        <FlightsSection legs={tfLegs} chosen={tfChosen} changed={tfTrip.changed} failed={tfTrip.failed} failedNow={tfTrip.failedNow} dropped={tfTrip.dropped} cause={tfTrip.cause} refreshing={flightsRefreshing} saved={validQuote} city={tf.city} travellers={travellers} startISO={tripStart} {...flightHandlers} />
+      ) : (() => {
         const padCard = { border: `1px solid ${C.div}`, borderRadius: 16, background: C.white, boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)", padding: "12px 14px 14px" };
         const changeStyle = { display: "inline-flex", alignItems: "center", gap: 1, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, textDecoration: "none", border: `1px solid ${C.div}`, borderRadius: 20, padding: "5px 12px", background: C.white };
         const divider = <div style={{ borderTop: `1px solid ${C.div}`, margin: "12px 0" }} />;
@@ -2402,11 +2544,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: `1px solid ${C.bg}` }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.head }}>{ch.title}</p>
-                      <p style={{ margin: "1px 0 0", fontSize: 12, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ch.detail}</p>
+                      <p style={{ margin: "1px 0 0", fontSize: 12, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: ch.kind === "flights" ? "normal" : "nowrap", lineHeight: 1.4 }}>{ch.detail}</p>
                     </div>
-                    <button onClick={() => undoChange(ch)} style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.div}`, background: C.white, fontSize: 12, fontWeight: 600, color: C.head, cursor: "pointer", fontFamily: "inherit" }}>
-                      Undo
-                    </button>
+                    {ch.undoable === false ? (
+                      <span style={{ flexShrink: 0, fontSize: 11, color: C.inact, maxWidth: 86, textAlign: "right", lineHeight: 1.3 }}>{ch.follows === "city" ? "Follows the new city" : `Follows your new ${shapeChanges.some((x) => x.key === "route") ? "route" : "dates"}`}</span>
+                    ) : (
+                      <button onClick={() => undoChange(ch)} style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.div}`, background: C.white, fontSize: 12, fontWeight: 600, color: C.head, cursor: "pointer", fontFamily: "inherit" }}>
+                        Undo
+                      </button>
+                    )}
                   </div>
                 ))}
                 <button data-testid="discard-copy" onClick={handleDiscardChanges} style={{ width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 10, border: `1px solid ${C.div}`, background: C.white, color: C.sub, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -2548,7 +2694,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                   <Info size={15} color={C.sub} />
                 </button>
               </div>
-              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact }}>Not saved yet</p>
+              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact }}>{hasChosenFlights ? "Not saved yet · flight prices are tentative" : "Not saved yet"}</p>
             </>
           )}
         </div>
@@ -2895,6 +3041,34 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       })()}
 
       {/* ═══ Toast Notification ═══ */}
+      {/* Adding, changing and reading flights */}
+      {flightFlow && (
+        <div style={{ ...overlayFrame, zIndex: 200 }}>
+          {flightFlow.step === "city" ? (
+            <CitySheet value={tf.city} changing={flightFlow.changing && tfChosen.some(Boolean)} onPick={pickFlightCity} onClose={() => setFlightFlow(null)} />
+          ) : (
+            <FlightChooser
+              legs={legsFrom(flightFlow.city)}
+              legIdxs={flightFlow.legIdxs}
+              initial={flightFlow.initial}
+              current={flightFlow.city === tf.city ? tfChosen : []}
+              mode={flightFlow.mode}
+              manualFirst={!!flightFlow.manualFirst}
+              fromCity={flightFlow.city}
+              travellers={travellers}
+              startISO={tripStart}
+              onDone={finishFlightChoice}
+              onClose={() => setFlightFlow(null)}
+            />
+          )}
+        </div>
+      )}
+      {flightDetail && (
+        <div style={{ ...overlayFrame, zIndex: 200 }}>
+          <FlightDetailSheet items={flightDetail} travellers={travellers} startISO={tripStart} onClose={() => setFlightDetail(null)} />
+        </div>
+      )}
+
       {toast && (
         <div style={{ ...overlayFrame, zIndex: 150, pointerEvents: "none" }}>
           <div style={{
