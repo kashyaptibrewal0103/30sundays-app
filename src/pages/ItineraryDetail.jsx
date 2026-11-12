@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice, legDateLabel } from "../data/flightData";
-import { FlightsSection, FlightChooser, FlightDetailSheet, CitySheet, useTripFlights, resolveTrip, materialize, recheck, flightChanges } from "../components/flights/TripFlights";
+import { FlightsSection, FlightChooser, FlightDetailSheet, CitySheet, useTripFlights, resolveTrip, materialize, recheck, flightChanges, fetchFails } from "../components/flights/TripFlights";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
 import { Camera, Volume2, VolumeX, FileText, ChevronLeft, Compass, Route, BedDouble, Headphones, Map as MapIcon, IndianRupee, Moon, Car, Baby, User } from "lucide-react";
 import ChangeDayScreen from "./ChangeDayScreen";
@@ -1030,7 +1030,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [localTf, saveLocalTf] = useTripFlights(`trip:${it.id}`, !!it.custom);
   const tf = inDeal ? (version.customizations?.flights || (it.custom ? { city: null, picks: {} } : { city: "Delhi", picks: {} })) : localTf;
   const saveTf = (next) => (inDeal ? dealsCtx.patchCustomizations(dealId, versionId, { flights: next }) : saveLocalTf(next));
-  const [flightFlow, setFlightFlow] = useState(null); // { step: "city", changing } | { step: "choose", city, legIdxs, mode, initial, fresh, manualFirst }
+  const [flightFlow, setFlightFlow] = useState(null); // { step: "city", changing } | { step: "choose", city, legIdxs, mode, initial, fresh }
   const [flightDetail, setFlightDetail] = useState(null);
   // Only hops the trip really flies count as flights; a ferry or a drive
   // between two airports is not one.
@@ -1063,7 +1063,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     onChangeCity: () => setFlightFlow({ step: "city", changing: true }),
     onChangeLegs: (idxs) => setFlightFlow({ step: "choose", city: tf.city, legIdxs: idxs, mode: "change", initial: Object.fromEntries(idxs.map((i) => [i, tfChosen[i]?.id])) }),
     onAddLeg: (idxs) => setFlightFlow({ step: "choose", city: tf.city, legIdxs: idxs, mode: "add", initial: {} }),
-    onManualLeg: (i) => setFlightFlow({ step: "choose", city: tf.city, legIdxs: [i], mode: "add", initial: {}, manualFirst: true }),
     onRemoveLegs: (idxs) => removeLegs(idxs),
     onDetails: (items) => setFlightDetail(items),
     onDismissChanges: () => saveTf({ city: tf.city, picks: materialize(tfLegs, tfChosen, tfTrip.failed) }),
@@ -1086,12 +1085,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     // Legs not in this choice keep what they had. A new city leaves the
     // domestic legs where they were in the list, so their places still match.
     const next = legs.map((_, i) => (i in picked ? picked[i] : f.fresh ? null : (tfChosen[i] || null)));
-    const stillFailed = f.fresh ? [] : tfTrip.failed.filter((i) => !(i in picked));
+    // A flight skipped because no fares came back stays on the trip as not
+    // found, with the way to the consultant, rather than as one taken out.
+    const stillFailed = [
+      ...(f.fresh ? [] : tfTrip.failed.filter((i) => !(i in picked))),
+      ...Object.keys(picked).map(Number).filter((i) => !picked[i] && fetchFails(legs[i])),
+    ];
     saveTf({ city: f.city, picks: materialize(legs, next, stillFailed) });
     setFlightFlow(null);
     const added = Object.values(picked).filter(Boolean);
-    if (added.length && added.every((x) => x.manual)) showToast("Flight added. Your consultant will check it and add the fare");
-    else if (added.length) showToast(`${f.mode === "change" ? "Flight changed" : added.length === 1 ? "Flight added" : "Flights added"}. Save the itinerary to fetch the latest fares`);
+    if (added.length) showToast(`${f.mode === "change" ? "Flight changed" : added.length === 1 ? "Flight added" : "Flights added"}. Save the itinerary to fetch the latest fares`);
   };
   const flightPerPersonAll = useNewFlights ? tfPerPerson : flightPerPerson;
   const hasChosenFlights = flightPerPersonAll > 0;
@@ -1299,8 +1302,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       const picks = materialize(tfLegs, tfChosen, tfTrip.failed);
       const cur = picks[ch.sig] || {};
       picks[ch.sig] = ch.restore
-        ? { id: ch.restore.id, role: ch.restore.role, label: ch.restore.label, airline: ch.restore.airline || null, fare: ch.restore.fare ?? null, manual: ch.restore.manual || null, name: ch.restore.name || null, dep: ch.restore.dep || null, failed: false }
-        : { ...cur, id: null, airline: null, fare: null, manual: null, name: null, dep: null, failed: false };
+        ? { id: ch.restore.id, role: ch.restore.role, label: ch.restore.label, airline: ch.restore.airline || null, fare: ch.restore.fare ?? null, name: ch.restore.name || null, dep: ch.restore.dep || null, failed: false }
+        : { ...cur, id: null, airline: null, fare: null, name: null, dep: null, failed: false };
       saveTf({ city: tf.city, picks });
       return;
     }
@@ -2266,7 +2269,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       <>
       <div ref={setSectionEl("flights")}>
       {useNewFlights ? (
-        <FlightsSection legs={tfLegs} chosen={tfChosen} changed={tfTrip.changed} failed={tfTrip.failed} failedNow={tfTrip.failedNow} dropped={tfTrip.dropped} cause={tfTrip.cause} refreshing={flightsRefreshing} saved={validQuote} city={tf.city} travellers={travellers} startISO={tripStart} {...flightHandlers} />
+        <FlightsSection legs={tfLegs} chosen={tfChosen} changed={tfTrip.changed} failed={tfTrip.failed} failedNow={tfTrip.failedNow} dropped={tfTrip.dropped} cause={tfTrip.cause} refreshing={flightsRefreshing} saved={validQuote} city={tf.city} travellers={travellers} startISO={tripStart} consultant={consultant} {...flightHandlers} />
       ) : (() => {
         const padCard = { border: `1px solid ${C.div}`, borderRadius: 16, background: C.white, boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)", padding: "12px 14px 14px" };
         const changeStyle = { display: "inline-flex", alignItems: "center", gap: 1, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, textDecoration: "none", border: `1px solid ${C.div}`, borderRadius: 20, padding: "5px 12px", background: C.white };
@@ -3053,7 +3056,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               initial={flightFlow.initial}
               current={flightFlow.city === tf.city ? tfChosen : []}
               mode={flightFlow.mode}
-              manualFirst={!!flightFlow.manualFirst}
+              consultant={consultant}
               fromCity={flightFlow.city}
               travellers={travellers}
               startISO={tripStart}

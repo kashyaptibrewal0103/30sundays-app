@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { PlaneTakeoff, PlaneLanding, Plane, Plus, X as XIcon, Check, ChevronRight, ChevronLeft, Luggage, BaggageClaim, ArrowLeftRight, Trash2, RefreshCw, PenLine, AlertCircle, Info } from "lucide-react";
+import { PlaneTakeoff, PlaneLanding, Plane, Plus, X as XIcon, Check, ChevronRight, ChevronLeft, Luggage, BaggageClaim, ArrowLeftRight, Trash2, RefreshCw, AlertCircle, Info } from "lucide-react";
 import { C } from "../../data";
 import { airports, formatPrice, generateFlightsForRoute, HOME_CITIES } from "../../data/flightData";
 
@@ -16,6 +16,10 @@ import { airports, formatPrice, generateFlightsForRoute, HOME_CITIES } from "../
 // The cards are the app's own, nothing added, and each holds one flight. Two
 // or more sit side by side and are swiped, like the app does. Each card
 // carries Change and Remove as buttons, not as small print.
+//
+// A flight is only ever one we fetched. When none can be fetched, the couple
+// is sent to their travel consultant, who adds it for them; a flight the
+// consultant adds is changed and removed like any other.
 
 const PINK = "#E31B53";
 const GREEN = "#2E7D32";
@@ -28,8 +32,8 @@ const NOTE_SAVED = "Fares as fetched when you last saved the itinerary";
 // { city, picks }. city is null until flights are added. picks is keyed by
 // the leg itself (from, to and date), not by its place in the list, so a
 // change to the route or the dates can be told apart from a choice:
-//   { "BOM-HAN-Nov 18": { id, role, label, airline, fare, manual } }
-// id is null once taken out, "manual" for a flight typed in by hand. role is
+//   { "BOM-HAN-Nov 18": { id, role, label, airline, fare } }
+// id is null once taken out. role is
 // what the flight is for: "outbound", "return", or a hop inside the country.
 // fare is the price the last check returned. A leg with no entry is new to
 // the trip.
@@ -71,18 +75,6 @@ export function bestFlight(leg, list = flightsFor(leg), airline = null) {
   return list.find((f) => same(f) && fits(f)) || list.find(same) || list.find(fits) || list[0] || null;
 }
 
-// A flight typed in by hand, shaped like the fetched ones so every card and
-// sheet can show it.
-function manualFlight(leg, m) {
-  const seg = { airline: m.airline, flightNo: m.flightNo, from: leg.from, fromCity: city(leg.from), dep: m.dep, to: leg.to, toCity: city(leg.to), arr: m.arr, duration: "" };
-  return {
-    id: "manual", manual: m, airline: m.airline, airlineCodes: [(m.flightNo || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase() || "✈"],
-    flightNo: m.flightNo, from: leg.from, to: leg.to, fromCity: city(leg.from), toCity: city(leg.to),
-    dep: m.dep, arr: m.arr, date: leg.date, arrDate: m.nextDay ? "next" : leg.date, duration: "",
-    stops: 0, stopCities: [], price: Number(m.fare) || 0, travelers: [], segments: [seg],
-  };
-}
-
 // Write down a full set of choices, one per leg (a flight, or null for none),
 // so that a leg turning up later without one can only mean the trip changed.
 // A leg whose fetch failed keeps saying so (failed) until a flight is added.
@@ -91,7 +83,7 @@ export function materialize(legs, flights, failed = []) {
     const f = flights[i] || null;
     return [legSig(l), {
       id: f ? f.id : null, role: legRole(l), label: legTitle(l),
-      airline: f?.airlineCodes?.[0] || null, fare: f?.price ?? null, manual: f?.manual || null,
+      airline: f?.airlineCodes?.[0] || null, fare: f?.price ?? null,
       name: f?.airline || null, dep: f?.dep || null,
       failed: !f && failed.includes(i),
     }];
@@ -119,7 +111,6 @@ export function resolveTrip(legs, picks) {
     const e = picks?.[legSig(leg)];
     if (e) {
       if (e.id === null) { chosen[i] = null; if (e.failed) failed.push(i); return; }
-      if (e.manual) { chosen[i] = manualFlight(leg, e.manual); return; }
       const f = findFlight(leg, e.id) || bestFlight(leg);
       chosen[i] = f && e.fare != null ? { ...f, price: e.fare, base: f.price } : f;
       return;
@@ -178,7 +169,7 @@ export function flightChanges({ legs, chosen, failed = [], city: nowCity, before
     const now = f ? `${f.airline}, ${f.dep}` : "";
     const base = { key: `flight:${role}`, title, sig, role };
     if (!had && !f) return;
-    if (!had && f) { lines.push({ ...base, detail: f.manual ? `Added by you: ${f.airline} ${f.flightNo}` : `Added ${f.airline}, ${l.date}, ${f.dep}`, restore: null }); return; }
+    if (!had && f) { lines.push({ ...base, detail: `Added ${f.airline}, ${l.date}, ${f.dep}`, restore: null }); return; }
     if (p.sig !== sig) {
       // New dates or a new city put this flight on a different leg.
       const follows = cityMoved && l.type === "international" && p.sig.split("-").slice(2).join("-") === l.date ? "city" : "trip";
@@ -187,7 +178,7 @@ export function flightChanges({ legs, chosen, failed = [], city: nowCity, before
       return;
     }
     if (!f) { lines.push({ ...base, detail: `Removed (was ${was})`, restore: p }); return; }
-    if (p.id !== f.id || (p.manual && !f.manual) || (!p.manual && f.manual)) {
+    if (p.id !== f.id) {
       lines.push({ ...base, detail: `Now ${now}. Was ${was}`, restore: p });
     }
   });
@@ -203,7 +194,6 @@ export function flightChanges({ legs, chosen, failed = [], city: nowCity, before
 // steady per flight so the prototype tells the same story every time.
 // Measured from the listed fare, so saving twice does not move it twice.
 export function recheck(f) {
-  if (f.manual) return f;
   let h = 0;
   for (const ch of `${f.id}|${f.date}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const delta = h % 6 === 0 ? 600 : h % 6 === 1 ? -400 : 0;
@@ -300,7 +290,6 @@ function Leg({ kind, leg, f, updated }) {
         <Icon size={13} color={color} style={{ flexShrink: 0 }} />
         <span style={{ fontSize: 11.5, color, letterSpacing: 0.2, whiteSpace: "nowrap" }}>{word} • {leg.date}</span>
         {updated && <Badge>UPDATED</Badge>}
-        {f.manual && <Badge color="#344054" bg="#F2F4F7" border="#EAECF0">ADDED BY YOU</Badge>}
       </div>
       <RouteRow f={f} accent={color} />
     </div>
@@ -321,9 +310,7 @@ function FlightCard({ parts, travellers, onChange, onRemove, onDetails, testId }
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${C.div}` }}>
         <AirlineTile f={f0} />
         <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f0.airline}</span>
-        {fare > 0
-          ? <span style={{ fontSize: 14.5, fontWeight: 500, color: C.head, flexShrink: 0 }}>₹{formatPrice(fare * travellers)}</span>
-          : <span style={{ fontSize: 11.5, color: C.inact, flexShrink: 0 }}>Fare not added</span>}
+        <span style={{ fontSize: 14.5, fontWeight: 500, color: C.head, flexShrink: 0 }}>₹{formatPrice(fare * travellers)}</span>
       </div>
       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 14 }}>
         {parts.map((p, k) => (
@@ -369,8 +356,25 @@ function Carousel({ children }) {
   );
 }
 
+// The travel consultant, on WhatsApp, with the flight already named. They add
+// what the app could not fetch.
+function AskConsultant({ consultant, leg, startISO, testId, big = false }) {
+  const first = consultant?.name?.split(" ")[0];
+  const msg = encodeURIComponent(`Hi${first ? ` ${first}` : ""}, the app couldn't find flights for ${legTitle(leg)} on ${longDate(leg.date, startISO)}. Could you add one to my itinerary?`);
+  const href = consultant?.phone ? `https://wa.me/${consultant.phone.replace(/\D/g, "")}?text=${msg}` : null;
+  const label = first ? `Ask ${first} on WhatsApp` : "Ask your consultant";
+  const style = big
+    ? { ...actBtn, flex: "none", width: "100%", maxWidth: 280, height: 44, marginTop: 18, border: "none", background: PINK, color: "#fff", fontSize: 14, textDecoration: "none" }
+    : { ...actBtn, border: `1px solid ${PINK}`, color: PINK, textDecoration: "none" };
+  return (
+    <a href={href || undefined} target="_blank" rel="noopener noreferrer" data-testid={testId} style={style}>
+      <img src="/whatsapp.webp" alt="" width={big ? 18 : 15} height={big ? 18 : 15} style={{ display: "block", flexShrink: 0 }} /> {label}
+    </a>
+  );
+}
+
 // A leg with no flight: taken out, or one we could not fetch.
-function MissingLeg({ text, sub, onAdd, onManual, testId, failed }) {
+function MissingLeg({ text, sub, onAdd, ask, testId, failed }) {
   return (
     <div data-testid={testId} style={{ padding: "11px 12px", border: `1.5px dashed ${failed ? "#FECDCA" : C.icon}`, borderRadius: 12, background: "#FCFCFD" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -387,7 +391,7 @@ function MissingLeg({ text, sub, onAdd, onManual, testId, failed }) {
       </div>
       {failed && (
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <button onClick={onManual} data-testid={`${testId}-manual`} style={{ ...actBtn, border: `1px solid ${PINK}`, color: PINK }}><PenLine size={14} /> Add flight manually</button>
+          {ask}
           <button onClick={onAdd} data-testid={`${testId}-retry`} style={{ ...actBtn, flex: "0 0 auto", padding: "0 14px", border: `1px solid ${C.div}`, color: C.head }}><RefreshCw size={13} color={C.sub} /> Search again</button>
         </div>
       )}
@@ -449,7 +453,7 @@ export function FareLoader({ title, sub, cards = 3 }) {
 }
 
 // ─── The section on the itinerary ───
-export function FlightsSection({ legs, chosen, changed = [], failed = [], failedNow = [], dropped = [], cause, refreshing, saved, city: fromCity, travellers, startISO, onAddFlights, onChangeCity, onChangeLegs, onRemoveLegs, onAddLeg, onManualLeg, onDetails, onDismissChanges }) {
+export function FlightsSection({ legs, chosen, changed = [], failed = [], failedNow = [], dropped = [], cause, refreshing, saved, city: fromCity, travellers, startISO, consultant, onAddFlights, onChangeCity, onChangeLegs, onRemoveLegs, onAddLeg, onDetails, onDismissChanges }) {
   const any = chosen.some(Boolean) || failed.length > 0;
   const note = saved ? NOTE_SAVED : NOTE_UNSAVED;
 
@@ -500,7 +504,7 @@ export function FlightsSection({ legs, chosen, changed = [], failed = [], failed
     />
   );
   const missing = (i, label) => failed.includes(i) ? (
-    <MissingLeg failed testId={`miss-${i}`} text={`No flights found for ${legTitle(legs[i])}`} sub={`${longDate(legs[i].date, startISO)}. Add the flight yourself, or search again.`} onAdd={() => onAddLeg([i])} onManual={() => onManualLeg(i)} />
+    <MissingLeg failed testId={`miss-${i}`} text={`No flights found for ${legTitle(legs[i])}`} sub={`${longDate(legs[i].date, startISO)}. Your travel consultant can add it for you, or search again.`} onAdd={() => onAddLeg([i])} ask={<AskConsultant consultant={consultant} leg={legs[i]} startISO={startISO} testId={`miss-${i}-ask`} />} />
   ) : (
     <MissingLeg testId={`miss-${i}`} text={`${label} not added`} sub={`${legTitle(legs[i])} · ${legs[i].date}`} onAdd={() => onAddLeg([i])} />
   );
@@ -527,7 +531,7 @@ export function FlightsSection({ legs, chosen, changed = [], failed = [], failed
         )}
         {failedNow.length > 0 && (
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#B42318", lineHeight: 1.45 }}>
-            We couldn't find flights for {failedNow.map((i) => legTitle(legs[i])).join(", ")} {routeMoved ? "on your new route" : "on the new dates"}. You can add {failedNow.length === 1 ? "it" : "them"} manually below.
+            We couldn't find flights for {failedNow.map((i) => legTitle(legs[i])).join(", ")} {routeMoved ? "on your new route" : "on the new dates"}. Your travel consultant can add {failedNow.length === 1 ? "it" : "them"} for you.
           </p>
         )}
       </div>
@@ -593,15 +597,17 @@ export function FlightsSection({ legs, chosen, changed = [], failed = [], failed
 // fits the trip is picked to start with. The footer keeps a tentative total,
 // and Done puts the flights on the itinerary, unsaved: saving the itinerary
 // is what fetches the latest fares. When nothing comes back, the step says
-// so and offers to add the flight by hand.
-export function FlightChooser({ legs, legIdxs, initial = {}, current = [], travellers, startISO, mode = "add", fromCity, manualFirst = false, onDone, onClose }) {
+// so and sends them to their travel consultant, who adds it for them.
+//
+// The options carry no labels (no Cheapest, no Non-stop): the one that fits
+// the trip is simply selected and listed first.
+export function FlightChooser({ legs, legIdxs, initial = {}, current = [], travellers, startISO, mode = "add", fromCity, consultant, onDone, onClose }) {
   const [step, setStep] = useState(0);
   const [picks, setPicks] = useState({}); // legIdx -> flight | null
   const [showAll, setShowAll] = useState(false);
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tries, setTries] = useState(0);
-  const [manual, setManual] = useState(manualFirst);
 
   const legIdx = legIdxs[step];
   const leg = legs[legIdx];
@@ -609,9 +615,10 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
   const list = useMemo(() => (failedFetch ? [] : flightsFor(leg)), [leg, failedFetch]);
   const best = useMemo(() => (failedFetch ? null : bestFlight(leg, list)), [leg, list, failedFetch]);
   const startId = initial[legIdx] || best?.id;
-  const selFlight = picks[legIdx] !== undefined ? picks[legIdx] : (current[legIdx]?.manual && mode === "change" ? current[legIdx] : list.find((f) => f.id === startId) || null);
-  const cheapest = list[0]?.id;
-  const ordered = useMemo(() => [best, ...list.filter((f) => f !== best)].filter(Boolean), [best, list]);
+  const selFlight = picks[legIdx] !== undefined ? picks[legIdx] : list.find((f) => f.id === startId) || null;
+  // The flight already on the trip (when changing) leads, then the best fit.
+  const startF = list.find((f) => f.id === startId);
+  const ordered = useMemo(() => [...new Set([startF, best, ...list])].filter(Boolean), [startF, best, list]);
   const shown = showAll ? ordered : ordered.slice(0, 5);
   const last = step === legIdxs.length - 1;
   const multi = legIdxs.length > 1;
@@ -624,15 +631,6 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
     return () => clearTimeout(t);
   }, [step, tries]);
 
-  // The airline flown out on, whether picked in this run or already on the trip.
-  const outAirline = useMemo(() => {
-    if (leg.direction !== "return") return null;
-    const oi = legs.findIndex((l) => l.type === "international" && l.direction === "outbound");
-    if (oi < 0) return null;
-    const f = picks[oi] !== undefined ? picks[oi] : current[oi];
-    return f && !f.manual ? f.airlineCodes?.[0] : null;
-  }, [leg, legs, picks, current]);
-
   // What the chosen flights come to so far, for everyone travelling.
   const runFlights = legIdxs.map((i) => (i === legIdx ? selFlight : picks[i] !== undefined ? picks[i] : null));
   const tentative = sum(runFlights) * travellers;
@@ -641,12 +639,10 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
   const choose = (f) => {
     const next = { ...picks, [legIdx]: f };
     setPicks(next);
-    setManual(false);
     if (last) finish(Object.fromEntries(legIdxs.map((i) => [i, next[i] !== undefined ? next[i] : null])));
     else setStep(step + 1);
   };
   const back = () => {
-    if (manual && !manualFirst) { setManual(false); return; }
     if (step === 0) onClose(); else setStep(step - 1);
   };
   const kindLabel = leg.type === "international" ? (leg.direction === "outbound" ? "Outbound flight" : "Return flight") : `Day ${dayOfTrip(leg.date, startISO) || ""} flight`;
@@ -659,15 +655,15 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
       <div style={{ flexShrink: 0, padding: "12px 14px", borderBottom: `1px solid ${C.div}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button onClick={back} aria-label="Back" style={{ width: 34, height: 34, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
-            {step === 0 && !(manual && !manualFirst) ? <XIcon size={16} color={C.head} /> : <ChevronLeft size={18} color={C.head} />}
+            {step === 0 ? <XIcon size={16} color={C.head} /> : <ChevronLeft size={18} color={C.head} />}
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 10.5, fontWeight: 600, color: C.sub, letterSpacing: 0.3, textTransform: "uppercase" }}>
-              {manual ? "Add flight manually" : kindLabel}{multi ? ` · ${step + 1} of ${legIdxs.length}` : ""}
+              {kindLabel}{multi ? ` · ${step + 1} of ${legIdxs.length}` : ""}
             </p>
             <p style={{ margin: "2px 0 0", fontSize: 15.5, fontWeight: 700, color: C.head }}>{legTitle(leg)}</p>
           </div>
-          {mode !== "change" && !manual && (
+          {mode !== "change" && (
             <button onClick={() => choose(null)} data-testid="flight-skip" style={{ ...linkBtn, fontSize: 12.5, color: C.sub, flexShrink: 0 }}>Skip</button>
           )}
         </div>
@@ -679,10 +675,7 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
         )}
       </div>
 
-      {manual ? (
-        <ManualForm leg={leg} startISO={startISO} initial={current[legIdx]?.manual || null} onSave={(m) => choose(manualFlight(leg, m))} cta={last ? "Done" : "Continue"} />
-      ) : (
-        <>
+      <>
           {/* Options */}
           <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px 20px", background: "#FAFAFB" }}>
             {loading ? (
@@ -694,11 +687,9 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
                 </span>
                 <p style={{ margin: "14px 0 0", fontSize: 15, fontWeight: 700, color: C.head }}>We couldn't fetch flights</p>
                 <p style={{ margin: "6px auto 0", fontSize: 12.5, color: C.sub, lineHeight: 1.5, maxWidth: 280 }}>
-                  No fares came back for {legTitle(leg)} on {longDate(leg.date, startISO)}. If you've found a flight yourself, add it here and your consultant will price it.
+                  No fares came back for {legTitle(leg)} on {longDate(leg.date, startISO)}. Your travel consultant can add this flight for you, and you can still change it after.
                 </p>
-                <button onClick={() => setManual(true)} data-testid="flight-manual" style={{ ...actBtn, flex: "none", width: "100%", maxWidth: 280, height: 44, marginTop: 18, border: "none", background: PINK, color: "#fff", fontSize: 14 }}>
-                  <PenLine size={15} /> Add flight manually
-                </button>
+                <AskConsultant consultant={consultant} leg={leg} startISO={startISO} testId="flight-ask" big />
                 <button onClick={() => setTries(tries + 1)} data-testid="flight-retry" style={{ ...actBtn, flex: "none", width: "100%", maxWidth: 280, height: 42, marginTop: 10, border: `1px solid ${C.div}`, color: C.head, fontSize: 13.5 }}>
                   <RefreshCw size={14} color={C.sub} /> Try again
                 </button>
@@ -722,12 +713,6 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
                           <AirlineTile f={f} size={30} />
                           <span style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ display: "block", fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.airline}</span>
-                            <span style={{ display: "flex", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
-                              {f === best && <Tag color={GREEN} bg="#ECFDF3">Best for your trip</Tag>}
-                              {outAirline && f.airlineCodes?.[0] === outAirline && <Tag color="#1570EF" bg="#EFF6FF">Same airline as outbound</Tag>}
-                              {f.id === cheapest && <Tag color="#344054" bg="#F2F4F7">Cheapest</Tag>}
-                              {f.stops === 0 && <Tag color="#344054" bg="#F2F4F7">Non-stop</Tag>}
-                            </span>
                           </span>
                           <span style={{ textAlign: "right", flexShrink: 0 }}>
                             <span style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.head }}>₹{formatPrice(f.price)}</span>
@@ -775,49 +760,11 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
               </p>
             </div>
           )}
-        </>
-      )}
+      </>
 
       {detail && <FlightDetailSheet items={[{ f: detail, kind: leg.direction === "return" ? "ret" : leg.type === "internal" ? "dom" : "out" }]} travellers={travellers} startISO={startISO} onClose={() => setDetail(null)} perPerson />}
     </div>
   );
-}
-
-// ─── Adding a flight by hand, when none could be fetched ───
-function ManualForm({ leg, startISO, initial, onSave, cta }) {
-  const [m, setM] = useState(initial || { airline: "", flightNo: "", dep: "", arr: "", nextDay: false, fare: "" });
-  const set = (k) => (e) => setM({ ...m, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
-  const ok = m.airline.trim() && m.flightNo.trim() && m.dep && m.arr;
-  const field = { width: "100%", height: 44, padding: "0 12px", border: `1px solid ${C.div}`, borderRadius: 10, fontSize: 14, fontFamily: "inherit", color: C.head, background: C.white, boxSizing: "border-box", outline: "none" };
-  const label = (t, opt) => <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.head, margin: "14px 0 6px" }}>{t}{opt && <span style={{ fontWeight: 400, color: C.inact }}> (optional)</span>}</span>;
-  return (
-    <>
-      <div data-testid="flight-manual-form" style={{ flex: 1, overflowY: "auto", padding: "6px 16px 20px" }}>
-        <p style={{ margin: "8px 0 0", fontSize: 12, color: C.sub, lineHeight: 1.5 }}>
-          Enter the flight you've found for {longDate(leg.date, startISO)}. Your consultant checks it and adds the fare.
-        </p>
-        <label>{label("Airline")}<input value={m.airline} onChange={set("airline")} placeholder="e.g. IndiGo" style={field} data-testid="manual-airline" /></label>
-        <label>{label("Flight number")}<input value={m.flightNo} onChange={set("flightNo")} placeholder="e.g. 6E 1613" style={field} data-testid="manual-flightno" /></label>
-        <div style={{ display: "flex", gap: 10 }}>
-          <label style={{ flex: 1 }}>{label(`Departs ${leg.from}`)}<input type="time" value={m.dep} onChange={set("dep")} style={field} data-testid="manual-dep" /></label>
-          <label style={{ flex: 1 }}>{label(`Lands ${leg.to}`)}<input type="time" value={m.arr} onChange={set("arr")} style={field} data-testid="manual-arr" /></label>
-        </div>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 12.5, color: C.head }}>
-          <input type="checkbox" checked={m.nextDay} onChange={set("nextDay")} /> Lands the next day
-        </label>
-        <label>{label("Fare per person", true)}<input inputMode="numeric" value={m.fare} onChange={(e) => setM({ ...m, fare: e.target.value.replace(/\D/g, "") })} placeholder="₹" style={field} data-testid="manual-fare" /></label>
-      </div>
-      <div style={{ flexShrink: 0, padding: "12px 14px 16px", borderTop: `1px solid ${C.div}` }}>
-        <button onClick={() => ok && onSave({ ...m, airline: m.airline.trim(), flightNo: m.flightNo.trim() })} disabled={!ok} data-testid="manual-save" style={{ width: "100%", height: 46, borderRadius: 999, border: "none", background: PINK, opacity: ok ? 1 : 0.5, color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "inherit", cursor: ok ? "pointer" : "default" }}>
-          {cta}
-        </button>
-      </div>
-    </>
-  );
-}
-
-function Tag({ children, color, bg }) {
-  return <span style={{ fontSize: 9.5, fontWeight: 600, color, background: bg, padding: "2px 7px", borderRadius: 999 }}>{children}</span>;
 }
 
 function BagChip({ Icon, color, bg, text, warn }) {
@@ -849,9 +796,7 @@ export function FlightDetailSheet({ items, travellers, startISO, onClose, perPer
             <span style={{ display: "block", fontSize: 14, color: C.head }}>{f0.airline}</span>
             <span style={{ display: "block", fontSize: 10.5, color: C.inact, marginTop: 3 }}>{f0.flightNo}</span>
           </span>
-          {total > 0
-            ? <span style={{ fontSize: 19, fontWeight: 600, color: C.head, flexShrink: 0 }}>₹{formatPrice(total)}</span>
-            : <span style={{ fontSize: 12, color: C.inact, flexShrink: 0 }}>Fare not added</span>}
+          <span style={{ fontSize: 19, fontWeight: 600, color: C.head, flexShrink: 0 }}>₹{formatPrice(total)}</span>
         </div>
 
         {items.map(({ f, kind }, k) => {
@@ -882,7 +827,7 @@ export function FlightDetailSheet({ items, travellers, startISO, onClose, perPer
               </div>
 
               <p style={{ margin: "14px 0 10px", fontSize: 10.5, fontWeight: 500, color: C.head, letterSpacing: 0.5 }}>LUGGAGE ALLOWANCE</p>
-              {bag ? (
+              {bag && (
                 <>
                   <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }}>
                     <Legend Icon={Luggage} color={PINK} bg="#FFF0F3" text="Cabin" />
@@ -896,8 +841,6 @@ export function FlightDetailSheet({ items, travellers, startISO, onClose, perPer
                     </div>
                   ))}
                 </>
-              ) : (
-                <p style={{ margin: 0, fontSize: 12, color: C.sub }}>Check your bags with the airline. You added this flight yourself.</p>
               )}
             </div>
           );

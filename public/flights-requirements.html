@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flights on the Itinerary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one reading column, the same as the destination and OTP one-pagers.
+   Each case is a row of fact + link, with phone screenshots under it. */
+:root {
+  --bg: #FFFFFF;
+  --ink: #254342;
+  --text: #2E3A39;
+  --sub: #5E6B6A;
+  --line: #E7E3DF;
+  --well: #F6F4F2;
+  --pink: #E31B53;       /* the app's action pink: links only */
+  --lagoon: #00A898;     /* kickers */
+  --gold: #B54708;       /* things to decide */
+  --gold-bg: #FFF7E6;
+  --phone: #EAE6E3;
+  --display: "DM Serif Display", Georgia, "Times New Roman", serif;
+  --body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111817; --ink: #CFE5E2; --text: #DCE3E2; --sub: #93A3A1; --line: #2A3534; --well: #18211F;
+    --pink: #FF5C85; --lagoon: #3BD1C0; --gold: #F5B451; --gold-bg: #2A2112; --phone: #222C2B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111817; --ink: #CFE5E2; --text: #DCE3E2; --sub: #93A3A1; --line: #2A3534; --well: #18211F;
+  --pink: #FF5C85; --lagoon: #3BD1C0; --gold: #F5B451; --gold-bg: #2A2112; --phone: #222C2B;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+img { max-width: 100%; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); font-weight: 400; color: var(--ink); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(34px, 6vw, 48px); line-height: 1.05; }
+h2 { font-size: 28px; line-height: 1.15; }
+h3 { font-size: 15px; font-weight: 800; color: var(--ink); margin: 0; }
+p { margin: 0; }
+a { color: var(--pink); font-weight: 700; text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; border-radius: 4px; }
+.lede { margin-top: 12px; color: var(--sub); max-width: 62ch; }
+.base { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13.5px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; background: var(--well); padding: 3px 8px; border-radius: 6px; color: var(--ink); overflow-wrap: anywhere; }
+section { margin-top: 52px; display: flex; flex-direction: column; gap: 18px; }
+.kicker { font-size: 12.5px; font-weight: 800; color: var(--lagoon); }
+.cases { border-top: 1px solid var(--line); }
+.case { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.case p { color: var(--sub); font-size: 14px; margin-top: 3px; }
+.links { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: flex-end; font-size: 13.5px; white-space: nowrap; }
+@media (max-width: 560px) {
+  .case { grid-template-columns: minmax(0, 1fr); }
+  .links { justify-content: flex-start; }
+}
+.strip { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+figure { margin: 0; flex: 0 0 196px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 7px; }
+figure img { width: 100%; aspect-ratio: 375 / 812; object-fit: cover; object-position: top;
+  border-radius: 18px; border: 6px solid var(--phone); background: var(--phone); display: block; }
+figcaption { font-size: 12.5px; color: var(--sub); line-height: 1.4; }
+figcaption b { color: var(--ink); font-weight: 800; }
+.decide { background: var(--gold-bg); border-radius: 14px; padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+.decide h3 { color: var(--gold); }
+.decide ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.note { font-size: 13px; color: var(--sub); }
+ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 800; color: var(--sub); background: var(--well); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); }
+th { font-size: 12.5px; font-weight: 800; color: var(--sub); }
+.scroll { overflow-x: auto; }
+.copy td:first-child { color: var(--sub); width: 34%; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Flights on the itinerary</h1>
+  <p class="lede">A trip built in the app for Vietnam, Thailand or Bali now carries its flights: to the country, between its cities, and home. Customers pick each flight with its fare and bags, and can change or remove any of them. Flights follow the trip when the route or dates change, and like the rest of the itinerary nothing is final until it is saved. Open the links on a phone or in a narrow window.</p>
+  <div class="base"><span>Prototype at</span><code>30sundays-app-two.vercel.app/build?dest=Vietnam</code><a href="https://30sundays-app-two.vercel.app/build?dest=Vietnam" target="_blank" rel="noopener">Open Vietnam</a></div>
+  <p class="note" style="margin-top:10px">Build a trip in the wizard, log in with any number and any 6 digits (not 000000), and scroll to Flights on the itinerary. Fares in the prototype are samples; Jaipur is set up as the city with no flights.</p>
+
+  <section>
+    <span class="kicker">Try it</span>
+    <h2>One wizard, three countries</h2>
+    <div class="cases">
+      <div class="case">
+        <div><h3>Vietnam</h3><p>Pick Hanoi and Hoi An (or add HCMC) to get flights inside the country. Hoi An flies from Da Nang; Ha Long from Hanoi.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/build?dest=Vietnam" target="_blank" rel="noopener">Open Vietnam</a></div>
+      </div>
+      <div class="case">
+        <div><h3>Thailand</h3><p>Bangkok with Phuket or Chiang Mai adds a domestic flight. Phuket to Krabi is a drive, so no flight shows for it.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/build?dest=Thailand" target="_blank" rel="noopener">Open Thailand</a></div>
+      </div>
+      <div class="case">
+        <div><h3>Bali</h3><p>Every Bali area uses Denpasar airport, so most trips have only the flights out and home. Labuan Bajo adds a domestic flight; Nusa Penida is a boat.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/build?dest=Bali" target="_blank" rel="noopener">Open Bali</a></div>
+      </div>
+      <div class="case">
+        <div><h3>No flights found</h3><p>On any trip, choose Jaipur as the city you fly from. The flights to and from India come back empty and the customer is sent to their travel consultant.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/build?dest=Vietnam" target="_blank" rel="noopener">Open Vietnam</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">1. Starting point</span>
+    <h2>Flights are not in the price, and say so</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Built trips start without flights</h3><p>A trip built in the wizard shows a Flights section with one card: Flights not included in this price, a line on why to add them, and an Add flights button. The wizard itself does not ask for a departure city.</p></div></div>
+      <div class="case"><div><h3>Ready-made trips</h3><p>A trip made by a consultant starts with flights from Delhi already on it, which the customer can change, remove or move to another city.</p></div></div>
+      <div class="case"><div><h3>Where it sits</h3><p>The section has its own chip in the section bar (Flights) and sits after Plan together, before the consultant card. A trip opened from someone else's booking shows no flights to edit.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="flights-shots/01-empty.jpg" alt="Flights not included in this price, with Add flights" loading="lazy"><figcaption><b>Empty.</b> Not in the price, one button to add.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">2. Adding flights</span>
+    <h2>A city, then one flight at a time</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Where are you flying from?</h3><p>A sheet of 11 cities: Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata, Ahmedabad, Pune, Kochi, Jaipur, Indore. Picking one starts the steps.</p></div></div>
+      <div class="case"><div><h3>One step per flight</h3><p>Outbound, then each flight inside the country in trip order, then return. The header says which flight and how many (Outbound flight · 1 of 3), the route, the date, travellers and the city, with a progress bar.</p></div></div>
+      <div class="case"><div><h3>Every step loads live fares</h3><p>A small plane flies an arc over skeleton cards while fares load: Fetching live fares for Tue, Dec 15. Nothing is pickable until they arrive.</p></div></div>
+      <div class="case"><div><h3>Each option</h3><p>Airline, fare per person, times, length, stops in orange (1 stop · BKK), a +1 when it lands the next day, cabin and check-in bags (or No check-in bag in orange), and Details. Five show first, then Show N more flights.</p></div></div>
+      <div class="case"><div><h3>Picked for them, no labels</h3><p>The best fit is selected and listed first: an outbound that lands the same day by 8 pm, a return that leaves after 11 am, a hop inside the country that leaves between 7 am and 5 pm. Options carry no tags, so no Cheapest, Shortest, Non-stop or Best for your trip.</p></div></div>
+      <div class="case"><div><h3>Different airlines are fine</h3><p>Outbound and return are picked separately, so they can be on different airlines (Thai Airways out, IndiGo home). Each flight is its own card.</p></div></div>
+      <div class="case"><div><h3>Tentative total and Done</h3><p>The footer keeps the total for all travellers so far, with: Flight prices are tentative. Save the itinerary to fetch the latest fares. The button says what is next (Next: Hanoi to Da Nang, Next: return flight), and Done on the last step.</p></div></div>
+      <div class="case"><div><h3>Skip and back</h3><p>Skip leaves that flight out and moves on. Back goes to the previous step; the cross on the first step closes without adding anything.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="flights-shots/02-city.jpg" alt="Where are you flying from sheet" loading="lazy"><figcaption><b>City.</b> Eleven cities, one tap.</figcaption></figure>
+      <figure><img src="flights-shots/03-loader.jpg" alt="Fetching live fares loader" loading="lazy"><figcaption><b>Loading.</b> Every step fetches fares.</figcaption></figure>
+      <figure><img src="flights-shots/04-outbound.jpg" alt="Outbound options, best fit selected" loading="lazy"><figcaption><b>Outbound.</b> Best fit selected, no tags.</figcaption></figure>
+      <figure><img src="flights-shots/05-domestic.jpg" alt="Domestic flight options Hanoi to Da Nang" loading="lazy"><figcaption><b>Inside Vietnam.</b> Day 3, Hanoi to Da Nang.</figcaption></figure>
+      <figure><img src="flights-shots/06-return.jpg" alt="Return options with tentative total" loading="lazy"><figcaption><b>Return.</b> Tentative total, then Done.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">3. On the itinerary</span>
+    <h2>The app's flight cards, one flight each</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Layout</h3><p>Flying from Mumbai with Change city on the right. Then International flights: outbound and return as two cards side by side, swiped, with dots. Then Domestic flights, each under its day and route (Day 4, Hanoi to Da Nang).</p></div></div>
+      <div class="case"><div><h3>The card</h3><p>Airline and the fare for all travellers, then OUTBOUND, RETURN or ONE WAY with the date, the route row as in the app today, Change and Remove as two clear buttons, and Tap to view flight details. Nothing else is added to the card.</p></div></div>
+      <div class="case"><div><h3>Flight details</h3><p>A bottom sheet: airline, flight number, total fare, each leg with times, airports and layovers, and the luggage allowance per traveller (cabin and check-in kg).</p></div></div>
+      <div class="case"><div><h3>The note under each heading</h3><p>Before saving: Save the itinerary to see the latest fares and pricing. After saving: Fares as fetched when you last saved the itinerary.</p></div></div>
+      <div class="case"><div><h3>Price</h3><p>Flights go into the indicative total in the bottom bar. While unsaved it reads Not saved yet · flight prices are tentative. A toast confirms: Flights added. Save the itinerary to fetch the latest fares.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="flights-shots/07-added.jpg" alt="International flights carousel on the itinerary" loading="lazy"><figcaption><b>Added.</b> Swipe outbound to return.</figcaption></figure>
+      <figure><img src="flights-shots/22-domestic.jpg" alt="Domestic flights by day" loading="lazy"><figcaption><b>Domestic.</b> One card per day it flies.</figcaption></figure>
+      <figure><img src="flights-shots/09-details.jpg" alt="Flight details sheet with luggage" loading="lazy"><figcaption><b>Details.</b> Legs, layover and bags.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">4. Change and remove</span>
+    <h2>Any flight, any time</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Change</h3><p>Opens the same step for that one flight, with the current flight selected and listed first, and no Skip. Toast: Flight changed. Save the itinerary to fetch the latest fares.</p></div></div>
+      <div class="case"><div><h3>Remove</h3><p>The card becomes a dashed row (Return flight not added, Da Nang to Mumbai · Dec 22) with Add. Toast: Return flight removed, with Undo. Removing both international flights shows one row, International flights not added, whose Add runs both steps.</p></div></div>
+      <div class="case"><div><h3>Everything removed</h3><p>The section goes back to Flights not included in this price.</p></div></div>
+      <div class="case"><div><h3>Change city</h3><p>Same city sheet with: We'll fetch flights from the new city. Your domestic flights stay as they are. Only the flights to and from India are picked again. Picking the same city closes the sheet.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="flights-shots/10-removed.jpg" alt="Return flight removed with Add and Undo" loading="lazy"><figcaption><b>Removed.</b> A row to add it back, Undo in the toast.</figcaption></figure>
+      <figure><img src="flights-shots/11-change-city.jpg" alt="Change city sheet" loading="lazy"><figcaption><b>Change city.</b> Domestic flights stay.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">5. Route and date changes</span>
+    <h2>Flights follow the trip</h2>
+    <div class="cases">
+      <div class="case"><div><h3>New dates</h3><p>Every flight moves to its new date, on the same airline where one flies that day. While it looks, the section shows Finding flights for your new dates. Then a notice: Your travel dates changed. We moved your 3 flights to the new dates and kept the same airlines where we could. They're marked Updated. Save the itinerary to fetch the latest fares.</p></div></div>
+      <div class="case"><div><h3>New route</h3><p>Flights that still fit stay. New legs get the best fit, legs that changed are picked again, and each is marked Updated. Notice: Your route changed. We found new flights for Hanoi to Da Nang, Da Nang to Ho Chi Minh City, Ho Chi Minh City to Mumbai.</p></div></div>
+      <div class="case"><div><h3>A flight no longer on the route</h3><p>It is taken out, and the notice says: Hanoi to Da Nang is no longer on your route, so we took it out.</p></div></div>
+      <div class="case"><div><h3>A removed flight stays removed</h3><p>A flight the customer took out does not come back when the dates move.</p></div></div>
+      <div class="case"><div><h3>Notice</h3><p>Has a close button. Closing it keeps the flights and clears the Updated tags.</p></div></div>
+      <div class="case"><div><h3>No version yet</h3><p>New dates or a new route land on the itinerary as unsaved changes, like a new hotel. Flights, hotels and day plans are saved together, as one new version, on Save.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="flights-shots/15-refreshing.jpg" alt="Finding flights for your new dates" loading="lazy"><figcaption><b>Re-fetching.</b> After new dates or a new route.</figcaption></figure>
+      <figure><img src="flights-shots/17-dates-updated.jpg" alt="Your travel dates changed notice with Updated tag" loading="lazy"><figcaption><b>New dates.</b> Same airlines, marked Updated.</figcaption></figure>
+      <figure><img src="flights-shots/20-route.jpg" alt="Your route changed notice" loading="lazy"><figcaption><b>New route.</b> New flights named in the notice.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">6. Saving</span>
+    <h2>Nothing is final until it is saved</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Changes since your last version</h3><p>Every flight change is its own line next to hotels, day plans, route and dates: Outbound flight · Mumbai to Hanoi, Added Thai Airways, Dec 15, 02:30. Others: Now X. Was Y; Removed (was X); No flights found from Jaipur; Flying from: Jaipur now, was Mumbai.</p></div></div>
+      <div class="case"><div><h3>Undo per line</h3><p>Each line has Undo. A line that only follows a new route, new dates or a new city has no Undo of its own and says so (Follows your new route); it goes back when that change is undone. Discard all changes puts every flight back as saved.</p></div></div>
+      <div class="case"><div><h3>Save rechecks every fare</h3><p>Save Itinerary fetches the latest fare for each flight along with hotels and day plans, and saves a new version. Toast: Itinerary saved as V2. Latest flight fares are up ₹1,200 (or down). No mention when nothing moved.</p></div></div>
+      <div class="case"><div><h3>After saving</h3><p>The notes switch to Fares as fetched when you last saved the itinerary, and the bottom bar shows the final price.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="flights-shots/08-changes.jpg" alt="Changes list with one line per flight" loading="lazy"><figcaption><b>Changes.</b> One line per flight, each with Undo.</figcaption></figure>
+      <figure><img src="flights-shots/21-route-changes.jpg" alt="Route change lines that follow the new route" loading="lazy"><figcaption><b>Follows the route.</b> No Undo of its own.</figcaption></figure>
+      <figure><img src="flights-shots/19-saved.jpg" alt="Itinerary saved as V2 with fare change" loading="lazy"><figcaption><b>Saved.</b> New version, fare change said out loud.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">7. When flights can't be fetched</span>
+    <h2>The consultant adds it</h2>
+    <div class="cases">
+      <div class="case"><div><h3>No manual entry</h3><p>Customers cannot type in a flight of their own. A flight on the itinerary is always one we fetched, or one their travel consultant added.</p></div></div>
+      <div class="case"><div><h3>While adding</h3><p>We couldn't fetch flights. No fares came back for Jaipur to Hanoi on Sat, Dec 19. Your travel consultant can add this flight for you, and you can still change it after. Buttons: Ask Meera on WhatsApp, Try again. Skip stays in the header.</p></div></div>
+      <div class="case"><div><h3>Ask on WhatsApp</h3><p>Opens a chat with the trip's consultant with the flight already named: Hi Meera, the app couldn't find flights for Jaipur to Hanoi on Sat, Dec 19. Could you add one to my itinerary? No consultant assigned yet: the button reads Ask your consultant.</p></div></div>
+      <div class="case"><div><h3>Skipped, still on the trip</h3><p>A flight skipped because no fares came back stays in the section as a red dashed row, No flights found for Jaipur to Hanoi, with Ask Meera on WhatsApp and Search again. It is not treated as removed.</p></div></div>
+      <div class="case"><div><h3>After a route or date change</h3><p>Same row, and the notice adds in red: We couldn't find flights for Jaipur to Hanoi on the new dates. Your travel consultant can add it for you.</p></div></div>
+      <div class="case"><div><h3>A flight the consultant adds</h3><p>Shows like any other flight card, with its fare and bags, and the customer can change or remove it.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="flights-shots/12-fetch-failed.jpg" alt="We couldn't fetch flights with Ask Meera on WhatsApp" loading="lazy"><figcaption><b>No fares.</b> Ask the consultant, or try again.</figcaption></figure>
+      <figure><img src="flights-shots/16-not-found.jpg" alt="No flights found rows on the itinerary" loading="lazy"><figcaption><b>On the itinerary.</b> Red rows, the consultant one tap away.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">Country rules</span>
+    <h2>Which hops are flights</h2>
+    <p class="note">A city flies from the airport that serves it. A hop by car or boat is not a flight and never shows in Flights.</p>
+    <div class="scroll">
+      <table>
+        <tr><th>Country</th><th>Airports</th><th>Flights inside the country</th><th>Not flights</th></tr>
+        <tr><td>Vietnam</td><td>Hanoi (also Ha Long, Ninh Binh), Da Nang (also Hoi An), Ho Chi Minh City, Phu Quoc</td><td>Hanoi to Da Nang, Da Nang to HCMC, HCMC to Phu Quoc</td><td>Hanoi to Ha Long, Hoi An to Da Nang (car)</td></tr>
+        <tr><td>Thailand</td><td>Bangkok, Phuket, Chiang Mai (also Chiang Rai, Pai), Krabi, Koh Samui</td><td>Bangkok to Phuket, Bangkok to Chiang Mai, Krabi to Koh Samui</td><td>Phuket to Krabi (car)</td></tr>
+        <tr><td>Bali</td><td>Denpasar for every Bali area, Labuan Bajo</td><td>Bali to Labuan Bajo</td><td>Ubud to Seminyak (car), to Nusa Penida (boat)</td></tr>
+      </table>
+    </div>
+    <ul class="plain">
+      <li>Into one city and home from another works: Mumbai to Hanoi out, Ho Chi Minh City to Mumbai home.</li>
+      <li>A one-city trip, or a Bali trip on the island, has only the international section.</li>
+      <li>Trips over the new year date each flight in the right year.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="kicker">Tracking</span>
+    <h2>Events</h2>
+    <ul class="plain">
+      <li><b>flights_add_tapped</b>: destination, trip_id</li>
+      <li><b>flights_city_selected</b>: city, is_change</li>
+      <li><b>flights_options_loaded</b>: leg_type (outbound, domestic, return), options_count, load_ms</li>
+      <li><b>flights_fetch_failed</b>: leg_type, from, to, date</li>
+      <li><b>flight_selected</b>: leg_type, airline, fare, is_best_fit, position in list</li>
+      <li><b>flight_skipped</b> · <b>flights_details_viewed</b>: leg_type, source (chooser, card)</li>
+      <li><b>flights_chooser_done</b>: flights_added, tentative_total · <b>flights_chooser_closed</b>: step</li>
+      <li><b>flight_change_tapped</b> · <b>flight_removed</b> · <b>flight_remove_undone</b>: leg_type</li>
+      <li><b>flights_consultant_asked</b>: leg_type, source (chooser, itinerary)</li>
+      <li><b>flights_notice_shown</b>: cause (dates, route), updated_count, failed_count · <b>flights_notice_dismissed</b></li>
+      <li><b>itinerary_saved</b>: add has_flights, flights_count, fare_delta</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="kicker">Words on screen</span>
+    <h2>Copy</h2>
+    <div class="scroll">
+      <table class="copy">
+        <tr><th>Where</th><th>Text</th></tr>
+        <tr><td>Empty section</td><td>Flights not included in this price · Add flights from your city to see what the whole trip costs. You can change or remove them any time. · Add flights</td></tr>
+        <tr><td>City sheet</td><td>Where are you flying from? · Next, you'll choose each flight. Every option shows its fare and bags.</td></tr>
+        <tr><td>City sheet, changing</td><td>We'll fetch flights from the new city. Your domestic flights stay as they are.</td></tr>
+        <tr><td>Loader</td><td>Fetching live fares for Tue, Dec 15 · Finding flights for your new dates · Finding flights for your new route</td></tr>
+        <tr><td>Chooser footer</td><td>Tentative total so far · Flight prices are tentative. Save the itinerary to fetch the latest fares.</td></tr>
+        <tr><td>Section notes</td><td>Save the itinerary to see the latest fares and pricing · Fares as fetched when you last saved the itinerary</td></tr>
+        <tr><td>Card tag</td><td>UPDATED</td></tr>
+        <tr><td>Toasts</td><td>Flights added. Save the itinerary to fetch the latest fares · Flight changed. … · Return flight removed (Undo)</td></tr>
+        <tr><td>Bottom bar</td><td>Not saved yet · flight prices are tentative</td></tr>
+        <tr><td>Save toast</td><td>Itinerary saved as V2. Latest flight fares are up ₹1,200</td></tr>
+        <tr><td>Fetch failed</td><td>We couldn't fetch flights · Your travel consultant can add this flight for you, and you can still change it after. · Ask Meera on WhatsApp · Try again · No flights found for Jaipur to Hanoi · Search again</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="decide">
+      <h3>To check</h3>
+      <ol>
+        <li>Fares source and how long a fetched fare is held. The prototype treats every fare as tentative until Save.</li>
+        <li>A flight that is sold out when Save rechecks it: block the save, or pick the next best and say so.</li>
+        <li>Fares for children and infants. The prototype prices every traveller as an adult.</li>
+        <li>The list of departure cities (11 today), and whether it should come from the customer's profile or lead city.</li>
+        <li>How the consultant adds a flight for the customer (from which tool), and how the customer hears it is on the itinerary.</li>
+        <li>Should a booked trip lock its flights? The prototype covers trips still being planned.</li>
+      </ol>
+    </div>
+  </section>
+
+  <p class="note" style="margin-top:28px">Fares, times and airlines in the prototype are generated samples, steady per route and date. Screenshots are from a Vietnam trip: Mumbai, Hanoi, Hoi An, and later Ho Chi Minh City.</p>
+</div>
+</body>
+</html>
