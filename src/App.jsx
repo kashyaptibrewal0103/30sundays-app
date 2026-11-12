@@ -31,6 +31,7 @@ import ItineraryDetail from "./pages/ItineraryDetail";
 import Plan from "./pages/Plan";
 import Build from "./pages/Build";
 import LoginV2 from "./pages/LoginV2";
+import OtpSmsLab from "./pages/OtpSmsLab";
 import LogoAnim from "./pages/LogoAnim";
 import MediaLab from "./pages/MediaLab";
 import RouteCardLab from "./pages/RouteCardLab";
@@ -127,7 +128,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
   const giftPaths = pathname === "/wallet" || pathname.startsWith("/gift-cards") || pathname.startsWith("/gift/") || pathname.startsWith("/g/") || pathname.startsWith("/registry");
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip" || pathname.startsWith("/day-media") || pathname === "/build" || pathname === "/ai-photos" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/otp-sms" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip" || pathname.startsWith("/day-media") || pathname === "/build" || pathname === "/ai-photos" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -140,7 +141,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
   // show only the screen, no demo-state switcher.
   // Design labs hide it too, so the cards can be judged without it on top of them.
-  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/stage-home" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
+  const shareLink = pathname.startsWith("/day-media/") || pathname === "/otp-sms" ||pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/stage-home" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
 
   // The photo lab is a desktop testing tool that talks to Gemini for real, so
   // it sits outside the phone frame and outside the app shell entirely. On its
@@ -208,6 +209,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/saved/activity/:id" element={<WishlistActivityDetail />} />
         <Route path="/build" element={<Build userState={userState} otpVerified={otpVerified} setOtpVerified={setOtpVerified} />} />
         <Route path="/login-v2" element={<LoginV2 showSkip />} />
+        <Route path="/otp-sms" element={<OtpSmsLab />} />
         <Route path="/logo-anim" element={<LogoAnim />} />
         <Route path="/media-lab" element={<MediaLab />} />
         <Route path="/route-lab" element={<RouteCardLab />} />

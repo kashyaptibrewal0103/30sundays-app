@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OTP on SMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one reading column, the same as the destination pages one-pager.
+   Each case is a row of fact + link, with phone screenshots under it. */
+:root {
+  --bg: #FFFFFF;
+  --ink: #254342;
+  --text: #2E3A39;
+  --sub: #5E6B6A;
+  --line: #E7E3DF;
+  --well: #F6F4F2;
+  --pink: #E31B53;       /* the app's action pink: links only */
+  --lagoon: #00A898;     /* kickers */
+  --gold: #B54708;       /* things to decide */
+  --gold-bg: #FFF7E6;
+  --phone: #EAE6E3;
+  --display: "DM Serif Display", Georgia, "Times New Roman", serif;
+  --body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111817; --ink: #CFE5E2; --text: #DCE3E2; --sub: #93A3A1; --line: #2A3534; --well: #18211F;
+    --pink: #FF5C85; --lagoon: #3BD1C0; --gold: #F5B451; --gold-bg: #2A2112; --phone: #222C2B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111817; --ink: #CFE5E2; --text: #DCE3E2; --sub: #93A3A1; --line: #2A3534; --well: #18211F;
+  --pink: #FF5C85; --lagoon: #3BD1C0; --gold: #F5B451; --gold-bg: #2A2112; --phone: #222C2B;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+img { max-width: 100%; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); font-weight: 400; color: var(--ink); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(34px, 6vw, 48px); line-height: 1.05; }
+h2 { font-size: 28px; line-height: 1.15; }
+h3 { font-size: 15px; font-weight: 800; color: var(--ink); margin: 0; }
+p { margin: 0; }
+a { color: var(--pink); font-weight: 700; text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; border-radius: 4px; }
+.lede { margin-top: 12px; color: var(--sub); max-width: 62ch; }
+.base { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13.5px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; background: var(--well); padding: 3px 8px; border-radius: 6px; color: var(--ink); overflow-wrap: anywhere; }
+section { margin-top: 52px; display: flex; flex-direction: column; gap: 18px; }
+.kicker { font-size: 12.5px; font-weight: 800; color: var(--lagoon); }
+.cases { border-top: 1px solid var(--line); }
+.case { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.case p { color: var(--sub); font-size: 14px; margin-top: 3px; }
+.links { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: flex-end; font-size: 13.5px; white-space: nowrap; }
+@media (max-width: 560px) {
+  .case { grid-template-columns: minmax(0, 1fr); }
+  .links { justify-content: flex-start; }
+}
+.strip { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+figure { margin: 0; flex: 0 0 196px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 7px; }
+figure img { width: 100%; aspect-ratio: 375 / 812; object-fit: cover; object-position: top;
+  border-radius: 18px; border: 6px solid var(--phone); background: var(--phone); display: block; }
+figcaption { font-size: 12.5px; color: var(--sub); line-height: 1.4; }
+figcaption b { color: var(--ink); font-weight: 800; }
+.decide { background: var(--gold-bg); border-radius: 14px; padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+.decide h3 { color: var(--gold); }
+.decide ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.note { font-size: 13px; color: var(--sub); }
+ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 800; color: var(--sub); background: var(--well); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); }
+th { font-size: 12.5px; font-weight: 800; color: var(--sub); }
+td:first-child { color: var(--sub); width: 34%; }
+.scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>OTP on SMS</h1>
+  <p class="lede">The login code now goes by SMS first. WhatsApp is the second way, offered on the number screen and again on every resend, in either direction. This page covers what the keyboard does, how the code fills itself in, the back key, and every switch between SMS and WhatsApp. Open the links on a phone or in a narrow window.</p>
+  <div class="base"><span>Prototype at</span><code>30sundays-app-two.vercel.app/otp-sms</code><a href="https://30sundays-app-two.vercel.app/otp-sms" target="_blank" rel="noopener">Open prototype</a></div>
+  <p class="note" style="margin-top:10px">The prototype draws an iPhone keyboard inside the screen and plays the message arriving, so it behaves the same on a laptop. A computer keyboard works too: digits, Backspace and paste.</p>
+
+  <section>
+    <span class="kicker">Try it</span>
+    <h2>Every case has a link</h2>
+    <div class="cases">
+      <div class="case">
+        <div><h3>First launch</h3><p>The number screen with Skip. Tap the field: the keyboard comes up with both buttons still in view, and the phone's own number is offered above the keys.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/otp-sms" target="_blank" rel="noopener">Open start</a></div>
+      </div>
+      <div class="case">
+        <div><h3>Code by SMS</h3><p>Lands on the code screen. The SMS arrives two seconds later and its code shows above the keyboard. One tap fills all six boxes.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/otp-sms?step=otp&amp;via=sms" target="_blank" rel="noopener">Open SMS</a></div>
+      </div>
+      <div class="case">
+        <div><h3>Code on WhatsApp</h3><p>The WhatsApp message has a Copy code button. After copying, the code is offered as Paste above the keyboard.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/otp-sms?step=otp&amp;via=whatsapp" target="_blank" rel="noopener">Open WhatsApp</a></div>
+      </div>
+      <div class="case">
+        <div><h3>Switch SMS and WhatsApp</h3><p>The countdown is already over, so both ways are awake. Send on either one, as many times as the limit allows. Open the WhatsApp version to switch the other way.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/otp-sms?step=otp&amp;via=sms&amp;wait=0" target="_blank" rel="noopener">From SMS</a><a href="https://30sundays-app-two.vercel.app/otp-sms?step=otp&amp;via=whatsapp&amp;wait=0" target="_blank" rel="noopener">From WhatsApp</a></div>
+      </div>
+      <div class="case">
+        <div><h3>WhatsApp can't reach the number</h3><p>A note under the boxes, and SMS wakes up at once without waiting for the countdown.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/otp-sms?step=otp&amp;via=whatsapp&amp;wa=fail" target="_blank" rel="noopener">Open case</a></div>
+      </div>
+      <div class="case">
+        <div><h3>Wrong code, and too many tries</h3><p>On any code screen, type six digits that aren't the code. Do it five times to see the lock.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/otp-sms?step=otp&amp;via=sms" target="_blank" rel="noopener">Open SMS</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">1. Number screen</span>
+    <h2>The keyboard never hides the way forward</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Tap the field, the number pad opens</h3><p>The number pad, not the full keyboard. The screen moves up so the field, Send OTP (SMS) and Get OTP on WhatsApp all sit right above the keys. The logo shrinks; nothing ends up behind the keyboard. Tapping anywhere outside the field puts the keyboard away.</p></div></div>
+      <div class="case"><div><h3>The phone's own number, one tap</h3><p>The keyboard offers the number saved on the phone. iPhone: the field is marked as a phone number, so iOS suggests it from My Card. Android: the Phone Number Hint prompt from Google.</p></div></div>
+      <div class="case"><div><h3>Pasted numbers are cleaned up</h3><p>+91 99710 19664, 099710 19664 and 99710-19664 all land as 9971019664. Spaces, dashes, the country code and a leading 0 are dropped.</p></div></div>
+      <div class="case"><div><h3>Ready when the number is</h3><p>Both buttons stay dimmed until all 10 digits are in. Then the field turns green with a tick. SMS is the filled pink button, WhatsApp the outlined one under it.</p></div></div>
+      <div class="case"><div><h3>Sending</h3><p>The tapped button shows a loader (Sending OTP... or Sending on WhatsApp...) and both buttons lock, so a code can't be asked for twice. Then the code screen.</p></div></div>
+      <div class="case"><div><h3>Skip, first launch only</h3><p>Skip shows only on the very first screen of the app. From the trip wizard, a lead form or Account, logging in is the point, so there is no Skip.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="otp-sms-shots/01-start.jpg" alt="Number screen on first launch, with Skip" loading="lazy"><figcaption><b>First launch.</b> Skip top right, keyboard down.</figcaption></figure>
+      <figure><img src="otp-sms-shots/02-keyboard.jpg" alt="Keyboard open, both buttons above it, own number suggested" loading="lazy"><figcaption><b>Keyboard up.</b> Both ways stay in view; own number offered.</figcaption></figure>
+      <figure><img src="otp-sms-shots/03-number.jpg" alt="Number filled, field green, buttons active" loading="lazy"><figcaption><b>Number in.</b> Green tick, both buttons wake.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">2. Code screen</span>
+    <h2>The code fills itself in</h2>
+    <div class="cases">
+      <div class="case"><div><h3>The keyboard opens on its own</h3><p>The first box is ready, no tap needed. Above the keys, in this order: Verify your number, which way the code went and to which number, the six boxes, the countdown and both resend options.</p></div></div>
+      <div class="case"><div><h3>SMS autofill, all six digits at once</h3><p>When the SMS lands, its code shows above the keyboard (From Messages on iPhone). One tap fills all six boxes together and checks the code. There is no Verify button. iPhone: the boxes are marked as a one-time code. Android: the SMS Retriever API fills it with no tap at all, or the SMS User Consent prompt with one tap.</p></div></div>
+      <div class="case"><div><h3>Typing</h3><p>Each digit moves the cursor to the next box. The sixth digit checks the code straight away.</p></div></div>
+      <div class="case"><div><h3>Back clears one digit at a time</h3><p>Each press of back clears the last filled digit and the cursor steps back with it, right to left. Holding it down clears them one after another. One press never clears everything, and never jumps over a box.</p></div></div>
+      <div class="case"><div><h3>No gaps</h3><p>Tapping any box puts the cursor on the first empty one (the last box if all are full), so a code can never have holes in it.</p></div></div>
+      <div class="case"><div><h3>Paste anywhere</h3><p>A 6-digit code pasted into any box fills all six and checks it. Anything that isn't a digit is dropped.</p></div></div>
+      <div class="case"><div><h3>Checking</h3><p>Verifying... shows under the boxes and the keyboard input is ignored until the answer is back. On success the keyboard goes down.</p></div></div>
+      <div class="case"><div><h3>Wrong number?</h3><p>The back arrow returns to the number screen with the number still in the field, ready to correct.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="otp-sms-shots/04-sms-arrives.jpg" alt="SMS arrives, code offered above the keyboard" loading="lazy"><figcaption><b>SMS lands.</b> The code waits above the keys.</figcaption></figure>
+      <figure><img src="otp-sms-shots/05-back.jpg" alt="Three digits typed after one back press" loading="lazy"><figcaption><b>Back.</b> 6302, then back: one digit gone, cursor on box four.</figcaption></figure>
+      <figure><img src="otp-sms-shots/06-filled.jpg" alt="All six digits filled at once, verifying" loading="lazy"><figcaption><b>One tap.</b> All six fill at once and check.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">3. WhatsApp</span>
+    <h2>Copy code, then one tap</h2>
+    <div class="cases">
+      <div class="case"><div><h3>The message</h3><p>Sent as a WhatsApp authentication message with a Copy code button. On Android it can also carry a one-tap Autofill button that opens the app with the code already in.</p></div></div>
+      <div class="case"><div><h3>iPhone</h3><p>The iPhone keyboard can't read WhatsApp. After Copy code, the code is offered as Paste above the keyboard, and one tap fills all six boxes. The app should not read the clipboard by itself, since iOS asks for permission every time.</p></div></div>
+      <div class="case"><div><h3>Android</h3><p>Autofill in the WhatsApp message brings the person back with the code filled in and checked. Copy and paste works as a fallback.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="otp-sms-shots/07-wa-arrives.jpg" alt="WhatsApp message with Copy code button" loading="lazy"><figcaption><b>WhatsApp lands.</b> Copy code on the message.</figcaption></figure>
+      <figure><img src="otp-sms-shots/08-wa-paste.jpg" alt="Copied code offered as Paste above the keyboard" loading="lazy"><figcaption><b>Copied.</b> Paste above the keys fills all six.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">4. Resend and switching</span>
+    <h2>Either way, in any order</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Both ways, from the start</h3><p>SMS and WhatsApp are both on the code screen from the first second, dimmed under a 60 second countdown, so nobody waits a minute to find out WhatsApp was an option. At zero the line reads Get a new code on, and both wake up.</p></div></div>
+      <div class="case"><div><h3>Every direction works the same</h3><p>SMS then SMS, SMS then WhatsApp, WhatsApp then WhatsApp, WhatsApp then SMS. Each time: a new code goes out, the boxes clear, the keyboard stays up, the line under the title changes to the new way, a green note confirms it (New code sent on WhatsApp), and the countdown starts again from 60.</p></div></div>
+      <div class="case"><div><h3>Late messages still work</h3><p>An SMS that turns up after the person switched to WhatsApp still gets them in. Every code sent in the last 10 minutes works, until one is used. In the prototype the earlier SMS code stays offered above the keyboard after the switch.</p></div></div>
+      <div class="case"><div><h3>WhatsApp can't reach the number</h3><p>If WhatsApp reports the message can't be delivered (the number isn't on WhatsApp), show within about 10 seconds: We couldn't reach this number on WhatsApp. Get the code by SMS instead. SMS wakes at once; WhatsApp keeps its countdown.</p></div></div>
+      <div class="case"><div><h3>Limit on codes</h3><p>Five codes per number in 10 minutes, across both ways. After that both options switch off with: Too many codes asked for. Try again in 10 minutes.</p></div></div>
+      <div class="case"><div><h3>Leaving the app and coming back</h3><p>Going to Messages or WhatsApp and back keeps the digits typed so far, opens the keyboard again, and the countdown shows the real time left (counted from when it started, not paused).</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="otp-sms-shots/09-resend-open.jpg" alt="Countdown over, both resend options active" loading="lazy"><figcaption><b>Countdown over.</b> Both ways awake.</figcaption></figure>
+      <figure><img src="otp-sms-shots/10-switch.jpg" alt="Switched from SMS to WhatsApp" loading="lazy"><figcaption><b>Switched to WhatsApp.</b> New line, green note, 60s again. The earlier SMS code still works.</figcaption></figure>
+      <figure><img src="otp-sms-shots/13-wa-fail.jpg" alt="WhatsApp could not reach the number, SMS active" loading="lazy"><figcaption><b>WhatsApp failed.</b> SMS wakes straight away.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">5. Wrong code</span>
+    <h2>Clear, then a way out</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Wrong code</h3><p>The boxes turn red with a small shake and the message reads That code isn't right. Check it and try again. The boxes clear, the keyboard stays up and the cursor goes back to the first box. Typing again takes the red away.</p></div></div>
+      <div class="case"><div><h3>Five wrong tries</h3><p>Too many wrong tries. Get a new code to try again. The keyboard goes down, the boxes lock, and both SMS and WhatsApp wake at once, whatever the countdown says. A new code resets the tries.</p></div></div>
+      <div class="case"><div><h3>Expired code <span class="tag">Not in prototype</span></h3><p>Older than 10 minutes: This code has expired. Get a new one. Both ways wake at once.</p></div></div>
+      <div class="case"><div><h3>No internet <span class="tag">Not in prototype</span></h3><p>On send or verify: No internet. Check your connection and try again. The number and the digits stay as they were.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="otp-sms-shots/11-wrong.jpg" alt="Wrong code error, boxes red" loading="lazy"><figcaption><b>Wrong code.</b> Red, cleared, try again.</figcaption></figure>
+      <figure><img src="otp-sms-shots/12-locked.jpg" alt="Too many wrong tries, keyboard down, both resend options active" loading="lazy"><figcaption><b>Five wrong.</b> Keyboard down, get a new code.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">Words on screen</span>
+    <h2>Copy</h2>
+    <div class="scroll">
+      <table>
+        <tr><th>Where</th><th>Text</th></tr>
+        <tr><td>Number screen buttons</td><td>Send OTP · Get OTP on WhatsApp</td></tr>
+        <tr><td>Under the buttons</td><td>We'll send a 6-digit code by SMS</td></tr>
+        <tr><td>Sending</td><td>Sending OTP... · Sending on WhatsApp...</td></tr>
+        <tr><td>Code screen, by SMS</td><td>We've sent you a verification code by SMS to +91 99710 19664</td></tr>
+        <tr><td>Code screen, on WhatsApp</td><td>We've sent you a verification code to your WhatsApp number +91 99710 19664</td></tr>
+        <tr><td>Countdown, then over</td><td>Didn't receive? Resend in 45s · Didn't receive? Get a new code on</td></tr>
+        <tr><td>After a resend</td><td>New code sent by SMS · New code sent on WhatsApp</td></tr>
+        <tr><td>Wrong code</td><td>That code isn't right. Check it and try again.</td></tr>
+        <tr><td>Five wrong tries</td><td>Too many wrong tries. Get a new code to try again.</td></tr>
+        <tr><td>WhatsApp failed</td><td>We couldn't reach this number on WhatsApp. Get the code by SMS instead.</td></tr>
+        <tr><td>Code limit</td><td>Too many codes asked for. Try again in 10 minutes.</td></tr>
+        <tr><td>The SMS</td><td>482913 is your 30 Sundays verification code. It is valid for 10 minutes. Do not share it with anyone. (plus the app's code for Android autofill on the last line)</td></tr>
+        <tr><td>The WhatsApp message</td><td>482913 is your verification code. For your security, do not share this code. [Copy code]</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">Tracking</span>
+    <h2>Events</h2>
+    <ul class="plain">
+      <li><b>otp_send_tapped</b>: channel (sms, whatsapp), is_resend</li>
+      <li><b>otp_channel_switched</b>: from, to</li>
+      <li><b>otp_delivery_failed</b>: channel, reason (from the SMS and WhatsApp delivery reports)</li>
+      <li><b>otp_filled</b>: method (autofill, paste, typed), channel</li>
+      <li><b>otp_verified</b>: channel, method, tries, seconds from first send</li>
+      <li><b>otp_wrong</b>: try number · <b>otp_locked</b> · <b>otp_send_limit_hit</b></li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="decide">
+      <h3>To check</h3>
+      <ol>
+        <li>Code life of 10 minutes, and every code sent in that time works until one is used. The stricter choice is only the latest code; that fails people whose SMS arrives late after a switch.</li>
+        <li>Limits: five wrong tries per code, five codes per number in 10 minutes. Confirm with tech and the SMS budget.</li>
+        <li>SMS in India needs the message template and the sender name (for example VM-30SNDY) registered on DLT. The Android autofill code has to be part of the approved template.</li>
+        <li>WhatsApp authentication template with Copy code (and Autofill on Android), approved in Meta Business Manager. Android Autofill also needs a small handshake from the app.</li>
+        <li>If an SMS fails to deliver (operator report, DND), do we nudge to WhatsApp the same way as the WhatsApp failure?</li>
+        <li>The prototype shows an iPhone. On Android the code from SMS can fill itself with no tap at all; the screens stay the same.</li>
+      </ol>
+    </div>
+  </section>
+
+  <p class="note" style="margin-top:28px">Codes in the prototype are random and any code it sent works. Expired code and no internet are written here but not built into the prototype.</p>
+</div>
+</body>
+</html>
