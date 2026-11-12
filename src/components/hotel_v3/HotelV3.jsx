@@ -171,6 +171,9 @@ export default function HotelV3({
   // What the rooms section is called. A booked hotel says "Your room"; a hotel
   // on somebody else's trip is not yours, so that screen passes its own.
   roomsTitle,
+  // The room already on the trip, when this is the customer's own hotel. The
+  // rooms section then leads with it and keeps the rest behind one tap.
+  currentRoomId,
   nights = 3,
   // Which paper the honest bit is written on. The postcard is the one we
   // picked, so it is what every screen gets unless it asks for the other.
@@ -259,6 +262,7 @@ export default function HotelV3({
             selectedId={selectedRoomId}
             readOnly={readOnly}
             title={roomsTitle}
+            currentId={currentRoomId}
             nights={nights}
           />
         </div>

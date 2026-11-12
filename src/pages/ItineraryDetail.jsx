@@ -1188,6 +1188,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           rating: savedHotel.bookingScore || h.rating,
           stars: savedHotel.stars || h.stars,
           hotelId: savedHotel.hotelId,
+          roomId: savedHotel.roomId,
         }
       : { ...h, hotelId: `${h.city}-hotel-0` }; // default to first hotel
     // Pull refundability from the real generated hotel behind this stay.
@@ -2162,7 +2163,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 roomType={h.type}
                 city={h.city}
                 freeCancellation={h.freeCancellation}
-                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}${viewOnly ? "&view=1" : ""}`}
+                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${h.roomId ? `&room=${encodeURIComponent(h.roomId)}` : ""}${dealQS}${viewOnly ? "&view=1" : ""}`}
                 footer={
                   <>
                     {swapOpen && (

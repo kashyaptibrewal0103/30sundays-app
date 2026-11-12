@@ -41,10 +41,16 @@ export default function HotelPDP() {
   const isCurrentHotel = hotel?.id === currentHotelId;
 
   const currentHotel = currentHotelId ? hotels.find(h => h.id === currentHotelId) : null;
-  const currentRoomPrice = currentHotel ? currentHotel.rooms[0].pricePerNight : 0;
+  // The room on the trip is the one the trip saved, when it saved one. Older
+  // links carry no room, and those fall back to the hotel's first room.
+  const roomParam = params.get("room");
+  const currentRoom = currentHotel
+    ? (currentHotel.rooms.find(r => r.id === roomParam) || currentHotel.rooms[0])
+    : null;
+  const currentRoomPrice = currentRoom ? currentRoom.pricePerNight : 0;
 
   const [selectedRoomId, setSelectedRoomId] = useState(() => {
-    if (isCurrentHotel && hotel?.rooms?.length) return hotel.rooms[0].id;
+    if (isCurrentHotel && currentRoom) return currentRoom.id;
     return hotel?.rooms?.[0]?.id || null;
   });
 
@@ -54,9 +60,10 @@ export default function HotelPDP() {
 
   const nights = stayInfo.nights;
   const selectedRoom = hotel.rooms.find(r => r.id === selectedRoomId);
-  const currentRoom = currentHotel?.rooms?.[0];
-
-  const isSameAsCurrent = isCurrentHotel && selectedRoomId === hotel.rooms[0]?.id;
+  const isSameAsCurrent = isCurrentHotel && selectedRoomId === currentRoom?.id;
+  // Your own hotel, opened from your own trip: the page leads with your room
+  // and keeps Change hotel on screen the whole way down.
+  const ownStay = isCurrentHotel && !readOnly;
 
   const newStayTotal = selectedRoom.pricePerNight * nights;
   const oldStayTotal = currentRoomPrice * nights;
@@ -147,19 +154,15 @@ export default function HotelPDP() {
   // shown right after the Select room section when the user is viewing their
   // own hotel. Change hotel opens the alternatives list; View upgrade opens the
   // single 5-star upgrade for this stay.
-  const changeHotelNode = isCurrentHotel && !readOnly ? (
+  // Change hotel itself lives in the bar at the bottom, always in reach, so
+  // only the upgrade is left here.
+  const goChangeHotel = () => navigate(`/hotels/${itineraryId}/${stayIndex}${hotelsQS}`);
+  const changeHotelNode = ownStay && upgradeHotel ? (
     <div style={{ margin: "16px 16px 0" }}>
-      <button
-        onClick={() => navigate(`/hotels/${itineraryId}/${stayIndex}${hotelsQS}`)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", borderRadius: 12, border: `1.5px solid #FD014F`, background: C.white, color: "#FD014F", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-      >
-        <ArrowLeftRight size={15} /> Change hotel
-      </button>
-
       {upgradeHotel && (
         <div
           onClick={() => setShowUpgrade(true)}
-          style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 11, padding: "12px 14px", borderRadius: 12, border: "1px solid #F5D98B", background: "linear-gradient(135deg, #FFFBEF 0%, #FDF3D6 100%)", cursor: "pointer" }}
+          style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 14px", borderRadius: 12, border: "1px solid #F5D98B", background: "linear-gradient(135deg, #FFFBEF 0%, #FDF3D6 100%)", cursor: "pointer" }}
         >
           <span style={{ width: 34, height: 34, borderRadius: 10, background: "#FBE7B8", display: "grid", placeItems: "center", flexShrink: 0 }}>
             <Sparkles size={16} color="#B8860B" />
@@ -223,6 +226,23 @@ export default function HotelPDP() {
             {isCurrentHotel ? "Replace room" : "Replace hotel"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+
+  // The bar on your own hotel, while your room is still the one picked: one
+  // button, Change hotel, always in reach. Pick another room and the usual
+  // replace bar takes its place.
+  const ownBar = (
+    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "10px 16px 14px", background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 26%)" }}>
+      <div data-testid="own-hotel-bar" style={{ background: C.white, border: `1px solid ${C.div}`, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.12)", padding: "12px 14px" }}>
+        <button
+          data-testid="change-hotel-bar"
+          onClick={goChangeHotel}
+          style={{ width: "100%", height: 46, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, borderRadius: 12, border: "none", background: "#FD014F", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          <ArrowLeftRight size={15} /> Change hotel
+        </button>
       </div>
     </div>
   );
@@ -401,6 +421,7 @@ export default function HotelPDP() {
       onPickRoom={readOnly ? undefined : (room) => setSelectedRoomId(room.id)}
       readOnly={readOnly}
       roomsTitle={readOnly ? "The room on this trip" : undefined}
+      currentRoomId={ownStay ? currentRoom?.id : undefined}
       onOpenSimilar={(h) => navigate(`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(h.id)}${hotelsQS}`)}
       nights={nights}
       stay={stayNode}
@@ -410,7 +431,7 @@ export default function HotelPDP() {
           <InclusionsSection inclusions={inclusions} />
         </>
       )}
-      bottomBar={readOnly || isSameAsCurrent ? null : bottomBar}
+      bottomBar={readOnly ? null : ownStay && isSameAsCurrent ? ownBar : bottomBar}
       overlay={readOnly ? null : overlay}
     />
   );

@@ -518,6 +518,7 @@ function RoomSheet({ room, chosen, onClose, onPick }) {
         >
           Choose this room
           {room.priceDelta > 0 && ` · + ₹${room.priceDelta.toLocaleString("en-IN")}`}
+          {room.priceDelta < 0 && ` · − ₹${Math.abs(room.priceDelta).toLocaleString("en-IN")}`}
         </button>
       ) : null}
     >
@@ -594,8 +595,25 @@ function RoomSheet({ room, chosen, onClose, onPick }) {
   );
 }
 
-export function Rooms({ hotel, onPick, selectedId, readOnly = false, nights = 3, title }) {
+export function Rooms({ hotel, onPick, selectedId, readOnly = false, nights = 3, title, currentId }) {
   const [detail, setDetail] = useState(null);
+
+  // Your own hotel is a different question from a hotel you are looking at.
+  // The room is already chosen, so the section leads with it, marked plainly,
+  // and the other rooms wait behind one tap.
+  if (currentId && !readOnly) {
+    return (
+      <YourRoom
+        hotel={hotel}
+        currentId={currentId}
+        selectedId={selectedId}
+        onPick={onPick}
+        nights={nights}
+        detail={detail}
+        setDetail={setDetail}
+      />
+    );
+  }
 
   return (
     <>
@@ -609,104 +627,194 @@ export function Rooms({ hotel, onPick, selectedId, readOnly = false, nights = 3,
           : `${hotel.rooms.length} room types. Any extra cost is for all ${nights} ${nights === 1 ? "night" : "nights"}.`}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {hotel.rooms.map((r) => {
-            const chosen = r.id === selectedId;
-            return (
-              // A card, not a button, because it now holds one. Tapping the
-              // card still opens the room; the control on it commits to the
-              // room without making you open it first. Two ways in, because
-              // people who already know the room they want should not have to
-              // read it again to choose it.
-              <div
-                key={r.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => setDetail(r)}
-                onKeyDown={(e) => { if (e.key === "Enter") setDetail(r); }}
-                style={{
-                  display: "flex", gap: 12, width: "100%", padding: 11, textAlign: "left",
-                  alignItems: "stretch", cursor: "pointer", fontFamily: "inherit",
-                  borderRadius: R.card, background: C.white,
-                  border: `1px solid ${chosen ? A.pink : C.div}`,
-                  boxShadow: chosen ? "0 4px 18px rgba(253,1,79,0.14)" : SHADOW.card,
-                }}
-              >
-                <div style={{ position: "relative", width: 108, flexShrink: 0 }}>
-                  <img
-                    src={r.images[0]}
-                    alt=""
-                    style={{
-                      width: "100%", height: "100%", minHeight: 108, borderRadius: R.well,
-                      objectFit: "cover", display: "block", background: A.photoBg,
-                    }}
-                  />
-                  <span style={{
-                    position: "absolute", bottom: 7, left: 7, background: "rgba(0,0,0,0.58)",
-                    color: "#fff", fontSize: 9.5, fontWeight: 600, borderRadius: 6, padding: "3px 7px",
-                    backdropFilter: "blur(4px)",
-                  }}>{r.images.length} photos</span>
-                </div>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ ...T.h3, margin: 0, fontSize: 14.5 }}>{r.name}</p>
-
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "8px 0 0" }}>
-                    <Tag>{r.size} m²</Tag>
-                    <Tag>{r.beds}</Tag>
-                    {r.view && <Tag>{r.view}</Tag>}
-                  </div>
-
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", margin: "9px 0 0" }}>
-                    <Yes>{r.mealPlan}</Yes>
-                    <Yes no={!r.refundable}>{r.refundable ? "Free cancellation" : "Non-refundable"}</Yes>
-                  </div>
-
-                  {!readOnly && (
-                    <div style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      gap: 10, margin: "11px 0 0",
-                    }}>
-                      <span style={{
-                        fontSize: 13.5, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap",
-                        color: r.priceDelta ? C.head : C.sub,
-                      }}>
-                        {r.priceDelta
-                          ? `+ ₹${r.priceDelta.toLocaleString("en-IN")}`
-                          : "No extra cost"}
-                      </span>
-
-                      {chosen ? (
-                        <span style={{
-                          flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
-                          background: A.pink, color: "#fff", borderRadius: R.pill,
-                          padding: "6px 12px", fontSize: 12, fontWeight: 700,
-                        }}>
-                          <Check size={13} strokeWidth={3} /> Selected
-                        </span>
-                      ) : (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onPick?.(r); }}
-                          style={{
-                            flexShrink: 0, border: `1.5px solid ${A.pink}`, background: C.white,
-                            color: A.pink, borderRadius: R.pill, padding: "6px 16px",
-                            fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                          }}
-                        >
-                          Select
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {hotel.rooms.map((r) => (
+            <RoomCard key={r.id} r={r} chosen={r.id === selectedId} readOnly={readOnly} onOpen={setDetail} onPick={onPick} />
+          ))}
         </div>
       </Section>
 
       <RoomSheet
         room={detail}
         chosen={readOnly || detail?.id === selectedId}
+        onClose={() => setDetail(null)}
+        onPick={onPick}
+      />
+    </>
+  );
+}
+
+// One room card, the same everywhere a room can be chosen. The price is what
+// the room adds to (or takes off) the stay; the room already on the trip has
+// nothing to add, so it carries no price at all.
+function RoomCard({ r, chosen, readOnly = false, onOpen, onPick, hidePrice = false, testId }) {
+  return (
+    // A card, not a button, because it now holds one. Tapping the
+    // card still opens the room; the control on it commits to the
+    // room without making you open it first. Two ways in, because
+    // people who already know the room they want should not have to
+    // read it again to choose it.
+    <div
+      data-testid={testId}
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(r)}
+      onKeyDown={(e) => { if (e.key === "Enter") onOpen(r); }}
+      style={{
+        display: "flex", gap: 12, width: "100%", padding: 11, textAlign: "left",
+        alignItems: "stretch", cursor: "pointer", fontFamily: "inherit",
+        borderRadius: R.card, background: C.white,
+        border: `1px solid ${chosen ? A.pink : C.div}`,
+        boxShadow: chosen ? "0 4px 18px rgba(253,1,79,0.14)" : SHADOW.card,
+      }}
+    >
+      <div style={{ position: "relative", width: 108, flexShrink: 0 }}>
+        <img
+          src={r.images[0]}
+          alt=""
+          style={{
+            width: "100%", height: "100%", minHeight: 108, borderRadius: R.well,
+            objectFit: "cover", display: "block", background: A.photoBg,
+          }}
+        />
+        <span style={{
+          position: "absolute", bottom: 7, left: 7, background: "rgba(0,0,0,0.58)",
+          color: "#fff", fontSize: 9.5, fontWeight: 600, borderRadius: 6, padding: "3px 7px",
+          backdropFilter: "blur(4px)",
+        }}>{r.images.length} photos</span>
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ ...T.h3, margin: 0, fontSize: 14.5 }}>{r.name}</p>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "8px 0 0" }}>
+          <Tag>{r.size} m²</Tag>
+          <Tag>{r.beds}</Tag>
+          {r.view && <Tag>{r.view}</Tag>}
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", margin: "9px 0 0" }}>
+          <Yes>{r.mealPlan}</Yes>
+          <Yes no={!r.refundable}>{r.refundable ? "Free cancellation" : "Non-refundable"}</Yes>
+        </div>
+
+        {!readOnly && (
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            gap: 10, margin: "11px 0 0",
+          }}>
+            <span style={{
+              fontSize: 13.5, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap",
+              color: r.priceDelta ? C.head : C.sub,
+            }}>
+              {hidePrice ? null : r.priceDelta > 0
+                ? `+ ₹${r.priceDelta.toLocaleString("en-IN")}`
+                : r.priceDelta < 0
+                  ? `− ₹${Math.abs(r.priceDelta).toLocaleString("en-IN")}`
+                  : "No extra cost"}
+            </span>
+
+            {chosen ? (
+              <span style={{
+                flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
+                background: A.pink, color: "#fff", borderRadius: R.pill,
+                padding: "6px 12px", fontSize: 12, fontWeight: 700,
+              }}>
+                <Check size={13} strokeWidth={3} /> Selected
+              </span>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPick?.(r); }}
+                style={{
+                  flexShrink: 0, border: `1.5px solid ${A.pink}`, background: C.white,
+                  color: A.pink, borderRadius: R.pill, padding: "6px 16px",
+                  fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                Select
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Your room ───
+//
+// The room already on the trip, opened from the trip. It leads, highlighted,
+// with no price on it: it is what the trip already costs. The other rooms sit
+// behind "Show more rooms", priced against your room rather than the cheapest
+// one, so a cheaper room reads as a saving and a bigger one as an extra.
+function YourRoom({ hotel, currentId, selectedId, onPick, nights, detail, setDetail }) {
+  const current = hotel.rooms.find((r) => r.id === currentId) || hotel.rooms[0];
+  // Every price here is the difference from your room, for the whole stay.
+  const rooms = hotel.rooms.map((r) => ({ ...r, priceDelta: r.priceDelta - current.priceDelta }));
+  const mine = rooms.find((r) => r.id === current.id);
+  const others = rooms.filter((r) => r.id !== current.id);
+  const [open, setOpen] = useState(selectedId && selectedId !== current.id);
+  const changed = selectedId && selectedId !== current.id;
+
+  const card = (r, { isCurrent }) => (
+    <RoomCard
+      key={r.id}
+      r={r}
+      chosen={r.id === selectedId}
+      onOpen={setDetail}
+      onPick={onPick}
+      hidePrice={isCurrent}
+      testId={isCurrent ? "your-room" : `room-${r.id}`}
+    />
+  );
+
+  return (
+    <>
+      <Section title="Your room">
+        {card(mine, { isCurrent: true })}
+
+        {others.length > 0 && (
+          open ? (
+            <div style={{ marginTop: 22 }}>
+              <h3 style={{ ...T.h3, margin: 0 }}>Other rooms</h3>
+              <p style={{ ...T.meta, margin: "4px 0 12px" }}>
+                Prices are the difference from your room, for all {nights} {nights === 1 ? "night" : "nights"}.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {others.map((r) => card(r, { isCurrent: false }))}
+              </div>
+              {!changed && (
+                <button
+                  onClick={() => setOpen(false)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5, margin: "14px auto 0",
+                    border: "none", background: "none", color: A.pink, cursor: "pointer",
+                    fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
+                  }}
+                >
+                  Show fewer rooms <ChevronUp size={16} strokeWidth={2.4} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              data-testid="show-more-rooms"
+              onClick={() => setOpen(true)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                marginTop: 12, padding: "12px 0", borderRadius: R.card,
+                border: `1px solid ${C.div}`, background: C.white, color: A.pink, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
+              }}
+            >
+              Show {others.length} more {others.length === 1 ? "room" : "rooms"} <ChevronDown size={16} strokeWidth={2.4} />
+            </button>
+          )
+        )}
+      </Section>
+
+      <RoomSheet
+        room={detail}
+        chosen={detail?.id === selectedId}
         onClose={() => setDetail(null)}
         onPick={onPick}
       />
