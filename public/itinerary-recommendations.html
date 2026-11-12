@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Itinerary Recommendations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one reading column, the same as the destination, OTP and flights one-pagers.
+   Each case is a row of fact + link, with phone screenshots under it. */
+:root {
+  --bg: #FFFFFF;
+  --ink: #254342;
+  --text: #2E3A39;
+  --sub: #5E6B6A;
+  --line: #E7E3DF;
+  --well: #F6F4F2;
+  --pink: #E31B53;       /* the app's action pink: links only */
+  --lagoon: #00A898;     /* kickers */
+  --gold: #B54708;       /* things to decide */
+  --gold-bg: #FFF7E6;
+  --phone: #EAE6E3;
+  --display: "DM Serif Display", Georgia, "Times New Roman", serif;
+  --body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111817; --ink: #CFE5E2; --text: #DCE3E2; --sub: #93A3A1; --line: #2A3534; --well: #18211F;
+    --pink: #FF5C85; --lagoon: #3BD1C0; --gold: #F5B451; --gold-bg: #2A2112; --phone: #222C2B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111817; --ink: #CFE5E2; --text: #DCE3E2; --sub: #93A3A1; --line: #2A3534; --well: #18211F;
+  --pink: #FF5C85; --lagoon: #3BD1C0; --gold: #F5B451; --gold-bg: #2A2112; --phone: #222C2B;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+img { max-width: 100%; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); font-weight: 400; color: var(--ink); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(34px, 6vw, 48px); line-height: 1.05; }
+h2 { font-size: 28px; line-height: 1.15; }
+h3 { font-size: 15px; font-weight: 800; color: var(--ink); margin: 0; }
+p { margin: 0; }
+a { color: var(--pink); font-weight: 700; text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; border-radius: 4px; }
+.lede { margin-top: 12px; color: var(--sub); max-width: 62ch; }
+.base { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13.5px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; background: var(--well); padding: 3px 8px; border-radius: 6px; color: var(--ink); overflow-wrap: anywhere; }
+section { margin-top: 52px; display: flex; flex-direction: column; gap: 18px; }
+.kicker { font-size: 12.5px; font-weight: 800; color: var(--lagoon); }
+.cases { border-top: 1px solid var(--line); }
+.case { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.case p { color: var(--sub); font-size: 14px; margin-top: 3px; }
+.links { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: flex-end; font-size: 13.5px; white-space: nowrap; }
+@media (max-width: 560px) {
+  .case { grid-template-columns: minmax(0, 1fr); }
+  .links { justify-content: flex-start; }
+}
+.strip { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+figure { margin: 0; flex: 0 0 196px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 7px; }
+figure img { width: 100%; aspect-ratio: 375 / 812; object-fit: cover; object-position: top;
+  border-radius: 18px; border: 6px solid var(--phone); background: var(--phone); display: block; }
+figcaption { font-size: 12.5px; color: var(--sub); line-height: 1.4; }
+figcaption b { color: var(--ink); font-weight: 800; }
+.decide { background: var(--gold-bg); border-radius: 14px; padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+.decide h3 { color: var(--gold); }
+.decide ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.note { font-size: 13px; color: var(--sub); }
+ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 800; color: var(--sub); background: var(--well); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); }
+th { font-size: 12.5px; font-weight: 800; color: var(--sub); }
+.scroll { overflow-x: auto; }
+.copy td:first-child { color: var(--sub); width: 34%; }
+.scroll table { min-width: 600px; }
+.formula { margin: 8px 0 0; padding: 10px 12px; background: var(--well); border-radius: 10px; font-size: 14px; font-weight: 700; color: var(--ink); }
+.case ul.plain { color: var(--sub); font-size: 14px; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <h1>Itinerary recommendations</h1>
+  <p class="lede">On the itinerary, two new places suggest a better version of the trip the couple is looking at. After Itinerary at a glance, People like you also tried offers other routes: more relaxed, one more city, or one more night. Under the hotels, Travellers like you also chose offers a 5 star, a better room, a higher rated hotel or a value find for the stay in view. Every suggestion follows rules built on what our couples actually book. Open the links on a phone or in a narrow window.</p>
+  <div class="base"><span>Prototype at</span><code>30sundays-app.vercel.app/itinerary/3?dealId=demo_draft_bali</code><a href="https://30sundays-app.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1" target="_blank" rel="noopener">Open Bali draft</a></div>
+  <p class="note" style="margin-top:10px">The Bali draft is Ubud 3N · Nusa Penida 1N · Seminyak 3N, 7 nights, 27 Dec to 3 Jan, 2 travellers. Every example on this page is worked on that trip. Hotels and prices in the prototype are samples.</p>
+
+  <section>
+    <span class="kicker">Try it</span>
+    <h2>Two sections on one screen</h2>
+    <div class="cases">
+      <div class="case">
+        <div><h3>People like you also tried</h3><p>Scroll past Itinerary at a glance. Three rows, the first open. Tap the i on a card for why we suggest it; tap the card to make it a new itinerary.</p></div>
+        <div class="links"><a href="https://30sundays-app.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1" target="_blank" rel="noopener">Open Bali draft</a></div>
+      </div>
+      <div class="case">
+        <div><h3>Travellers like you also chose</h3><p>Under the hotel cards. Swipe the hotels: the title and the tabs follow the stay in view (Ubud shows 5 star and Room upgrade; Seminyak adds Higher rated and Value find).</p></div>
+        <div class="links"><a href="https://30sundays-app.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1" target="_blank" rel="noopener">Open Bali draft</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">What our bookings say</span>
+    <h2>The numbers the rules rest on</h2>
+    <p class="note">Sold trips from the last 12 months (Postgres, converted and not cancelled): Bali 3,589, Vietnam 3,082, Thailand 2,536. Share = the share of booked trips that stay in that city. Approximate: Postgres runs a few bookings a month below the revenue dashboard.</p>
+    <div class="scroll">
+      <table>
+        <tr><th>Country</th><th>Core cities (in most trips)</th><th>Cities people add (10% or more)</th><th>Rarely booked (under 10%)</th></tr>
+        <tr><td>Bali</td><td>Ubud 98%, Seminyak 84%</td><td>Nusa Penida 32% (1.3 nights), Gili Trawangan 27% (1.7 nights)</td><td>Kuta 9%, Nusa Dua 7%, Canggu 2%, Uluwatu 2%</td></tr>
+        <tr><td>Vietnam</td><td>Hanoi 80%, Phu Quoc 71%, Da Nang 67%</td><td>Ha Long cruise 18% (1 night), Ho Chi Minh City 14% (1.7), Sapa 12% (1.5)</td><td>Hoi An 5%, Ninh Binh, Nha Trang, Da Lat under 1%</td></tr>
+        <tr><td>Thailand</td><td>Phuket 91%, Krabi 80%</td><td>Bangkok 35% (2.4 nights), Phi Phi 20% (1.4), Pattaya 11% (2.3)</td><td>Koh Samui 5%, Chiang Mai 2%</td></tr>
+      </table>
+    </div>
+    <ul class="plain">
+      <li><b>Pace:</b> in all three countries, booked trips average 2.4 to 2.6 nights per city, at every trip length. That is the yardstick for relaxed.</li>
+      <li><b>Cities by length:</b> a 7-night Bali trip has 2 cities in 26% of bookings, 3 in 52%, 4 or more in 22%. Vietnam 7N: 21%, 65%, 13%. Thailand 7N: 22%, 69%, 8%.</li>
+      <li><b>Gateways:</b> some cities are only booked with another. Ha Long with Hanoi in 100% of trips, Sapa with Hanoi 99%, Phi Phi with Phuket 99%, Pattaya with Bangkok 93%, Gili Trawangan and Nusa Penida with Ubud 99 to 100%.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="kicker">Rules for every route suggestion</span>
+    <h2>People like you also tried</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Where and how</h3><p>After Itinerary at a glance, before Hotels. Three rows, closed until tapped and one open at a time (the first open on arrival): Make it more relaxed, Add {city}, Stay one more night. An open row shows 2 to 3 photo cards, swiped. A card shows the route with nights per stop and the total nights, nothing else. The i on a card says why, in one line.</p></div></div>
+      <div class="case"><div><h3>Where cards come from</h3><p>First, real routes our couples booked in that country in the last 12 months that pass the row's rules. If fewer than 2 pass, the rest are made from the couple's own route by the row's rules below. Real routes are ranked by how often they were booked.</p></div></div>
+      <div class="case"><div><h3>What stays the same</h3><p>The country, the start date and the travellers. A route is never the same as the trip on screen, and no two cards in a row are the same route.</p></div></div>
+      <div class="case"><div><h3>Row shown or hidden</h3><p>A row with no card that passes its rules is hidden. The section is hidden when all three are, on a trip opened read-only, and on a booked trip.</p></div></div>
+      <div class="case"><div><h3>Picking a card</h3><p>A sheet asks first: Create a new itinerary? It shows this itinerary, kept as it is, and the new one with its nights. Create new itinerary builds it with new hotels, day plans and prices and saves it in the couple's plans next to this one. Nothing is booked; Not now closes it.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="recos-shots/r01-relaxed.jpg" alt="People like you also tried with Make it more relaxed open" loading="lazy"><figcaption><b>The section.</b> Three rows, first open.</figcaption></figure>
+      <figure><img src="recos-shots/r02-why.jpg" alt="Why we suggest this on a card" loading="lazy"><figcaption><b>The i.</b> One line on why.</figcaption></figure>
+      <figure><img src="recos-shots/r05-confirm.jpg" alt="Create a new itinerary sheet" loading="lazy"><figcaption><b>Confirm.</b> This one stays; the new one sits next to it.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">1. Make it more relaxed</span>
+    <h2>Same nights, same or fewer cities, a calmer score</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Who qualifies</h3><p>A route qualifies only if all four hold:</p>
+        <ul class="plain" style="margin-top:6px">
+          <li>Exactly the same total nights as the trip.</li>
+          <li>Only cities already on the trip: the same ones, or fewer. Never a new city.</li>
+          <li>The cities in the same order as the trip, and the longest stay kept (it is the heart of the trip).</li>
+          <li>A relaxed score at least 3 points above the trip's.</li>
+        </ul></div></div>
+      <div class="case"><div><h3>The relaxed score</h3>
+        <p class="formula">Relaxed score = 10 × nights per city − 6 × one-night stops − 4 × hotel changes − 2 × transfer hours</p>
+        <ul class="plain" style="margin-top:6px">
+          <li><b>Nights per city:</b> total nights ÷ cities. Booked trips sit at 2.4 to 2.6.</li>
+          <li><b>One-night stops:</b> a city with one night is a check-in and a check-out. A stop that is one night by nature (the Ha Long cruise) does not count.</li>
+          <li><b>Hotel changes:</b> cities − 1.</li>
+          <li><b>Transfer hours:</b> the time between cities by car, boat or flight, from the route builder.</li>
+        </ul></div></div>
+      <div class="case"><div><h3>How cards are made when no booked route fits</h3><p>Two moves, in this order. A one-night stop gets a second night, taken from the longest stay (never leaving a stay under two nights). Then one stop fewer: the shortest stay is dropped (middle stops before the first and last), and its nights go to the stays that remain. A city is only dropped if the trip still has as many cities as at least 15% of booked trips of that length have.</p></div></div>
+      <div class="case"><div><h3>Order</h3><p>Closest to the trip first: fewest cities dropped, then the bigger score gain, then the most booked.</p></div></div>
+    </div>
+    <div class="scroll">
+      <table>
+        <tr><th>On the Bali draft</th><th>Nights per city</th><th>One-night stops</th><th>Hotel changes</th><th>Transfers</th><th>Score</th></tr>
+        <tr><td>Now: Ubud 3N · Nusa Penida 1N · Seminyak 3N</td><td>2.3</td><td>1</td><td>2</td><td>2h</td><td>5</td></tr>
+        <tr><td>Card 1: Ubud 3N · Nusa Penida 2N · Seminyak 2N</td><td>2.3</td><td>0</td><td>2</td><td>2h</td><td>11 (+6)</td></tr>
+        <tr><td>Card 2: Ubud 4N · Seminyak 3N</td><td>3.5</td><td>0</td><td>1</td><td>0.5h</td><td>30 (+25)</td></tr>
+      </table>
+    </div>
+    <p class="note">Card 1 comes first because it keeps every city. A 7-night Bali trip with 2 cities is a shape 26% of our couples book, so card 2 passes.</p>
+  </section>
+
+  <section>
+    <span class="kicker">2. Add a city</span>
+    <h2>A city our couples add, where it fits</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Which city</h3><p>One city per trip, named in the row title (Add Gili Trawangan). It must pass all of these:</p>
+        <ul class="plain" style="margin-top:6px">
+          <li><b>Popular:</b> in at least 10% of the country's booked trips (the middle column in the table above). This keeps out cities like Kuta or Hoi An.</li>
+          <li><b>Fits this trip:</b> among booked trips that have all of this trip's cities, at least 15% also have this one. The highest share wins.</li>
+          <li><b>Has its gateway:</b> a city booked with another city in 90% or more of trips is only offered when that city is on the trip. Ha Long and Sapa need Hanoi, Phi Phi needs Phuket or Krabi, Pattaya needs Bangkok.</li>
+          <li><b>Not already on the trip.</b></li>
+        </ul></div></div>
+      <div class="case"><div><h3>Where it goes</h3><p>Where booked routes put it: after the city it most often follows (Gili after Nusa Penida, Ha Long after Hanoi, Phi Phi after Krabi). With no pattern, next to its gateway. Never a route that goes back on itself.</p></div></div>
+      <div class="case"><div><h3>The cards: same length, +1, +2</h3><p>Up to 3 cards, all with the new city:</p>
+        <ul class="plain" style="margin-top:6px">
+          <li><b>Same nights:</b> the new city's nights are taken from the longest stays, never leaving a stay under two nights.</li>
+          <li><b>One night more:</b> the new city gets one night; nothing else moves.</li>
+          <li><b>Two nights more:</b> the new city gets two nights.</li>
+        </ul>
+        <p style="margin-top:6px">The new city gets the nights it is usually booked for, rounded: Nusa Penida, Ha Long and Phi Phi 1, Gili and Sapa 1 or 2, Bangkok, Pattaya and Ho Chi Minh City 2.</p></div></div>
+      <div class="case"><div><h3>A pace guard</h3><p>A card is only shown if its number of cities, for its length, is one at least 15% of booked trips have. A 5-night Bali trip with 3 cities (13%) fails; 7 nights with 4 cities (22%) passes.</p></div></div>
+      <div class="case"><div><h3>Order and the i</h3><p>Same nights first, then +1, then +2; a booked route with the same cities beats a made one. The i says why from real numbers, for example: Turtles, no cars and sunsets. About 1 in 4 of our Bali trips stop here.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="recos-shots/r03-add.jpg" alt="Add Gili Trawangan row" loading="lazy"><figcaption><b>Add Gili.</b> 7N, 8N and 9N cards.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">3. Stay one more night</span>
+    <h2>The best-selling one-night-longer version</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Which routes</h3><p>Booked routes with exactly the trip's cities, in the same order, and one night more. Ranked by how many couples booked them; the top 3, each adding the night to a different city.</p></div></div>
+      <div class="case"><div><h3>When no booked route fits</h3><p>One more night in each city, in the order booked trips most often add it (the beach end first, then the longest stay). Never on a stop that is one night by nature, like the Ha Long cruise.</p></div></div>
+      <div class="case"><div><h3>What changes</h3><p>The trip ends a day later. The hotel stays the same for the longer stay, and the return flight moves with the new date.</p></div></div>
+    </div>
+    <div class="strip">
+      <figure><img src="recos-shots/r04-night.jpg" alt="Stay one more night row" loading="lazy"><figcaption><b>One more night.</b> Same cities, 8 nights.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">4. Hotels</span>
+    <h2>Travellers like you also chose in {city}</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Where and how</h3><p>Under the hotel cards, on a cream band. It follows the hotel in view: swipe to Seminyak and the title and the picks change to Seminyak's. Up to four tabs, in this order, each hidden when empty: 5 star, Room upgrade, Higher rated, Value find. Up to 4 hotels a tab. The price is the difference for the whole stay: More by ₹2,100 or Lesser by ₹3,900.</p></div></div>
+      <div class="case"><div><h3>Rules every hotel must pass</h3>
+        <ul class="plain" style="margin-top:6px">
+          <li><b>Same area:</b> within 3 km of the stay's hotel, or the same neighbourhood. A beach stay stays within 1 km more of the beach than now; a town stay within 2 km more of the centre.</li>
+          <li><b>Rating you can trust:</b> Booking.com score with at least 50 reviews.</li>
+          <li><b>Bookable:</b> available for those dates and that room count, not blacklisted, same or better meal plan.</li>
+          <li><b>One tab each:</b> a hotel shows in one tab only, the first one it qualifies for.</li>
+        </ul></div></div>
+      <div class="case"><div><h3>Opening a pick</h3><p>A hotel opens its hotel page in the Change hotel flow, so choosing it swaps the stay. A room opens the same hotel page with that room's details open. The new price shows in the bottom bar as an unsaved change.</p></div></div>
+      <div class="case"><div><h3>Hidden when</h3><p>The stay is self-booked, no tab has a hotel, or the trip is read-only or booked.</p></div></div>
+    </div>
+    <div class="scroll">
+      <table>
+        <tr><th>Tab</th><th>Shown when</th><th>Which hotels or rooms</th><th>Rating</th><th>Price cap</th><th>Order</th></tr>
+        <tr><td><b>5 star</b></td><td>The stay is under 5 stars</td><td>5-star hotels in the area</td><td>At least the current score</td><td>Up to +60% a night, and no more than ₹6,000 more a night</td><td>Highest score, then smallest extra</td></tr>
+        <tr><td><b>Room upgrade</b></td><td>The hotel has a better room (bigger, a view, a pool or villa)</td><td>The next room up in the same hotel; one card</td><td>Same hotel</td><td>Up to +50% a night</td><td>Smallest extra</td></tr>
+        <tr><td><b>Higher rated</b></td><td>A hotel scores clearly higher</td><td>Same stars or more, score at least 0.3 above the stay</td><td>+0.3 or more</td><td>Up to +30% a night</td><td>Highest score, then smallest extra</td></tr>
+        <tr><td><b>Value find</b></td><td>A hotel costs clearly less</td><td>Same stars or more, at least 10% cheaper a night</td><td>No more than 0.2 below the stay, and 8.0 or more</td><td>Cheaper only</td><td>Biggest saving</td></tr>
+      </table>
+    </div>
+    <ul class="plain">
+      <li><b>A 5-star stay</b> never shows the 5 star tab. It shows Room upgrade, plus Higher rated and Value find among other 5-star hotels.</li>
+      <li><b>A 4-star stay</b> (Ubud Grand Resort, 8.4) can show all four. On the draft, Ubud shows 5 star and Room upgrade; Seminyak (4 star, 8.1) shows Room upgrade, Higher rated and Value find.</li>
+    </ul>
+    <div class="strip">
+      <figure><img src="recos-shots/h01-five.jpg" alt="5 star tab for Ubud" loading="lazy"><figcaption><b>5 star.</b> For the 4-star Ubud stay.</figcaption></figure>
+      <figure><img src="recos-shots/h02-room.jpg" alt="Room upgrade tab" loading="lazy"><figcaption><b>Room upgrade.</b> The next room up, one card.</figcaption></figure>
+      <figure><img src="recos-shots/h03-rated.jpg" alt="Higher rated tab for Seminyak" loading="lazy"><figcaption><b>Higher rated.</b> Seminyak, scored above 8.1.</figcaption></figure>
+      <figure><img src="recos-shots/h04-value.jpg" alt="Value find tab for Seminyak" loading="lazy"><figcaption><b>Value find.</b> As good, for less.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">Edge cases</span>
+    <h2>When the rules meet odd trips</h2>
+    <ul class="plain">
+      <li><b>One-city trip:</b> no Make it more relaxed (nothing to drop). Add a city and Stay one more night still show.</li>
+      <li><b>Two-city trip:</b> relaxed only moves nights (a one-night stop gets a second night); it never drops to one city unless that is a shape at least 15% of booked trips of that length have.</li>
+      <li><b>Trip already has every popular city:</b> the Add row is hidden.</li>
+      <li><b>Ha Long without Hanoi, Phi Phi without Phuket or Krabi:</b> not offered (gateway rule).</li>
+      <li><b>Long trips:</b> no card over 12 nights.</li>
+      <li><b>A city named two ways in our data</b> (Halong Cruise, Halong, Halong Bay; Phi Phi, Phi Phi Island, Koh Phi Phi): counted as one city before any share is worked out.</li>
+      <li><b>Unsaved changes on screen:</b> suggestions are worked out from the trip as it is on screen, saved or not.</li>
+      <li><b>Flights on the trip:</b> the new itinerary fetches flights again for its route and dates, as the flights page describes.</li>
+      <li><b>Hotel swapped from a pick:</b> the picks are worked out again for the new hotel.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="kicker">Tracking</span>
+    <h2>Events</h2>
+    <ul class="plain">
+      <li><b>recos_section_viewed</b>: rows shown (relaxed, add_city, one_more_night), city added</li>
+      <li><b>recos_row_opened</b>: row · <b>recos_why_tapped</b>: row, card position</li>
+      <li><b>recos_card_tapped</b>: row, card position, nights, cities, source (booked, made)</li>
+      <li><b>recos_itinerary_created</b>: row, nights change, cities change · <b>recos_confirm_dismissed</b>: row</li>
+      <li><b>hotel_recos_viewed</b>: city, tabs shown · <b>hotel_recos_tab_tapped</b>: tab</li>
+      <li><b>hotel_recos_card_tapped</b>: tab, hotel, stars, score, price difference for the stay</li>
+      <li><b>hotel_recos_swapped</b>: tab, from hotel, to hotel · <b>room_upgrade_chosen</b>: hotel, room, price difference</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="decide">
+      <h3>To check</h3>
+      <ol>
+        <li>The thresholds: 10% to call a city popular, 15% to call it a fit, 3 points of relaxed score, 15% for a city count to be a real shape. Tune them after a month of the events above.</li>
+        <li>Hotel caps: +60% and ₹6,000 a night for 5 star, +50% for a room, +30% for higher rated, 10% cheaper for value. Confirm against margins with the sales team.</li>
+        <li>The 3 km and beach and centre distances, using the hotel latitude and longitude we already hold.</li>
+        <li>How often the booking numbers refresh. Suggested: weekly, from the last 12 months of sold trips.</li>
+        <li>The prototype's i lines say nearly half our Bali trips stop at Gili Trawangan and Nusa Penida. The data says 27% and 32%; the copy should follow the data.</li>
+        <li>The prototype's picks list is fixed per country and includes Hoi An (5% of Vietnam trips) but not Bangkok (35% of Thailand trips). The live version should come from the data, as above.</li>
+        <li>Prototype sample data: some hotels sit in the wrong town (Padma Resort Ubud under Seminyak), and one price moved between loads (Alila Ubud, ₹2,400 then ₹18,000).</li>
+      </ol>
+    </div>
+  </section>
+
+  <p class="note" style="margin-top:28px">Numbers from Postgres sold deals (converted, not cancelled), last 12 months to 12 Nov 2026. Screenshots from the live prototype at 30sundays-app.vercel.app.</p>
+</div>
+</body>
+</html>
