@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ArrowRight, User, Baby, ArrowLeftRight } from "lucide-react";
+import { ChevronDown, ArrowRight, User, Baby, ArrowLeftRight, AlertTriangle } from "lucide-react";
 import SaveHeart from "./SaveHeart";
 import { C, allItineraries } from "../data";
 import { useDeals } from "../data/deals";
@@ -50,10 +50,64 @@ function ActionLink({ quote }) {
   );
 }
 
+// ─── Waiting on payment ───
+//
+// The consultant has sent the final plan and only confirming and paying is
+// left. The card keeps its usual rows; what changes is that Review & Pay is
+// the one solid button on it. Five ways of placing it are kept side by side
+// on /pending-lab until one is picked; My Plans uses PENDING_DEFAULT.
+export const PENDING_VARIANTS = [
+  { key: "banner-pill", name: "Button in the banner", note: "Same rows as today. The banner's Review link becomes a solid pink button, and View goes grey." },
+  { key: "price-pill", name: "Button next to the price", note: "Review & Pay takes View's place beside the price. The banner below is just the message." },
+  { key: "status-top", name: "Status first", note: "The banner moves up under the trip details, so it reads: status, price, then the button." },
+  { key: "white-banner", name: "Lighter banner", note: "No yellow fill. A thin amber line with an outlined pink button, View in grey." },
+  { key: "header-chip", name: "Status chip", note: "The status becomes a small chip in the trip details. No banner row; the button sits by the price." },
+];
+export const PENDING_DEFAULT = "banner-pill";
+
+const AMBER = { text: "#B54708", fill: "#FEF9E7", line: "#F5DFA0" };
+
+function PayButton({ onClick, outline = false }) {
+  return (
+    <button
+      data-testid="review-pay"
+      onClick={onClick}
+      style={{
+        flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
+        padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
+        fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+        border: outline ? `1.5px solid ${C.p600}` : "none",
+        background: outline ? C.white : C.p600,
+        color: outline ? C.p600 : "#fff",
+        boxShadow: outline ? "none" : "0 3px 10px rgba(227,27,83,0.25)",
+      }}
+    >
+      Review & Pay <ArrowRight size={14} />
+    </button>
+  );
+}
+
+function PendingNote({ action, white = false, top = false }) {
+  return (
+    <div data-testid="awaiting-pay" style={{
+      display: "flex", alignItems: "center", gap: 8, padding: action ? "9px 12px" : "10px 12px",
+      background: white ? C.white : AMBER.fill,
+      borderTop: `1px solid ${white ? C.bg : AMBER.line}`,
+      borderBottom: top ? `1px solid ${AMBER.line}` : "none",
+    }}>
+      <AlertTriangle size={15} color={AMBER.text} style={{ flexShrink: 0 }} />
+      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: AMBER.text, lineHeight: "17px" }}>
+        Confirmation and payment pending
+      </span>
+      {action}
+    </div>
+  );
+}
+
 // ONE card template per deal. Header (destination, version, status) + the
 // itinerary facts (route with nights, dates, travellers, generated-on) + the
 // price(s) with their action. Maldives shows one priced row per property.
-export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId, pastNote }) {
+export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId, pastNote, pendingVariant = PENDING_DEFAULT }) {
   const [open, setOpen] = useState(false);
   const { isWished, toggleWish } = useDeals();
   const navigate = useNavigate();
@@ -80,6 +134,8 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId
   const isDraftCard = deal.cardKind === "draft";
   const versionBadgeNum = isDraftCard ? deal.baseNum : primary.num;
   const showVersionBadge = versionBadgeNum != null;
+  const awaiting = !lost && !isDraftCard && primaryIsQuote && !!deal.awaitingPayment;
+  const pv = awaiting ? pendingVariant : null;
 
   const dest = primary.destination ?? deal.dest;
   const itin = allItineraries.find(i => i.id === (primary.itineraryId ?? deal.itineraryId));
@@ -124,7 +180,16 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId
           <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{adults}<User size={12} /></span>
           {kids > 0 && <><span>·</span><span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{kids}<Baby size={12} /></span></>}
         </div>
-        {!isDraftCard && generatedOn && <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact }}>Generated {generatedOn}</p>}
+        {!isDraftCard && generatedOn && (
+          <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            Generated {generatedOn}
+            {pv === "header-chip" && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: AMBER.fill, color: AMBER.text, border: `1px solid ${AMBER.line}`, whiteSpace: "nowrap" }}>
+                <AlertTriangle size={11} /> Payment pending
+              </span>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -151,6 +216,10 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId
   const comparable = !isDraftCard && Object.values(
     sorted.reduce((m, v) => { const d = v.destination || deal.dest; m[d] = (m[d] || 0) + 1; return m; }, {})
   ).some(n => n >= 2);
+  const goPay = (e) => {
+    e.stopPropagation();
+    navigate(`/itinerary/${primary.itineraryId ?? deal.itineraryId}/payment-plan?pp=${Math.round(ppPrice(primary))}&t=${t}`);
+  };
   const goCompare = (e) => {
     e.stopPropagation();
     const p = deal.property ? `?prop=${encodeURIComponent(deal.property)}` : "";
@@ -161,11 +230,22 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId
     <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", background: C.white }}>
       {Header}
 
-      {/* One final price + one action */}
-      <div onClick={() => onOpen(primary)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 12px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
+      {pv === "status-top" && <PendingNote top />}
+
+      {/* One final price + one action. While payment is pending the action
+          is Review & Pay wherever the variant puts it, and View steps back. */}
+      <div onClick={() => onOpen(primary)} style={{ display: "flex", alignItems: "center", gap: 8, padding: pv && ["price-pill", "status-top", "header-chip"].includes(pv) ? "9px 12px" : "11px 12px", borderTop: pv === "status-top" ? "none" : `1px solid ${C.bg}`, cursor: "pointer" }}>
         <span style={{ flex: 1, fontSize: 16, fontWeight: 700, color: C.head }}>{fmt(total(ppPrice(primary), t))}{priceCaption}</span>
-        <ActionLink quote={primaryIsQuote} />
+        {pv && ["price-pill", "status-top", "header-chip"].includes(pv)
+          ? <PayButton onClick={goPay} />
+          : pv
+            ? <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, color: C.sub, whiteSpace: "nowrap" }}>View <ArrowRight size={14} /></span>
+            : <ActionLink quote={primaryIsQuote} />}
       </div>
+
+      {pv === "banner-pill" && <PendingNote action={<PayButton onClick={goPay} />} />}
+      {pv === "price-pill" && <PendingNote />}
+      {pv === "white-banner" && <PendingNote white action={<PayButton onClick={goPay} outline />} />}
 
       {/* Quiet expander — earlier versions (V1, V2 …) */}
       {earlier.length > 0 && (

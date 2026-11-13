@@ -420,7 +420,9 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
           // Maldives → one unit per property; every other vacation → one unit.
           const toUnits = (list) => list.flatMap(deal => deal.properties?.length
             ? deal.properties.map(p => ({ ...deal, id: `${deal.id}__${p.property.replace(/\s+/g, "")}`, dealId: deal.id, property: p.property, itineraryId: p.itineraryId, versions: p.versions, properties: undefined }))
-            : [{ ...deal, dealId: deal.id }]);
+            // (Vietnam is named too: phones that saved the demo plans before
+            // the flag existed still show the pending card.)
+            : [{ ...deal, dealId: deal.id, awaitingPayment: deal.awaitingPayment || deal.id === "demo_vietnam" }]);
           // Each unit shows up to two cards: a "Draft" card for the in-progress
           // edit (no Compare, reopens where the user left off), and a "created"
           // card for the finalised versions (with Compare + earlier versions).

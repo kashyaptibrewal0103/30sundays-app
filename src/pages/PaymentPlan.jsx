@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, Shield, CheckCircle2, Lock } from "lucide-react";
 import { C, allItineraries } from "../data";
 
@@ -16,14 +16,17 @@ function buildInstallments(total) {
 export default function PaymentPlan() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const it = allItineraries.find(i => i.id === Number(id));
 
   if (!it) {
     return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
   }
 
-  const travelers = 2;
-  const priceNum = Number(String(it.price).replace(/,/g, "")) || 0;
+  // A plan opened from My Plans brings its own final price and travellers, so
+  // this page asks for the same amount the card showed.
+  const travelers = Number(params.get("t")) || 2;
+  const priceNum = Number(params.get("pp")) || Number(String(it.price).replace(/,/g, "")) || 0;
   const total = priceNum * travelers;
   const installments = buildInstallments(total);
   const first = installments[0];

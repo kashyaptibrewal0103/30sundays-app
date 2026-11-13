@@ -74,6 +74,9 @@ function demoDeals() {
   const dealVietnam = {
     id: "demo_vietnam", status: "active", itineraryId: 10, dest: "Vietnam", title: routeTitle(10), img: byId(10)?.img,
     customItinerary: null, createdAt: now - 5 * DAY,
+    // The consultant has sent the final plan: it waits on the customer to
+    // confirm and pay, so My Plans leads this card with Review & Pay.
+    awaitingPayment: true,
     versions: [
       ver("demo_vietnam_v1", 10, { num: 1, status: "quote", ageDays: 5, pdfAgo: 4 }),
       ver("demo_vietnam_v2", 11, { num: 2, status: "quote", ageDays: 1, priceAdj: 6000, pdfAgo: 0 }),
