@@ -440,9 +440,12 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
           });
           // In-progress edits float up (their draft was just touched); the draft
           // card sits right above its created card so the pair reads together.
+          // A plan waiting on the customer's confirmation and payment goes to
+          // the top: it is the one thing on this screen that needs them now.
+          const waiting = (c) => (c.cardKind === "made" && c.awaitingPayment ? 0 : 1);
           const activeCards = toCards(
             [...toUnits(active)].sort((a, b) => recency(b.versions) - recency(a.versions))
-          );
+          ).sort((a, b) => waiting(a) - waiting(b));
           return (
           <>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, padding: "12px 16px 8px" }}>
