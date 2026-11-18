@@ -82,7 +82,11 @@ function DestFoot({ price, nights }) {
 
 // On a destination page the country is already the page, so the card leads
 // with the length of the trip and drops who went.
-export default function BookedCard({ t, wide = false, inDest = false }) {
+// `showBooked` is the "Priya & Rohan booked 2 weeks ago" pill on the photo.
+// It belongs on a rail of recently booked trips, where who and when is the
+// point; on a rail picked by place or pace it reads as a claim about trips
+// nobody said were recent, so those rails turn it off.
+export default function BookedCard({ t, wide = false, inDest = false, showBooked = true }) {
   const tone = TAG[t.style] || TAG.Relaxed;
   // Who went, as a count rather than a label. "Couple" and "Family" both took
   // a line to say something the numbers say better, and children only show up
@@ -99,7 +103,7 @@ export default function BookedCard({ t, wide = false, inDest = false }) {
     }}>
       <div style={{ position: "relative" }}>
         <img src={t.img} alt={t.dest} style={{ width: "100%", height: inDest ? (wide ? 140 : 124) : wide ? 150 : 138, objectFit: "cover", display: "block" }} />
-        <span style={{
+        {showBooked && <span style={{
           position: "absolute", left: 11, bottom: 10, maxWidth: "calc(100% - 22px)",
           display: "inline-flex", alignItems: "center", gap: 7,
           // No backdrop blur. The pill sits inside a rounded card that already
@@ -114,7 +118,7 @@ export default function BookedCard({ t, wide = false, inDest = false }) {
           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
             <strong style={{ fontWeight: 800, color: "#fff" }}>{t.who}</strong> booked {t.when}
           </span>
-        </span>
+        </span>}
       </div>
 
       <div style={{ padding: inDest ? "10px 12px 12px" : "11px 13px 13px" }}>

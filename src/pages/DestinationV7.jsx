@@ -774,7 +774,10 @@ function GettingThere({ dest, v }) {
 // row has choices, the activity or place sits at the end of the title with an
 // arrow; tapping it lists what this country's trips include, and picking one
 // loads those trips in place.
-function TripRail({ title, cards, choices, word }) {
+// Only the recently booked rail says who booked each trip and when. Trips
+// with a place, Most loved, Relaxed and the rest are chosen for what they
+// are, not how recent they are, so their cards carry no booked line.
+function TripRail({ title, cards, choices, word, showBooked = false }) {
   const [pick, setPick] = useState(0);
   const [picking, setPicking] = useState(false);
   const [all, setAll] = useState(false);
@@ -818,11 +821,11 @@ function TripRail({ title, cards, choices, word }) {
       )}
       <style>{"@keyframes v7in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }"}</style>
       <div key={word} className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch", animation: word ? "v7in 0.35s ease-out" : undefined }}>
-        {trips.slice(0, 6).map((t) => <BookedCard key={t.key} t={t} inDest />)}
+        {trips.slice(0, 6).map((t) => <BookedCard key={t.key} t={t} inDest showBooked={showBooked} />)}
       </div>
       <ListSheet open={all} title={full} count={trips.length} onClose={() => setAll(false)}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {trips.map((t) => <BookedCard key={t.key} t={t} wide inDest />)}
+          {trips.map((t) => <BookedCard key={t.key} t={t} wide inDest showBooked={showBooked} />)}
         </div>
       </ListSheet>
     </div>
@@ -830,7 +833,7 @@ function TripRail({ title, cards, choices, word }) {
 }
 
 function Itineraries({ dest }) {
-  return <TripRail title="Recently booked itineraries" cards={BOOKED_TRIPS.filter((t) => t.dest === dest)} />;
+  return <TripRail title="Recently booked itineraries" cards={BOOKED_TRIPS.filter((t) => t.dest === dest)} showBooked />;
 }
 
 // The section bar, as on the itinerary page.
