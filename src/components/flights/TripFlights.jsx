@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { PlaneTakeoff, PlaneLanding, Plane, Plus, X as XIcon, Check, ChevronRight, ChevronLeft, Luggage, BaggageClaim, ArrowLeftRight, Trash2, RefreshCw, AlertCircle, Info } from "lucide-react";
+import { PlaneTakeoff, PlaneLanding, Plane, Plus, X as XIcon, Check, ChevronRight, ChevronLeft, Luggage, BaggageClaim, ArrowLeftRight, Trash2, RefreshCw, AlertCircle, Info, Link2 } from "lucide-react";
 import { C } from "../../data";
 import { airports, formatPrice, generateFlightsForRoute, HOME_CITIES } from "../../data/flightData";
 
@@ -86,6 +86,7 @@ export function materialize(legs, flights, failed = []) {
       airline: f?.airlineCodes?.[0] || null, fare: f?.price ?? null,
       name: f?.airline || null, dep: f?.dep || null,
       failed: !f && failed.includes(i),
+      pkg: f?.pkg ? { ...f.pkg } : null,
     }];
   }));
 }
@@ -112,7 +113,7 @@ export function resolveTrip(legs, picks) {
     if (e) {
       if (e.id === null) { chosen[i] = null; if (e.failed) failed.push(i); return; }
       const f = findFlight(leg, e.id) || bestFlight(leg);
-      chosen[i] = f && e.fare != null ? { ...f, price: e.fare, base: f.price } : f;
+      chosen[i] = f && e.fare != null ? { ...f, price: e.fare, base: f.price, pkg: e.pkg || undefined } : f;
       return;
     }
     const before = entries.find((x) => x.role === legRole(leg));
@@ -120,11 +121,106 @@ export function resolveTrip(legs, picks) {
     if (before && before.id === null) { chosen[i] = null; return; }
     if (!fresh && fetchFails(leg)) { chosen[i] = null; failed.push(i); failedNow.push(i); return; }
     chosen[i] = bestFlight(leg, flightsFor(leg), before?.airline);
+    // A flight that was part of a deal keeps to that deal when the same
+    // airline still flies the moved leg; the deal is priced again below.
+    if (chosen[i] && before?.pkg && chosen[i].airlineCodes?.[0] === before.pkg.airline) {
+      chosen[i] = { ...chosen[i], pkg: before.pkg };
+    }
     if (!fresh) changed.push(i);
   });
+  settlePackages(legs, chosen, changed);
   const roles = new Set(legs.map(legRole));
   const dropped = fresh ? [] : entries.filter((x) => x.id && !roles.has(x.role)).map((x) => x.label);
   return { chosen, changed, failed, failedNow, dropped, cause: dropped.length || newRole ? "route" : "dates" };
+}
+
+// ─── Flights booked together ───
+//
+// Some airlines sell more than one flight on a trip as one booking, on one
+// fare: out and back, both hops inside the country, or the whole trip, out,
+// around and home. A deal is offered next to choosing each flight, never in
+// place of it. On the trip it is one card, changed and removed as one.
+//
+// Each flight in a deal carries its share of the deal's fare (price) and the
+// fare it would cost alone (base), so the trip total adds up either way, and
+// a pkg note that ties the flights together:
+//   { id, kind, airline, name, roles, total, full, saving, share }
+// kind is "round", "domestic" or "whole". roles are the legs it covers.
+
+const PKG_OFF = { round: 0.92, domestic: 0.93, whole: 0.9 };
+export const PKG_LABEL = { round: "Round trip, one fare", domestic: "Both domestic flights, one fare", whole: "Whole trip, one fare" };
+const PKG_ORDER = { whole: 0, round: 1, domestic: 2 };
+const airlineOf = (f) => f?.airlineCodes?.[0] || null;
+
+// Price a set of flights as one deal, and share the fare out across them in
+// proportion, so each flight still has a price of its own.
+export function makePackage(kind, legs, idxs, flights) {
+  const full = sum(flights);
+  const total = Math.round((full * PKG_OFF[kind]) / 100) * 100;
+  const shares = flights.map((f) => Math.round((f.price * total) / full));
+  shares[shares.length - 1] = total - shares.slice(0, -1).reduce((a, b) => a + b, 0);
+  const airline = airlineOf(flights[0]);
+  const meta = {
+    id: `${kind}:${airline}:${idxs.map((i) => legRole(legs[i])).join("|")}`,
+    kind, airline, name: flights[0].airline, roles: idxs.map((i) => legRole(legs[i])),
+    total, full, saving: full - total,
+  };
+  return {
+    ...meta,
+    idxs,
+    flights: flights.map((f, k) => ({ ...f, price: shares[k], base: f.base ?? f.price, pkg: { ...meta, share: shares[k] } })),
+  };
+}
+
+// Every deal an airline offers across the legs being chosen. A deal needs one
+// airline on every one of its legs.
+export function packagesFor(legs, legIdxs) {
+  const idxs = legIdxs.filter((i) => legs[i] && !fetchFails(legs[i]));
+  const lists = Object.fromEntries(idxs.map((i) => [i, flightsFor(legs[i])]));
+  const out = idxs.find((i) => legs[i].type === "international" && legs[i].direction === "outbound");
+  const ret = idxs.find((i) => legs[i].type === "international" && legs[i].direction === "return");
+  const dom = idxs.filter((i) => legs[i].type === "internal");
+  const groups = [];
+  if (out != null && ret != null && dom.length) groups.push({ kind: "whole", idxs: [...idxs].filter((i) => i === out || i === ret || dom.includes(i)).sort((a, b) => a - b) });
+  if (out != null && ret != null) groups.push({ kind: "round", idxs: [out, ret] });
+  if (dom.length >= 2) groups.push({ kind: "domestic", idxs: dom });
+  const pkgs = [];
+  groups.forEach((g) => {
+    const per = g.idxs.map((i) => new Set(lists[i].map(airlineOf)));
+    const common = [...per[0]].filter((a) => per.every((set) => set.has(a)));
+    common.forEach((a) => {
+      const flights = g.idxs.map((i) => bestFlight(legs[i], lists[i].filter((f) => airlineOf(f) === a)));
+      if (flights.some((f) => !f)) return;
+      pkgs.push(makePackage(g.kind, legs, g.idxs, flights));
+    });
+  });
+  return pkgs.sort((a, b) => PKG_ORDER[a.kind] - PKG_ORDER[b.kind] || a.total - b.total);
+}
+
+// The other flights the deal's airline has on one of its legs, for picking a
+// different time without leaving the deal.
+export const packageTimes = (legs, i, airline) => flightsFor(legs[i])
+  .filter((f) => airlineOf(f) === airline)
+  .filter((f, k, all) => all.findIndex((x) => x.dep === f.dep) === k)
+  .sort((a, b) => a.dep.localeCompare(b.dep));
+
+// After the trip moves: a deal still flown by its airline on every leg is
+// priced again for the new flights; one that lost a leg, or its airline, is
+// no longer a deal, and its flights go back to their own fares.
+function settlePackages(legs, chosen, changed) {
+  const groups = {};
+  chosen.forEach((f, i) => { if (f?.pkg) (groups[f.pkg.id] ||= []).push(i); });
+  Object.values(groups).forEach((idxs) => {
+    const pkg = chosen[idxs[0]].pkg;
+    const whole = idxs.length === pkg.roles.length && idxs.every((i) => airlineOf(chosen[i]) === pkg.airline);
+    if (!whole) {
+      idxs.forEach((i) => { const f = { ...chosen[i], price: chosen[i].base ?? chosen[i].price }; delete f.pkg; chosen[i] = f; });
+      return;
+    }
+    if (!idxs.some((i) => changed.includes(i))) return;
+    const fresh = makePackage(pkg.kind, legs, idxs, idxs.map((i) => ({ ...chosen[i], price: chosen[i].base ?? chosen[i].price })));
+    idxs.forEach((i, k) => { chosen[i] = fresh.flights[k]; });
+  });
 }
 
 // ─── What changed in the flights since the last save ───
@@ -197,7 +293,7 @@ export function recheck(f) {
   let h = 0;
   for (const ch of `${f.id}|${f.date}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const delta = h % 6 === 0 ? 600 : h % 6 === 1 ? -400 : 0;
-  const latest = (f.base ?? f.price) + delta;
+  const latest = (f.pkg?.share ?? f.base ?? f.price) + delta;
   return latest !== f.price ? { ...f, price: latest, was: f.price } : f;
 }
 
@@ -279,11 +375,14 @@ function Badge({ children, color = "#B54708", bg = "#FFFAEB", border = "#FEDF89"
 }
 
 // One leg inside a card, as the app draws it: "OUTBOUND • Feb 11", then the route.
-function Leg({ kind, leg, f, updated }) {
+function Leg({ kind, leg, f, updated, inPkg, startISO }) {
   const ret = kind === "ret";
   const color = ret ? GREEN : PINK;
   const Icon = ret ? PlaneLanding : PlaneTakeoff;
-  const word = kind === "out" ? "OUTBOUND" : ret ? "RETURN" : "ONE WAY";
+  // Inside a deal a hop in the country says which day it is, since it sits
+  // between the flights out and home rather than under its own day.
+  const day = inPkg && kind === "dom" ? dayOfTrip(leg.date, startISO) : null;
+  const word = kind === "out" ? "OUTBOUND" : ret ? "RETURN" : inPkg ? `DAY ${day || ""} · ${legTitle(leg).toUpperCase()}` : "ONE WAY";
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -300,17 +399,32 @@ const cardStyle = { border: `1px solid ${C.div}`, borderRadius: 14, background: 
 const footStyle = { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 14px", background: "#F7F7F8", border: "none", fontFamily: "inherit", fontSize: 11, color: C.sub, cursor: "pointer" };
 const actBtn = { flex: 1, height: 34, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", background: C.white };
 
+// The one line that marks flights booked together.
+export function PkgChip({ kind }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: PINK, background: "#FFF0F3", borderRadius: 999, padding: "2px 8px", whiteSpace: "nowrap" }}>
+      <Link2 size={11} /> {PKG_LABEL[kind]}
+    </span>
+  );
+}
+
 // One airline's flights: the app's card, plus the two things that can be done
-// to it.
-function FlightCard({ parts, travellers, onChange, onRemove, onDetails, testId }) {
+// to it. A deal is the same card holding every flight in it.
+function FlightCard({ parts, travellers, onChange, onRemove, onDetails, testId, pkg }) {
   const f0 = parts[0].f;
   const fare = sum(parts.map((p) => p.f));
   return (
     <div style={cardStyle} data-testid={testId}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${C.div}` }}>
         <AirlineTile f={f0} />
-        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f0.airline}</span>
-        <span style={{ fontSize: 14.5, fontWeight: 500, color: C.head, flexShrink: 0 }}>₹{formatPrice(fare * travellers)}</span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f0.airline}</span>
+          {pkg && <span style={{ display: "block", marginTop: 4 }}><PkgChip kind={pkg.kind} /></span>}
+        </span>
+        <span style={{ textAlign: "right", flexShrink: 0 }}>
+          <span style={{ display: "block", fontSize: 14.5, fontWeight: 500, color: C.head }}>₹{formatPrice(fare * travellers)}</span>
+          {pkg?.saving > 0 && <span style={{ display: "block", fontSize: 10.5, fontWeight: 600, color: GREEN, marginTop: 2 }}>Saves ₹{formatPrice(pkg.saving * travellers)}</span>}
+        </span>
       </div>
       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 14 }}>
         {parts.map((p, k) => (
@@ -488,15 +602,26 @@ export function FlightsSection({ legs, chosen, changed = [], failed = [], failed
   const out = chosen[outIdx];
   const ret = chosen[retIdx];
   const isNew = (i) => changed.includes(i);
-  const part = (i, kind) => ({ kind, leg: legs[i], f: chosen[i], updated: isNew(i), i });
-  // One flight to a card, always. Outbound and return are two cards, swiped.
-  const intlCards = [out && [part(outIdx, "out")], ret && [part(retIdx, "ret")]].filter(Boolean);
+  const kindOf = (i) => (legs[i].type === "internal" ? "dom" : legs[i].direction === "return" ? "ret" : "out");
+  const part = (i, kind = kindOf(i), inPkg = false) => ({ kind, leg: legs[i], f: chosen[i], updated: isNew(i), i, inPkg, startISO });
+  // Flights booked together, by deal. A deal shows only while all its
+  // flights are on the trip; resolveTrip takes apart any that are not.
+  const deals = {};
+  chosen.forEach((f, i) => { if (f?.pkg) (deals[f.pkg.id] ||= []).push(i); });
+  const dealOf = (i) => (chosen[i]?.pkg ? deals[chosen[i].pkg.id] : null);
+  const intlDeal = out && ret && dealOf(outIdx) && dealOf(outIdx) === dealOf(retIdx) ? dealOf(outIdx) : null;
+  // One flight to a card, unless they were booked together. Outbound and
+  // return are two cards, swiped; a deal is one card with all its flights.
+  const intlCards = intlDeal
+    ? [intlDeal.map((i) => part(i, kindOf(i), true))]
+    : [out && [part(outIdx, "out")], ret && [part(retIdx, "ret")]].filter(Boolean);
   const domestic = legs.map((l, i) => ({ l, i })).filter((x) => x.l.type === "internal");
   const card = (parts, testId) => (
     <FlightCard
       key={testId}
       testId={testId}
       parts={parts}
+      pkg={parts[0].inPkg ? parts[0].f.pkg : null}
       travellers={travellers}
       onChange={() => onChangeLegs(parts.map((p) => p.i))}
       onRemove={() => onRemoveLegs(parts.map((p) => p.i))}
@@ -556,7 +681,8 @@ export function FlightsSection({ legs, chosen, changed = [], failed = [], failed
         <>
           {notice}
 
-          <SectionHead title="International flights" note={note} />
+          {/* A whole-trip deal holds the flights inside the country too. */}
+          <SectionHead title={intlDeal && intlDeal.some((i) => legs[i].type === "internal") ? "Your flights" : "International flights"} note={note} />
           {!out && !ret && !failed.includes(outIdx) && !failed.includes(retIdx) ? (
             <MissingLeg testId="flights-intl-missing" text="International flights not added" sub={`${legTitle(legs[outIdx])} and back`} onAdd={() => onAddLeg([outIdx, retIdx])} />
           ) : (
@@ -573,6 +699,30 @@ export function FlightsSection({ legs, chosen, changed = [], failed = [], failed
               <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 {domestic.map(({ l, i }) => {
                   const day = dayOfTrip(l.date, startISO);
+                  const deal = dealOf(i);
+                  // Booked with the flights out and home: it is on that card.
+                  if (deal && deal === intlDeal) {
+                    return (
+                      <div key={legSig(l)} data-testid={`flights-dom-${i}-in-deal`}>
+                        <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: C.head }}>{day ? `Day ${day}` : l.date}</p>
+                        <p style={{ margin: "1px 0 0", fontSize: 12, color: C.sub }}>{legTitle(l)} · in your {chosen[i].airline} booking above</p>
+                      </div>
+                    );
+                  }
+                  // Both hops booked together: one card, at the first of them.
+                  if (deal && deal.length > 1) {
+                    if (deal[0] !== i) return null;
+                    // In the order they are flown.
+                    const byDay = [...deal].sort((a, b) => (dayOfTrip(legs[a].date, startISO) || 0) - (dayOfTrip(legs[b].date, startISO) || 0));
+                    const days = byDay.map((k) => dayOfTrip(legs[k].date, startISO)).filter(Boolean);
+                    return (
+                      <div key={legSig(l)}>
+                        <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: C.head }}>{days.length ? `Days ${days.join(" and ")}` : l.date}</p>
+                        <p style={{ margin: "1px 0 10px", fontSize: 12, color: C.sub }}>{byDay.map((k) => legTitle(legs[k])).join(", then ")}</p>
+                        {card(byDay.map((k) => part(k, "dom", true)), `flights-dom-deal`)}
+                      </div>
+                    );
+                  }
                   return (
                     <div key={legSig(l)}>
                       <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: C.head }}>{day ? `Day ${day}` : l.date}</p>
@@ -601,7 +751,7 @@ export function FlightsSection({ legs, chosen, changed = [], failed = [], failed
 //
 // The options carry no labels (no Cheapest, no Non-stop): the one that fits
 // the trip is simply selected and listed first.
-export function FlightChooser({ legs, legIdxs, initial = {}, current = [], travellers, startISO, mode = "add", fromCity, consultant, onDone, onClose }) {
+export function FlightChooser({ legs, legIdxs, initial = {}, initialPkg = null, current = [], travellers, startISO, mode = "add", fromCity, consultant, onDone, onClose }) {
   const [step, setStep] = useState(0);
   const [picks, setPicks] = useState({}); // legIdx -> flight | null
   const [showAll, setShowAll] = useState(false);
@@ -609,9 +759,50 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
   const [loading, setLoading] = useState(true);
   const [tries, setTries] = useState(0);
 
-  const legIdx = legIdxs[step];
+  // ─── Booked together, or each on its own ───
+  //
+  // When an airline sells more than one of these flights as one booking, the
+  // first step asks how to book: one of those deals, or each flight chosen on
+  // its own. A deal that covers every flight ends the choosing there; one
+  // that covers some leaves the rest to their own steps.
+  //
+  // The flights a deal leaves over can make a deal of their own (the round
+  // trip on one airline, both hops inside the country on another), so a
+  // second way step offers those before the flights left are chosen singly.
+  const [dealTimes, setDealTimes] = useState({}); // deal id -> { legIdx: flight id }
+  const dealFor = (d) => {
+    const times = dealTimes[d.id];
+    if (!times) return d;
+    const flights = d.idxs.map((i, k) => packageTimes(legs, i, d.airline).find((f) => f.id === times[i]) || d.flights[k]);
+    return makePackage(d.kind, legs, d.idxs, flights.map((f) => ({ ...f, price: f.base ?? f.price })));
+  };
+  const deals1 = useMemo(() => (legIdxs.length > 1 ? packagesFor(legs, legIdxs) : []), [legs, legIdxs]);
+  const [ways, setWays] = useState(() => [
+    initialPkg && deals1.some((d) => d.id === initialPkg) ? initialPkg : mode === "change" || !deals1.length ? "each" : deals1[0].id,
+    null,
+  ]);
+  const pickDeal = (list, w) => (list.length && w && w !== "each" ? dealFor(list.find((d) => d.id === w) || list[0]) : null);
+  const deal1 = pickDeal(deals1, ways[0]);
+  const rest1 = deal1 ? legIdxs.filter((i) => !deal1.idxs.includes(i)) : legIdxs;
+  const rest1Key = rest1.join(",");
+  const deals2 = useMemo(() => (deal1 && rest1.length > 1 ? packagesFor(legs, rest1) : []), [legs, rest1Key, !!deal1]);
+  const way2 = ways[1] ?? (deals2[0]?.id || "each");
+  const deal2 = pickDeal(deals2, way2);
+  const rest = deal2 ? rest1.filter((i) => !deal2.idxs.includes(i)) : rest1;
+  const levels = [
+    { deals: deals1, way: ways[0], deal: deal1, idxs: legIdxs },
+    { deals: deals2, way: way2, deal: deal2, idxs: rest1 },
+  ];
+  const seq = deals1.length ? ["way", ...(deals2.length ? ["way2"] : []), ...rest] : legIdxs;
+  const level = seq[step] === "way" ? levels[0] : seq[step] === "way2" ? levels[1] : null;
+  const atWay = !!level;
+  const chosenDeals = [deal1, deal2].filter(Boolean);
+  const deal = level ? level.deal : null;
+  const setWay = (w) => setWays(level === levels[0] ? [w, null] : [ways[0], w]);
+
+  const legIdx = atWay ? (deal ? deal.idxs[0] : level.idxs[0]) : seq[step];
   const leg = legs[legIdx];
-  const failedFetch = fetchFails(leg);
+  const failedFetch = atWay ? false : fetchFails(leg);
   const list = useMemo(() => (failedFetch ? [] : flightsFor(leg)), [leg, failedFetch]);
   const best = useMemo(() => (failedFetch ? null : bestFlight(leg, list)), [leg, list, failedFetch]);
   const startId = initial[legIdx] || best?.id;
@@ -620,8 +811,8 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
   const startF = list.find((f) => f.id === startId);
   const ordered = useMemo(() => [...new Set([startF, best, ...list])].filter(Boolean), [startF, best, list]);
   const shown = showAll ? ordered : ordered.slice(0, 5);
-  const last = step === legIdxs.length - 1;
-  const multi = legIdxs.length > 1;
+  const last = step === seq.length - 1;
+  const multi = seq.length > 1;
 
   // Every step is a fetch: hold the screen on the loader while it runs.
   useEffect(() => {
@@ -631,13 +822,23 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
     return () => clearTimeout(t);
   }, [step, tries]);
 
-  // What the chosen flights come to so far, for everyone travelling.
-  const runFlights = legIdxs.map((i) => (i === legIdx ? selFlight : picks[i] !== undefined ? picks[i] : null));
+  // What the chosen flights come to so far, for everyone travelling. A deal
+  // counts at its own fare.
+  // Only the deals chosen up to this step count towards the total so far.
+  const dealsSoFar = chosenDeals.filter((d) => d === deal1 || seq.indexOf("way2") <= step);
+  const dealOfLeg = (i) => dealsSoFar.find((d) => d.idxs.includes(i));
+  const runFlights = legIdxs.map((i) => (dealOfLeg(i) ? dealOfLeg(i).flights[dealOfLeg(i).idxs.indexOf(i)] : i === legIdx && !atWay ? selFlight : picks[i] !== undefined && !picks[i]?.pkg ? picks[i] : null));
   const tentative = sum(runFlights) * travellers;
 
   const finish = (all) => onDone(all);
+  const withDeal = (next) => {
+    const out = { ...next };
+    legIdxs.forEach((i) => { if (out[i]?.pkg) delete out[i]; });
+    chosenDeals.forEach((d) => d.idxs.forEach((i, k) => { out[i] = d.flights[k]; }));
+    return out;
+  };
   const choose = (f) => {
-    const next = { ...picks, [legIdx]: f };
+    const next = withDeal(atWay ? picks : { ...picks, [legIdx]: f });
     setPicks(next);
     if (last) finish(Object.fromEntries(legIdxs.map((i) => [i, next[i] !== undefined ? next[i] : null])));
     else setStep(step + 1);
@@ -645,9 +846,10 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
   const back = () => {
     if (step === 0) onClose(); else setStep(step - 1);
   };
-  const kindLabel = leg.type === "international" ? (leg.direction === "outbound" ? "Outbound flight" : "Return flight") : `Day ${dayOfTrip(leg.date, startISO) || ""} flight`;
-  const nextLeg = !last ? legs[legIdxs[step + 1]] : null;
-  const cta = last ? "Done" : `Next: ${nextLeg.type === "international" ? (nextLeg.direction === "return" ? "return flight" : "outbound flight") : legTitle(nextLeg)}`;
+  const legWord = (l) => (l.type === "international" ? (l.direction === "return" ? "return flight" : "outbound flight") : legTitle(l));
+  const kindLabel = atWay ? "Your flights" : leg.type === "international" ? (leg.direction === "outbound" ? "Outbound flight" : "Return flight") : `Day ${dayOfTrip(leg.date, startISO) || ""} flight`;
+  const nextStep = !last ? seq[step + 1] : null;
+  const cta = last ? "Done" : nextStep === "way2" ? "Next: the rest of your flights" : `Next: ${legWord(legs[nextStep])}`;
 
   return (
     <div data-testid="flight-chooser" style={{ position: "absolute", inset: 0, background: C.white, display: "flex", flexDirection: "column" }}>
@@ -659,18 +861,22 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 10.5, fontWeight: 600, color: C.sub, letterSpacing: 0.3, textTransform: "uppercase" }}>
-              {kindLabel}{multi ? ` · ${step + 1} of ${legIdxs.length}` : ""}
+              {kindLabel}{multi ? ` · ${step + 1} of ${seq.length}` : ""}
             </p>
-            <p style={{ margin: "2px 0 0", fontSize: 15.5, fontWeight: 700, color: C.head }}>{legTitle(leg)}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 15.5, fontWeight: 700, color: C.head }}>{atWay ? (level === levels[0] ? "How would you like to book?" : "And the rest of your flights?") : legTitle(leg)}</p>
           </div>
-          {mode !== "change" && (
+          {mode !== "change" && !atWay && (
             <button onClick={() => choose(null)} data-testid="flight-skip" style={{ ...linkBtn, fontSize: 12.5, color: C.sub, flexShrink: 0 }}>Skip</button>
           )}
         </div>
-        <p style={{ margin: "6px 0 0 44px", fontSize: 11.5, color: C.sub }}>{longDate(leg.date, startISO)} · {travellers} traveller{travellers === 1 ? "" : "s"}{fromCity && leg.type === "international" ? ` · from ${fromCity}` : ""}</p>
+        <p style={{ margin: "6px 0 0 44px", fontSize: 11.5, color: C.sub }}>
+          {atWay
+            ? `${level.idxs.length} flights · ${travellers} traveller${travellers === 1 ? "" : "s"}${fromCity && level === levels[0] ? ` · from ${fromCity}` : ""}`
+            : `${longDate(leg.date, startISO)} · ${travellers} traveller${travellers === 1 ? "" : "s"}${fromCity && leg.type === "international" ? ` · from ${fromCity}` : ""}`}
+        </p>
         {multi && (
           <div style={{ display: "flex", gap: 4, margin: "10px 0 0 44px" }}>
-            {legIdxs.map((_, k) => <span key={k} style={{ flex: 1, height: 3, borderRadius: 2, background: k <= step ? PINK : C.div }} />)}
+            {seq.map((_, k) => <span key={k} style={{ flex: 1, height: 3, borderRadius: 2, background: k <= step ? PINK : C.div }} />)}
           </div>
         )}
       </div>
@@ -679,7 +885,20 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
           {/* Options */}
           <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px 20px", background: "#FAFAFB" }}>
             {loading ? (
-              <FareLoader title={`Fetching live fares for ${longDate(leg.date, startISO)}`} sub={`${legTitle(leg)} · ${travellers} traveller${travellers === 1 ? "" : "s"}`} />
+              atWay
+                ? <FareLoader title="Fetching live fares for your flights" sub={`${level.idxs.length} flights · ${travellers} traveller${travellers === 1 ? "" : "s"}`} />
+                : <FareLoader title={`Fetching live fares for ${longDate(leg.date, startISO)}`} sub={`${legTitle(leg)} · ${travellers} traveller${travellers === 1 ? "" : "s"}`} />
+            ) : atWay ? (
+              <WayStep
+                deals={level.deals.map(dealFor)}
+                way={level.way}
+                legs={legs}
+                legIdxs={level.idxs}
+                startISO={startISO}
+                onWay={setWay}
+                onTime={(d, i, id) => setDealTimes({ ...dealTimes, [d.id]: { ...(dealTimes[d.id] || {}), [i]: id } })}
+                onDetails={(d) => setDetail(d.idxs.map((i, k) => ({ f: d.flights[k], kind: legs[i].type === "internal" ? "dom" : legs[i].direction === "return" ? "ret" : "out" })))}
+              />
             ) : failedFetch ? (
               <div data-testid="flight-fetch-failed" style={{ textAlign: "center", padding: "36px 12px" }}>
                 <span style={{ width: 48, height: 48, borderRadius: "50%", background: "#FEF3F2", display: "inline-grid", placeItems: "center" }}>
@@ -748,10 +967,10 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
             <div style={{ flexShrink: 0, padding: "10px 14px 16px", borderTop: `1px solid ${C.div}`, background: C.white }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: 10.5, color: C.sub }}>Tentative total{multi && !last ? " so far" : ""}</p>
-                  <p style={{ margin: "1px 0 0", fontSize: 16, fontWeight: 700, color: C.head }} data-testid="flight-tentative">₹{formatPrice(tentative)}</p>
+                  <p style={{ margin: 0, fontSize: 10.5, color: C.sub }}>{atWay && !deal ? "Choose each flight next" : `Tentative total${multi && !last ? " so far" : ""}`}</p>
+                  <p style={{ margin: "1px 0 0", fontSize: 16, fontWeight: 700, color: C.head }} data-testid="flight-tentative">{atWay && !deal ? "" : `₹${formatPrice(tentative)}`}</p>
                 </div>
-                <button onClick={() => choose(selFlight)} disabled={!selFlight} data-testid="flight-next" style={{ flex: "0 0 auto", minWidth: 150, padding: "0 20px", height: 46, borderRadius: 999, border: "none", background: PINK, opacity: selFlight ? 1 : 0.5, color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
+                <button onClick={() => choose(selFlight)} disabled={!atWay && !selFlight} data-testid="flight-next" style={{ flex: "0 0 auto", minWidth: 150, padding: "0 20px", height: 46, borderRadius: 999, border: "none", background: PINK, opacity: atWay || selFlight ? 1 : 0.5, color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
                   {cta}
                 </button>
               </div>
@@ -762,7 +981,102 @@ export function FlightChooser({ legs, legIdxs, initial = {}, current = [], trave
           )}
       </>
 
-      {detail && <FlightDetailSheet items={[{ f: detail, kind: leg.direction === "return" ? "ret" : leg.type === "internal" ? "dom" : "out" }]} travellers={travellers} startISO={startISO} onClose={() => setDetail(null)} perPerson />}
+      {detail && <FlightDetailSheet items={Array.isArray(detail) ? detail : [{ f: detail, kind: leg.direction === "return" ? "ret" : leg.type === "internal" ? "dom" : "out" }]} travellers={travellers} startISO={startISO} onClose={() => setDetail(null)} perPerson />}
+    </div>
+  );
+}
+
+// ─── The first step: a deal, or each flight on its own ───
+function WayStep({ deals, way, legs, legIdxs, startISO, onWay, onTime, onDetails }) {
+  const radio = (on) => (
+    <span style={{ width: 18, height: 18, borderRadius: "50%", flexShrink: 0, border: on ? "none" : `1.5px solid ${C.icon}`, background: on ? PINK : C.white, display: "grid", placeItems: "center" }}>
+      {on && <Check size={12} color="#fff" strokeWidth={3} />}
+    </span>
+  );
+  const kindOf = (i) => (legs[i].type === "internal" ? "dom" : legs[i].direction === "return" ? "ret" : "out");
+  const covers = (d) => (d.idxs.length === legIdxs.length ? "All your flights" : d.idxs.map((i) => legTitle(legs[i])).join(", "));
+  return (
+    <div data-testid="flight-way">
+      <p style={{ margin: "2px 2px 2px", fontSize: 13.5, fontWeight: 700, color: C.head }}>Booked together</p>
+      <p style={{ margin: "0 2px 12px", fontSize: 11.5, color: C.sub, lineHeight: 1.45 }}>One airline flies these flights on one fare. Usually less than booking each.</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {deals.map((d) => {
+          const on = way === d.id;
+          const bag = d.flights[0].travelers?.[0] || {};
+          const checkin = kg(bag.checkin);
+          return (
+            <div key={d.id} role="button" onClick={() => onWay(d.id)} data-testid="flight-deal"
+              style={{ background: C.white, borderRadius: 14, border: on ? `1.5px solid ${PINK}` : `1px solid ${C.div}`, padding: "12px 12px 10px", cursor: "pointer", boxShadow: on ? "0 4px 14px rgba(227,27,83,0.10)" : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <AirlineTile f={d.flights[0]} size={30} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</span>
+                  <span style={{ display: "block", marginTop: 4 }}><PkgChip kind={d.kind} /></span>
+                </span>
+                <span style={{ textAlign: "right", flexShrink: 0 }}>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.head }}>₹{formatPrice(d.total)}</span>
+                  <span style={{ display: "block", fontSize: 9.5, color: C.inact }}>per person</span>
+                  {d.saving > 0 && <span style={{ display: "block", fontSize: 10, fontWeight: 600, color: GREEN, marginTop: 1 }}>Saves ₹{formatPrice(d.saving)}</span>}
+                </span>
+                {radio(on)}
+              </div>
+              {d.idxs.length < legIdxs.length && <p style={{ margin: "8px 0 0", fontSize: 11, color: C.sub }}>Covers {covers(d)}. You choose the rest next.</p>}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+                {d.idxs.map((i, k) => {
+                  const f = d.flights[k];
+                  const kind = kindOf(i);
+                  const color = kind === "ret" ? GREEN : PINK;
+                  // Up to four of the airline's times, always with the one picked.
+                  const all = on ? packageTimes(legs, i, d.airline) : [];
+                  const others = all.length <= 4 ? all : [...new Set([f.id, ...all.map((o) => o.id)])].slice(0, 4).map((id) => all.find((o) => o.id === id) || f).sort((a, b) => a.dep.localeCompare(b.dep));
+                  return (
+                    <div key={i} style={k ? { borderTop: `1px dashed ${C.div}`, paddingTop: 12 } : null}>
+                      <p style={{ margin: "0 0 8px", fontSize: 10.5, color, letterSpacing: 0.2 }}>
+                        {kind === "out" ? "OUTBOUND" : kind === "ret" ? "RETURN" : `DAY ${dayOfTrip(legs[i].date, startISO) || ""} · ${legTitle(legs[i]).toUpperCase()}`} • {legs[i].date}
+                      </p>
+                      <RouteRow f={f} size="option" accent={color} />
+                      {others.length > 1 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" }} onClick={(e) => e.stopPropagation()}>
+                          <span style={{ fontSize: 10.5, color: C.sub }}>{d.name} times:</span>
+                          {others.map((o) => {
+                            const sel = o.id === f.id;
+                            return (
+                              <button key={o.id} onClick={() => onTime(d, i, o.id)} data-testid="flight-deal-time"
+                                style={{ border: `1px solid ${sel ? PINK : C.div}`, background: sel ? "#FFF0F3" : C.white, color: sel ? PINK : C.head, borderRadius: 999, padding: "3px 9px", fontSize: 11, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
+                                {o.dep}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 9, borderTop: `1px dashed ${C.div}` }}>
+                <BagChip Icon={Luggage} color={PINK} bg="#FFF0F3" text={`Cabin ${kg(bag.cabin)} kg`} />
+                <BagChip Icon={BaggageClaim} color="#1570EF" bg="#EFF6FF" text={checkin ? `Check-in ${checkin} kg` : "No check-in bag"} warn={!checkin} />
+                <button onClick={(e) => { e.stopPropagation(); onDetails(d); }} style={{ ...linkBtn, marginLeft: "auto", fontSize: 11, fontWeight: 500, color: C.sub, textDecoration: "underline" }}>Details</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 2px 10px" }}>
+        <span style={{ flex: 1, height: 1, background: C.div }} />
+        <span style={{ fontSize: 11, color: C.inact }}>or</span>
+        <span style={{ flex: 1, height: 1, background: C.div }} />
+      </div>
+      <div role="button" onClick={() => onWay("each")} data-testid="flight-way-each"
+        style={{ display: "flex", alignItems: "center", gap: 10, background: C.white, borderRadius: 14, border: way === "each" ? `1.5px solid ${PINK}` : `1px solid ${C.div}`, padding: "14px 12px", cursor: "pointer" }}>
+        <span style={{ width: 30, height: 30, borderRadius: 8, background: "#F2F4F7", display: "grid", placeItems: "center", flexShrink: 0 }}><Plane size={15} color="#344054" /></span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: C.head }}>Choose each flight yourself</span>
+          <span style={{ display: "block", fontSize: 11.5, color: C.sub, marginTop: 2 }}>Any airline, one flight at a time ({legIdxs.length} flights)</span>
+        </span>
+        {radio(way === "each")}
+      </div>
     </div>
   );
 }
@@ -799,6 +1113,12 @@ export function FlightDetailSheet({ items, travellers, startISO, onClose, perPer
           <span style={{ fontSize: 19, fontWeight: 600, color: C.head, flexShrink: 0 }}>₹{formatPrice(total)}</span>
         </div>
 
+        {f0.pkg && items.length > 1 && (
+          <div data-testid="flight-detail-deal" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <PkgChip kind={f0.pkg.kind} />
+            <span style={{ fontSize: 11.5, color: C.sub }}>Booked together on one fare{f0.pkg.saving > 0 ? `, ₹${formatPrice(f0.pkg.saving * (perPerson ? 1 : travellers))} less than booking each` : ""}.</span>
+          </div>
+        )}
         {items.map(({ f, kind }, k) => {
           const color = kind === "ret" ? GREEN : PINK;
           const label = kind === "ret" ? "RETURN" : kind === "dom" ? "FLIGHT" : "DEPARTURE";

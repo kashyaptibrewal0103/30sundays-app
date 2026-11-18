@@ -29,7 +29,7 @@ import { getDayRating, tourKeysForDay } from "../data/dayRatings";
 import { DayRatingPill, DayRatingRow } from "../components/DayRating";
 import GlanceDayCard from "../components/GlanceDayCard";
 import PopularActivities, { DayPickSheet } from "../components/PopularActivities";
-import BetterTrip, { BetterTripConfirm } from "../components/BetterTrip";
+import BetterTrip from "../components/BetterTrip";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
@@ -41,6 +41,7 @@ import { buildDayMeta, routeNights, respread, destMeta, synthesizeItinerary } fr
 import { hop } from "../data/routeBuilder";
 import SaveVersionNote from "../components/SaveVersionNote";
 import BuildingScreen from "../components/BuildingScreen";
+import TripChangeReview from "../components/TripChangeReview";
 import { LeisureCard, LeisureStrip, ExploreIdeas } from "../components/DayWiseExtras";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { DayMediaDetail } from "./DayDetailImmersive";
@@ -584,7 +585,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [popularAct, setPopularAct] = useState(null); // { act, city } opened from a People like you also chose card
   const [popularDayPick, setPopularDayPick] = useState(null); // { name, days } for View plans
   const [hotelInView, setHotelInView] = useState(0); // the hotel card the picks under the row follow
-  const [betterPick, setBetterPick] = useState(null); // a route from People like you also tried, awaiting OK
   const [dayDetailJump, setDayDetailJump] = useState(null);   // section to land on, e.g. "reviews"
   const [optionPreview, setOptionPreview] = useState(null);   // the day plan opened from Change day plan
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
@@ -838,7 +838,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // That takes a moment, and the moment has a screen of its own; the change
   // itself runs when the screen is done.
   const [building, setBuilding] = useState(null); // { run }
-  const startBuild = (run) => setBuilding({ run });
+  // Called as startBuild(run) or, from People like you also tried,
+  // startBuild(reason, summary, run): the run is whichever is a function.
+  const startBuild = (...args) => setBuilding({ run: args.find((a) => typeof a === "function") });
 
   // The route this trip is made of, however it was saved: the built route when
   // there is one, otherwise read back off the days.
@@ -853,7 +855,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // unsaved change, like a new hotel does: nothing is a version, and no price
   // is final, until Save fetches the latest prices. The saved version stays as
   // it was underneath, which is what Discard goes back to.
-  const rebuild = (nextRoute, startIso, pax = travellers) => {
+  const rebuild = (nextRoute, startIso, pax = travellers, { autosave = false } = {}) => {
     const built = synthesizeItinerary({
       dest: it.dest,
       nights: routeNights(nextRoute),
@@ -876,13 +878,32 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     setSelectedDayOptions({});
     setSelectedHotelOptions({});
     setTravelDates(nextDates);
-    navigate(`/itinerary/${built.id}?dealId=${dealId}&versionId=${versionId}`, { replace: true });
-    showToast("Your trip is updated with new hotels and day plans. Save the itinerary to get the latest prices");
+    // A change of dates or route was confirmed with its summary in front of
+    // it, so it is saved straight away rather than left as an unsaved change.
+    navigate(`/itinerary/${built.id}?dealId=${dealId}&versionId=${versionId}${autosave ? "&autosave=1" : ""}`, { replace: true });
+    if (!autosave) showToast("Your trip is updated with new hotels and day plans. Save the itinerary to get the latest prices");
+  };
+
+  // New cities or new dates first say what they change, and only go
+  // through, saved, on Confirm.
+  const [tripChange, setTripChange] = useState(null); // { kind, nextRoute, startIso, rows, saveNote }
+  const confirmTripChange = () => {
+    const c = tripChange;
+    setTripChange(null);
+    // The plan they have is kept as a version of its own. One that was never
+    // saved is saved now, as it is, so the rebuilt one lands beside it as
+    // the next version rather than in its place.
+    // A saved one that never wrote down what it was saved as (the demo plans)
+    // writes it down now, so there is something to put back.
+    if (!quoted || !version?.committed) {
+      dealsCtx.requestPricing(dealId, versionId, quoted ? (version.livePrice ?? computePrice(it.price, selectedDayOptions, selectedHotelOptions)) : computePrice(it.price, selectedDayOptions, selectedHotelOptions));
+    }
+    startBuild(() => rebuild(c.nextRoute, c.startIso, travellers, { autosave: true }));
   };
 
   const applyCities = (nextRoute) => {
     setCitiesScreen(false);
-    startBuild(() => rebuild(nextRoute, tripStart));
+    setTripChange(reviewTripChange("route", nextRoute, tripStart));
   };
 
   // New dates, same length or not: the plan is built again for those days,
@@ -890,7 +911,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // length changed.
   const applyDates = (d0, n) => {
     const nextRoute = n && n !== (it.nights || 0) ? respread(tripRoute, n) : tripRoute;
-    startBuild(() => rebuild(nextRoute, d0));
+    setTripChange(reviewTripChange("dates", nextRoute, d0));
   };
 
   // A different party: rooms, prices and the plan built for it.
@@ -1103,7 +1124,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const movedKey = [...tfTrip.changed, ...tfTrip.failedNow].map((i) => tfLegs[i] && `${tfLegs[i].from}-${tfLegs[i].to}-${tfLegs[i].date}`).join("|");
   const [flightsRefreshing, setFlightsRefreshing] = useState(false);
   useEffect(() => {
-    if (!movedKey) return;
+    // Nothing moved (or it settled before the fetch finished): no loader.
+    if (!movedKey) { setFlightsRefreshing(false); return; }
     setFlightsRefreshing(true);
     const t = setTimeout(() => setFlightsRefreshing(false), 1800);
     return () => clearTimeout(t);
@@ -1119,7 +1141,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const flightHandlers = {
     onAddFlights: () => setFlightFlow({ step: "city", changing: false }),
     onChangeCity: () => setFlightFlow({ step: "city", changing: true }),
-    onChangeLegs: (idxs) => setFlightFlow({ step: "choose", city: tf.city, legIdxs: idxs, mode: "change", initial: Object.fromEntries(idxs.map((i) => [i, tfChosen[i]?.id])) }),
+    // A deal is changed as one: the chooser opens on the way step with it picked.
+    onChangeLegs: (idxs) => setFlightFlow({ step: "choose", city: tf.city, legIdxs: idxs, mode: "change", initial: Object.fromEntries(idxs.map((i) => [i, tfChosen[i]?.id])), initialPkg: tfChosen[idxs[0]]?.pkg?.id || null }),
     onAddLeg: (idxs) => setFlightFlow({ step: "choose", city: tf.city, legIdxs: idxs, mode: "add", initial: {} }),
     onRemoveLegs: (idxs) => removeLegs(idxs),
     onDetails: (items) => setFlightDetail(items),
@@ -1312,6 +1335,114 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   });
   const flightChangesList = flightLines.map((l) => ({ kind: "flights", ...l }));
   const changes = [...shapeChanges, ...dayChanges, ...hotelChanges, ...flightChangesList];
+
+  // ─── What new dates or a new route would change ───
+  //
+  // The trip is built for the new shape here, without saving anything, and
+  // laid next to the one on screen: dates, route, then each hotel, the day
+  // plans and every flight. This is what the review sheet reads out.
+  const reviewTripChange = (kind, nextRoute, startIso) => {
+    const preview = synthesizeItinerary({
+      dest: it.dest, nights: routeNights(nextRoute), route: nextRoute, picksByCity: {},
+      vibes: it._vibes || [], startDate: startIso, party: { travellers },
+      id: it.custom ? it.id : undefined,
+    });
+    const day = (x) => x.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    const span = (iso, n) => { const a = new Date(iso); const b = new Date(a.getTime() + n * 86400000); return `${day(a)} – ${day(b)}`; };
+    const n0 = routeNights(tripRoute) || it.nights || 0;
+    const n1 = routeNights(nextRoute);
+    const datesMoved = String(startIso).slice(0, 10) !== new Date(tripStart).toISOString().slice(0, 10) || n0 !== n1;
+    const why = datesMoved ? "the new dates" : "the new route";
+    const count = (n, word) => `${n} ${word}`;
+    const sections = [];
+
+    // Hotels: by city, against what is on screen now (picks included).
+    const nextHotels = getHotels(preview);
+    const hl = { added: [], changed: [], kept: [], removed: [] };
+    nextHotels.forEach((nh) => {
+      const cur = hotels.find((h) => h.city === nh.city);
+      if (!cur) hl.added.push({ name: nh.city, text: `New stay at ${nh.name}` });
+      else if (cur.name !== nh.name) hl.changed.push({ name: nh.city, text: `${cur.name} changes to ${nh.name}` });
+      else hl.kept.push({ name: nh.city, text: `${nh.name}, rooms and price checked again` });
+    });
+    hotels.filter((h) => !nextHotels.some((nh) => nh.city === h.city))
+      .forEach((h) => hl.removed.push({ name: h.city, text: `${h.name} is removed`, off: true }));
+    const hotelStatus = [
+      hl.added.length && count(hl.added.length, "new"),
+      hl.changed.length && count(hl.changed.length, "changed"),
+      hl.removed.length && count(hl.removed.length, "removed"),
+      hl.kept.length && count(hl.kept.length, "same"),
+    ].filter(Boolean).join(" · ");
+    const firstHotel = hl.added[0] || hl.changed[0] || hl.removed[0];
+    sections.push({
+      key: "hotels", label: "Hotels", status: hotelStatus,
+      calm: !hl.added.length && !hl.changed.length && !hl.removed.length,
+      sub: firstHotel ? `${firstHotel.name}: ${firstHotel.text}` : `Same hotels, rechecked for ${why}`,
+      lines: [...hl.added, ...hl.changed, ...hl.removed, ...hl.kept],
+    });
+
+    // Day plans: added, removed or resized cities, and the days the couple
+    // had changed, which go back to our picks.
+    const nightsIn = (r) => Object.fromEntries(r.map((x) => [x.city, x.n]));
+    const a0 = nightsIn(tripRoute);
+    const b0 = nightsIn(nextRoute);
+    const dl = { added: [], resized: [], removed: [] };
+    nextRoute.forEach((x) => {
+      if (!(x.city in a0)) dl.added.push({ name: x.city, text: `${x.n} new day${x.n === 1 ? "" : "s"} planned` });
+      else if (a0[x.city] !== x.n) dl.resized.push({ name: x.city, text: `${a0[x.city]} nights become ${x.n}, days planned again` });
+    });
+    tripRoute.forEach((x) => { if (!(x.city in b0)) dl.removed.push({ name: x.city, text: `${x.n} day${x.n === 1 ? "" : "s"} removed`, off: true }); });
+    const picked = Object.keys(selectedDayOptions).length;
+    const dayLines = [...dl.added, ...dl.resized, ...dl.removed];
+    if (!dayLines.length) dayLines.push({ name: null, text: `All ${n1 + 1} days planned again for ${why}` });
+    if (picked) dayLines.push({ name: null, text: `${picked} day plan${picked === 1 ? "" : "s"} you changed go${picked === 1 ? "es" : ""} back to our picks` });
+    const dayStatus = [
+      dl.added.length && count(dl.added.length, "added"),
+      dl.resized.length && count(dl.resized.length, "resized"),
+      dl.removed.length && count(dl.removed.length, "removed"),
+    ].filter(Boolean).join(" · ") || "Replanned";
+    sections.push({
+      key: "days", label: "Day plans", status: dayStatus,
+      sub: dl.added[0] ? `${dl.added[0].name}: ${dl.added[0].text}` : dl.resized[0] ? `${dl.resized[0].name}: ${dl.resized[0].text}` : `Laid out again across ${n1 + 1} days`,
+      lines: dayLines,
+    });
+
+    // Flights: the same lines the changes strip uses, worked out for the new
+    // legs from the flights on the trip now.
+    if (useNewFlights && tf.city && tfChosen.some(Boolean)) {
+      const legs1 = getFlightLegs(preview, tf.city, legDateLabel(startIso))
+        .filter((l) => l.type !== "internal" || (hop(preview.dest, l.fromCity, l.toCity)?.mode || "flight") === "flight");
+      const now = { city: tf.city, picks: materialize(tfLegs, tfChosen, tfTrip.failed) };
+      const r = resolveTrip(legs1, now.picks);
+      const fl = flightChanges({ legs: legs1, chosen: r.chosen, failed: r.failed, city: tf.city, before: now });
+      const moved = fl.filter((x) => /^Moved|^Now/.test(x.detail)).length;
+      const added = fl.filter((x) => /^Added/.test(x.detail)).length;
+      const removed = fl.filter((x) => /Removed|No flights/.test(x.detail)).length;
+      const held = {};
+      r.chosen.forEach((f) => { if (f?.pkg) held[f.pkg.id] = f.pkg; });
+      const kept = Object.values(held);
+      const lines = fl.map((x) => ({ name: x.title.replace(/^(Outbound|Return|Domestic) flight · /, ""), text: x.detail, off: /Removed/.test(x.detail) }));
+      if (fl.length) kept.forEach((p) => lines.push({ name: null, text: `${p.name} ${p.kind === "round" ? "round trip" : p.kind === "whole" ? "whole trip" : "domestic flights"}: still booked together, priced again` }));
+      const status = [
+        moved && count(moved, "moved"),
+        added && count(added, "new"),
+        removed && count(removed, "removed"),
+      ].filter(Boolean).join(" · ") || "No change";
+      sections.push({
+        key: "flights", label: "Flights", status, calm: !fl.length,
+        sub: !fl.length ? "Your flights stay as they are" : kept.length ? `${kept.map((p) => p.name).join(", ")} deal${kept.length > 1 ? "s" : ""} kept` : "Same airlines where we can",
+        lines: fl.length ? lines : [],
+      });
+    }
+
+    // The version they have stays; the new one is the next number.
+    const nums = (dealsCtx.getDeal(dealId)?.versions || []).map((v) => v.num || 0);
+    const vNow = version?.num || 1;
+    const vNew = Math.max(vNow, ...nums) + 1;
+    const before = { v: vNow, dates: span(tripStart, n0), nights: n0, route: tripRoute.map((x) => ({ city: x.city, n: x.n })), price: `₹${formatPrice(grandTotal)}` };
+    const after = { v: vNew, dates: span(startIso, n1), nights: n1, route: nextRoute.map((x) => ({ city: x.city, n: x.n })), price: "Latest price on save" };
+    return { kind, nextRoute, startIso, before, after, sections };
+  };
   const hasChanges = changes.length > 0;
   const validQuote = quoted && !hasChanges && !isExpired(version);
 
@@ -1600,6 +1731,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedFlag, versionId]);
+
+  // A trip rebuilt for confirmed new dates or a new route saves as it lands.
+  const autosaveFlag = params.get("autosave");
+  useEffect(() => {
+    if (autosaveFlag !== "1" || !inDeal) return;
+    const next = new URLSearchParams(params);
+    next.delete("autosave");
+    setParams(next, { replace: true });
+    handleGetFinalPrice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosaveFlag, it.id]);
 
   // How tall the bottom bar is right now. It changes as strips come and go, so
   // it is watched rather than read once.
@@ -2264,7 +2406,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {wizardEditable && (
         <>
           <Divider />
-          <BetterTrip dest={it.dest} route={tripRoute} onPick={(card) => setBetterPick(card)} />
+          <BetterTrip dest={it.dest} route={tripRoute} onPick={(card) => setTripChange(reviewTripChange("route", card.route, tripStart))} />
         </>
       )}
 
@@ -3242,19 +3384,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         );
       })()}
 
-      {betterPick && (
-        <BetterTripConfirm
-          from={tripRoute}
-          to={betterPick.route}
-          frameStyle={overlayFrame}
-          onClose={() => setBetterPick(null)}
-          onConfirm={() => {
-            const next = betterPick.route;
-            setBetterPick(null);
-            startBuild("route", `${next.map((r) => r.city).join(" · ")} · ${routeNights(next)} nights`, () => rebuild(next, tripStart));
-          }}
-        />
-      )}
 
       {/* ═══ Toast Notification ═══ */}
       {/* Adding, changing and reading flights */}
@@ -3267,6 +3396,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               legs={legsFrom(flightFlow.city)}
               legIdxs={flightFlow.legIdxs}
               initial={flightFlow.initial}
+              initialPkg={flightFlow.initialPkg}
               current={flightFlow.city === tf.city ? tfChosen : []}
               mode={flightFlow.mode}
               consultant={consultant}
@@ -3360,6 +3490,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           dest={it.dest}
           cities={tripRoute.map((r) => r.city)}
           onDone={() => { const run = building.run; setBuilding(null); run(); }}
+        />
+      )}
+      {tripChange && (
+        <TripChangeReview
+          kind={tripChange.kind}
+          before={tripChange.before}
+          after={tripChange.after}
+          sections={tripChange.sections}
+          frame={overlayFrame}
+          onConfirm={confirmTripChange}
+          onClose={() => setTripChange(null)}
         />
       )}
       {dateSheet && (

@@ -353,6 +353,12 @@ export function generateFlightsForRoute(from, to, date, pax = 2) {
           { codes: ["AI"], stops: 1, hubCodes: ["SIN"], durationRange: [8, 13] },
           { codes: ["6E", "QZ"], stops: 1, hubCodes: ["KUL"], durationRange: [9, 14] },
           { codes: ["TG"], stops: 1, hubCodes: ["BKK"], durationRange: [9, 14] },
+          // Vietnam's own airline flies India to Vietnam as well as inside the
+          // country, which is what makes a whole-trip booking on one airline
+          // possible there.
+          ...([airports[from]?.country, airports[to]?.country].includes("Vietnam")
+            ? [{ codes: ["VN"], stops: 1, hubCodes: ["BKK"], durationRange: [8, 12] }]
+            : []),
         ];
   }
 
