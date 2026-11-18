@@ -1,15 +1,19 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
 import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Search, X as XIcon, SlidersHorizontal, ChevronDown, ChevronUp,
   Check, Star, User, Images, ChevronRight, Map, MapPin,
-  Car, Utensils, RotateCcw, Ban, LogIn, LogOut,
+  Car, Utensils, RotateCcw, Ban, LogIn, LogOut, Heart, Crown,
 } from "lucide-react";
 import { C, allItineraries } from "../data";
-import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
+import { stayHotels, getStayInfo, formatHotelPrice } from "../data/hotelData";
+import { useWishlist } from "../data/wishlist";
 import { useDeals } from "../data/deals";
 import HotelMapScreen from "../components/HotelMapScreen";
 import CardReel from "../components/CardReel";
+import SaveHeart from "../components/SaveHeart";
+import { regionGuide } from "../data/regionGuide";
+import { HonestBand, StayGuideSheet } from "../components/StayGuide";
 
 // ─── Change hotel, built like Change day plan ───
 //
@@ -36,10 +40,10 @@ const SORTS = [
 // The cuts people reach for most, on the bar itself. Each writes the same
 // filter state the sheet does, so the two never disagree.
 const QUICK = [
+  { key: "Gold", label: "Gold", icon: true },
   { key: "5 star", label: "5 star" },
   { key: "9+ rated", label: "9+ rated" },
   { key: "Free cancellation", label: "Free cancellation" },
-  { key: "Private transfer", label: "Private transfer" },
   { key: "Early check-in", label: "Early check-in" },
 ];
 
@@ -55,7 +59,7 @@ const galleryOf = (hotel) => [
 ].filter((v, i, a) => a.indexOf(v) === i);
 
 // ─── The one number that matters: what this swap does to the trip ───
-function PriceDelta({ delta, nights, fallbackPrice }) {
+export function PriceDelta({ delta, nights, fallbackPrice }) {
   if (delta === null) {
     return (
       <span style={{ fontSize: 13, fontWeight: 700, color: C.head }}>
@@ -122,7 +126,100 @@ function Fact({ icon: Icon, children, muted = false }) {
 }
 
 // ─── One hotel ──────────────────────────────────────────────────────────────
-function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
+//
+// The heart sits beside the hotel name, right aligned, where every card in
+// the app keeps it. The photo stays a photo. A solid pink heart on white next
+// to the name is signal enough, and the list already says how many are saved
+// and lifts them to the top, so the old "Saved" chip on the photo is gone.
+// ─── Gold ───
+//
+// The two best-reviewed hotels in the city, marked so they can be shortlisted
+// at a glance, the way Luxe works on Agoda. A rich gold so it reads as a mark
+// of quality rather than a notice.
+function GoldTag() {
+  return (
+    <span data-testid="gold-tag" style={{
+      position: "absolute", left: 9, top: 9, zIndex: 2,
+      display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+      height: 24, boxSizing: "border-box", lineHeight: 1,
+      padding: "0 10px 0 8px", borderRadius: 6,
+      background: "linear-gradient(135deg, #FCEBB0 0%, #F3CB55 48%, #D9A11E 100%)",
+      border: "1px solid rgba(255,255,255,0.55)",
+      boxShadow: "0 2px 8px rgba(120,80,0,0.28)",
+      fontSize: 11, fontWeight: 800, color: "#3D2A00", letterSpacing: 0.3,
+    }}>
+      <Crown size={12} color="#3D2A00" fill="#3D2A00" strokeWidth={1.5} style={{ display: "block", flexShrink: 0 }} />
+      <span style={{ display: "block", lineHeight: "12px" }}>Gold</span>
+    </span>
+  );
+}
+
+// ─── The wishlist shelf ───
+//
+// The saved hotels for this town, on a pale pink band that runs edge to edge,
+// as a short rail of compact cards. Chosen from five options on the wishlist
+// canvas (H1), without the heart graphic beside the title.
+const SHELF_TINT = "#FFF1F3";
+
+function WishlistShelf({ hotels, city, nights, currentHotel, onOpen, onSave }) {
+  return (
+    <div data-testid="wishlist-shelf" style={{ margin: "-14px -16px 0", padding: "16px 0 18px", background: SHELF_TINT, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 2 }}>
+        <p style={{ margin: 0, fontSize: 16.5, fontWeight: 800, color: C.head }}>Your wishlist stays</p>
+        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: C.p600 }}>
+          {hotels.length === 1 ? `1 of your saves is in ${city}` : `${hotels.length} of your saves are in ${city}`}
+        </p>
+      </div>
+      <div className="hide-scrollbar" style={{ display: "flex", gap: 12, overflowX: "auto", scrollSnapType: "x mandatory", padding: "0 16px 4px", scrollPaddingLeft: 16 }}>
+        {hotels.map((h) => (
+          <ShelfCard
+            key={h.id}
+            hotel={h}
+            solo={hotels.length === 1}
+            nights={nights}
+            priceDelta={currentHotel ? (h.pricePerNight - currentHotel.pricePerNight) * nights : null}
+            onOpen={onOpen}
+            onSave={() => onSave(h)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ShelfCard({ hotel, solo, nights, priceDelta, onOpen, onSave }) {
+  const photo = galleryOf(hotel)[0];
+  return (
+    <div
+      data-testid={`shelf-hotel-${hotel.id}`}
+      onClick={() => onOpen(hotel)}
+      role="button"
+      style={{
+        flex: "none", width: solo ? "100%" : "84%", scrollSnapAlign: "start",
+        borderRadius: 14, overflow: "hidden", background: C.white, cursor: "pointer",
+        boxShadow: "0 2px 10px rgba(227,27,83,0.10)",
+      }}
+    >
+      <div style={{ position: "relative", height: 124, background: C.bg }}>
+        {photo && <img src={photo.url || photo} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        <SaveHeart onPhoto saved onToggle={onSave} style={{ position: "absolute", top: 6, right: 6 }} />
+      </div>
+      <div style={{ padding: "10px 12px 11px", display: "flex", flexDirection: "column", gap: 7 }}>
+        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hotel.name}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Stars n={hotel.stars} />
+          <ScoreChip score={hotel.bookingScore} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderTop: `1px solid ${C.div}`, paddingTop: 9 }}>
+          <PriceDelta delta={priceDelta} nights={nights} fallbackPrice={hotel.pricePerNight} />
+          <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery, saved = false, onSave, gold = false }) {
   const photos = galleryOf(hotel);
   const strip = photos.slice(0, 6);
 
@@ -139,6 +236,7 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
       {/* Photos: a full-width reel you swipe, with dots under it, the same one
           the region pages use. Tap a picture for all of them. */}
       <CardReel imgs={strip} alt={hotel.name} height={168} onTap={(i) => onGallery(hotel, i)}>
+        {gold && <GoldTag />}
         <button
           data-testid={`gallery-${hotel.id}`}
           onClick={(e) => { e.stopPropagation(); onGallery(hotel, 0); }}
@@ -152,10 +250,16 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
           <Images size={11} color="#fff" />
           <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fff" }}>{photos.length} photos</span>
         </button>
+
       </CardReel>
 
       <div style={{ padding: "10px 12px 11px", display: "flex", flexDirection: "column", gap: 7 }}>
-        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.3 }}>{hotel.name}</p>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{hotel.name}</p>
+          {onSave && (
+            <SaveHeart saved={saved} onToggle={onSave} size={28} style={{ marginTop: -5, marginBottom: -5, marginRight: -6 }} />
+          )}
+        </div>
 
         {/* How good it is: our stars counted out, their score scored */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -170,7 +274,6 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
             row reads as facts and not as a sentence run on from the line above */}
         <div style={{ display: "flex", gap: "5px 16px", flexWrap: "wrap" }}>
           {hotel.mealPlan !== "Only Room" && <Fact icon={Utensils}>{hotel.mealPlan}</Fact>}
-          <Fact icon={Car}>{hotel.sharedTransfers ? "Shared transfer" : "Private transfer"}</Fact>
           <Fact icon={hotel.freeCancellation ? RotateCcw : Ban} muted={!hotel.freeCancellation}>
             {hotel.freeCancellation ? "Refundable" : "Non-refundable"}
           </Fact>
@@ -250,6 +353,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     else navigate(backToItinerary, { replace: true });
   };
 
+  const { isSaved: wishSaved, toggle: wishToggle } = useWishlist();
   const [showSheet, setShowSheet] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [confirmSelf, setConfirmSelf] = useState(false);
@@ -263,6 +367,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     landmarks: new Set(),
     amenities: new Set(),
     roomFacilities: new Set(),
+    sharedTransfer: false,
     sort: "recommended",
   });
 
@@ -274,9 +379,19 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
 
   const allHotels = useMemo(
-    () => (stayInfo ? generateHotelsForCity(stayInfo.city, itinerary.dest, stayInfo.checkIn, stayInfo.checkOut, stayInfo.nights) : []),
+    () => (stayInfo ? stayHotels(itinerary, Number(stayIndex)) : []),
     [stayInfo, itinerary],
   );
+
+  // The two best-reviewed hotels in this city. Stars are the same across a
+  // city's list, so the score is what separates them.
+  const goldIds = useMemo(
+    () => new Set([...allHotels].sort((a, b) => b.bookingScore - a.bookingScore).slice(0, 2).map((h) => h.id)),
+    [allHotels],
+  );
+  // What kind of hotel to book here, from the region guide.
+  const stay = itinerary && stayInfo ? regionGuide(itinerary.dest, stayInfo.city)?.stay : null;
+  const [guideOpen, setGuideOpen] = useState(false);
 
   // The stay you already have is not an option to change to, so it is not in
   // the list. It is only the price everything else is measured against.
@@ -286,12 +401,13 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const shown = useMemo(() => {
     let list = allHotels.filter(h => h.id !== currentHotelId).filter(h => {
       for (const f of filters.quick) {
+        if (f === "Gold" && !goldIds.has(h.id)) return false;
         if (f === "5 star" && h.stars !== 5) return false;
         if (f === "9+ rated" && h.bookingScore < 9) return false;
         if (f === "Free cancellation" && !h.freeCancellation) return false;
-        if (f === "Private transfer" && h.sharedTransfers) return false;
         if (f === "Early check-in" && !h.earlyCheckIn) return false;
       }
+      if (filters.sharedTransfer && !h.sharedTransfers) return false;
       if (filters.stars.size && !filters.stars.has(h.stars)) return false;
       if (filters.minRating > 0 && h.bookingScore < filters.minRating) return false;
       if (filters.meals.size && !h.rooms.some(r => filters.meals.has(r.mealPlan))) return false;
@@ -307,8 +423,19 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     else if (filters.sort === "rating") list = [...list].sort((a, b) => b.bookingScore - a.bookingScore);
     else if (filters.sort === "distance") list = [...list].sort((a, b) => a.distanceFromCenter - b.distanceFromCenter);
     else list = [...list].sort((a, b) => (b.bookingScore + b.stars / 2) - (a.bookingScore + a.stars / 2));
-    return list;
-  }, [allHotels, currentHotelId, currentHotel, nights, filters]);
+
+    // Hotels already on the wishlist come first. The chosen sort still holds
+    // inside each group, so a saved hotel is lifted, not shuffled.
+    const wishDest = itinerary?.dest;
+    const saved = list.filter(h => wishSaved("hotel", wishDest, h.name));
+    const rest = list.filter(h => !wishSaved("hotel", wishDest, h.name));
+    return [...saved, ...rest];
+  }, [allHotels, currentHotelId, currentHotel, nights, filters, itinerary, wishSaved]);
+
+  const savedCount = useMemo(
+    () => shown.filter(h => wishSaved("hotel", itinerary?.dest, h.name)).length,
+    [shown, itinerary, wishSaved],
+  );
 
   // Escape closes what is on top, the way a full screen should.
   useEffect(() => {
@@ -352,17 +479,33 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   });
 
   const landmarkOptions = [...new Set(allHotels.map(h => h.neighbourhood))];
+  const honestAt = Math.min(savedCount + 1, shown.length - 1);
+
   const activeFilterCount =
     filters.quick.size + filters.stars.size + (filters.minRating > 0 ? 1 : 0) +
-    filters.meals.size + filters.landmarks.size + filters.amenities.size + filters.roomFacilities.size;
+    filters.meals.size + filters.landmarks.size + filters.amenities.size + filters.roomFacilities.size +
+    (filters.sharedTransfer ? 1 : 0);
 
   const clearAllFilters = () => setFilters(prev => ({
     quick: new Set(), stars: new Set(), minRating: 0, meals: new Set(),
-    landmarks: new Set(), amenities: new Set(), roomFacilities: new Set(), sort: prev.sort,
+    landmarks: new Set(), amenities: new Set(), roomFacilities: new Set(), sharedTransfer: false, sort: prev.sort,
   }));
 
   const openHotel = (hotel) =>
     navigate(`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(hotel.id)}?current=${encodeURIComponent(currentHotelId || "")}${dealQS}`);
+
+  // Saved by name, under the trip's destination, with the stay's town kept
+  // alongside: the hotel list is rebuilt for every set of dates, so a name is
+  // the only key that survives.
+  const isWished = (h) => wishSaved("hotel", itinerary.dest, h.name);
+  const toggleWish = (h) => wishToggle("hotel", itinerary.dest, h.name, {
+    name: h.name,
+    img: h.images?.[0]?.url,
+    sub: `${stayInfo.city} · ${h.stars}-star`,
+    city: stayInfo.city,
+    stars: h.stars,
+    score: h.bookingScore,
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.bg, position: "relative", overflow: "hidden" }}>
@@ -402,6 +545,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
         </div>
       </div>
 
+
       {/* ═══ The list ═══ */}
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(112px + env(safe-area-inset-bottom))" }}>
         {shown.length === 0 ? (
@@ -417,15 +561,47 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {shown.map(h => (
-              <HotelCard
-                key={h.id}
-                hotel={h}
+            {/* Saved hotels get a heading of their own, and the rest start under
+                a second one, so it is plain that the first few are the
+                wishlist and not the best matches. Without saves there is one
+                list and no headings at all. */}
+            {/* Saved hotels sit on a pink shelf of their own, swiped
+                sideways, so they read as the wishlist at a glance and the
+                list under it stays plain. Without saves there is one list
+                and no headings at all. */}
+            {savedCount > 0 && (
+              <WishlistShelf
+                hotels={shown.slice(0, savedCount)}
+                city={stayInfo.city}
                 nights={nights}
-                priceDelta={currentHotel ? (h.pricePerNight - currentHotel.pricePerNight) * nights : null}
+                currentHotel={currentHotel}
                 onOpen={openHotel}
-                onGallery={(hotel, at) => setGallery({ hotel, at })}
+                onSave={toggleWish}
               />
+            )}
+            {shown.map((h, i) => i < savedCount ? null : (
+              <Fragment key={h.id}>
+                {savedCount > 0 && i === savedCount && (
+                  <p style={{ margin: "2px 0 -4px", display: "flex", alignItems: "baseline", gap: 8, fontSize: 15, fontWeight: 800, color: C.head }}>
+                    All hotels in {stayInfo.city}
+                    <span style={{ fontSize: 12.5, fontWeight: 500, color: C.sub }}>{shown.length - savedCount} more</span>
+                  </p>
+                )}
+                <HotelCard
+                  hotel={h}
+                  nights={nights}
+                  priceDelta={currentHotel ? (h.pricePerNight - currentHotel.pricePerNight) * nights : null}
+                  onOpen={openHotel}
+                  onGallery={(hotel, at) => setGallery({ hotel, at })}
+                  saved={isWished(h)}
+                  onSave={() => toggleWish(h)}
+                  gold={goldIds.has(h.id)}
+                />
+                {/* The honest bit, after the second hotel of the main list
+                    (the wishlist group above it does not count), or after
+                    the last one when the list is shorter than that. */}
+                {i === honestAt && <HonestBand city={stayInfo.city} stay={stay} onOpen={() => setGuideOpen(true)} />}
+              </Fragment>
             ))}
 
             {/* The one thing the overflow menu used to hold. It is a real
@@ -463,11 +639,13 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                 onClick={() => toggleQuick(q.key)}
                 style={{
                   flexShrink: 0, borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
+                  display: "inline-flex", alignItems: "center",
                   border: on ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
                   background: on ? "#FFEBF1" : C.white,
                   fontSize: 12, fontWeight: 500, color: on ? "#FD014F" : C.head, whiteSpace: "nowrap",
                 }}
               >
+                {q.icon && <Crown size={11} color={on ? "#FD014F" : "#C8901A"} fill={on ? "#FD014F" : "#C8901A"} strokeWidth={1.5} style={{ marginRight: 4 }} />}
                 {q.label}
               </button>
             );
@@ -491,6 +669,8 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           )}
         </button>
       </div>
+
+      {guideOpen && stay && <StayGuideSheet stay={stay} city={stayInfo.city} onClose={() => setGuideOpen(false)} />}
 
       {/* ═══ Sorting and filters, one tabbed sheet ═══ */}
       {showSheet && (
@@ -554,6 +734,11 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                   {mealOptions.map(m => (
                     <FilterChip key={m} label={m} on={filters.meals.has(m)} onClick={() => toggleFilter("meals", m)} />
                   ))}
+                </div>
+
+                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Transfers</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                  <FilterChip label="Shared transfer available" on={filters.sharedTransfer} onClick={() => setFilters(prev => ({ ...prev, sharedTransfer: !prev.sharedTransfer }))} />
                 </div>
 
                 <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Nearby landmarks</p>
@@ -638,6 +823,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           currentHotel={currentHotel}
           onOpen={(h) => { setMapOpen(false); openHotel(h); }}
           onClose={() => setMapOpen(false)}
+          isSaved={isWished}
         />
       )}
     </div>

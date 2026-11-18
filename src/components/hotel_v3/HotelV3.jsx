@@ -9,6 +9,7 @@ import SourceLogo from "../hotel_detail/SourceLogo";
 import { SOURCES } from "../../data/hotelDetailData";
 import { GREEN, AMBER, LOW_THRESHOLD } from "../../data/dayRatings";
 import MediaHeader from "./MediaHeader";
+import SaveHeart from "../SaveHeart";
 import GalleryScreen from "./GalleryScreen";
 import Ratings from "./Ratings";
 import {
@@ -157,6 +158,8 @@ export default function HotelV3({
   onPickRoom,
   onOpenSimilar,
   selectedRoomId,
+  // A room whose details open as the page does.
+  openRoomId = null,
   jumpRef,
   // The three places this screen opens from each bring something of their own:
   // a booking card or a stay summary above the fold, perks and add-ons after
@@ -178,6 +181,10 @@ export default function HotelV3({
   // Which paper the honest bit is written on. The postcard is the one we
   // picked, so it is what every screen gets unless it asks for the other.
   honestVariant = "postcard",
+  // The wishlist heart beside the hotel name. The screen that opens this knows
+  // which destination it is in, so it owns the save and hands it down here.
+  saved = false,
+  onSave = null,
 }) {
   const [gallery, setGallery] = useState(null);
   const scroller = useRef(null);
@@ -226,10 +233,15 @@ export default function HotelV3({
         />
 
         <div style={{ padding: `18px ${PAD}px 0` }}>
-          <h1 style={{ ...T.h1, margin: 0 }}>
-            {hotel.name}
-            {hotel.sundaysPick !== false && <SundaysPick />}
-          </h1>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <h1 style={{ ...T.h1, margin: 0, flex: 1, minWidth: 0 }}>
+              {hotel.name}
+              {hotel.sundaysPick !== false && <SundaysPick />}
+            </h1>
+            {onSave && (
+              <SaveHeart saved={saved} onToggle={onSave} size={32} style={{ marginTop: -1, marginRight: -7 }} />
+            )}
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0 0", flexWrap: "wrap" }}>
             <Stars n={hotel.stars} size={13} />
             <span style={{ ...T.meta, fontSize: 12.5 }}>
@@ -260,6 +272,7 @@ export default function HotelV3({
             hotel={hotel}
             onPick={onPickRoom}
             selectedId={selectedRoomId}
+            openId={openRoomId}
             readOnly={readOnly}
             title={roomsTitle}
             currentId={currentRoomId}

@@ -6,12 +6,12 @@
 const CDN = "https://cdn.30sundays.club/app_content";
 
 const upgradeData = {
-  // Bali 7N Relaxed (id: 1), Ubud, Seminyak, Sanur
+  // Bali 7N (id: 1), Seminyak, Nusa Penida, Gili Trawangan, Ubud
   1: [
     {
-      cityIndex: 0, // Ubud, 4★ → 5★
+      cityIndex: 3, // Ubud, 4★ → 5★
       current: {
-        name: "Padma Resort Ubud",
+        name: "Ubud Grand Resort",
         stars: 4,
         type: "Deluxe Room · Breakfast included",
         rating: 8.4,
@@ -32,25 +32,24 @@ const upgradeData = {
         ],
       },
     },
-    // Seminyak is already 5★ (The Mulia), no upgrade
     {
-      cityIndex: 2, // Sanur, 4★ → 5★
+      cityIndex: 0, // Seminyak, 4★ → 5★
       current: {
-        name: "COMO Uma Sanur",
+        name: "Seminyak Grand Resort",
         stars: 4,
         type: "Garden Room · Breakfast included",
         rating: 8.1,
         img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80&auto=format&fit=crop",
       },
       upgrade: {
-        name: "Four Seasons Sayan",
+        name: "The Legian Seminyak",
         stars: 5,
-        type: "Riverfront Villa · Half board",
+        type: "Ocean View Suite · Half board",
         rating: 9.4,
         img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=80&auto=format&fit=crop",
         delta: 3800,
         perks: [
-          "Valley-view private terrace",
+          "Ocean-view private terrace",
           "Daily yoga sessions",
           "Gourmet dining credit",
           "Sunset cocktails included",
@@ -59,27 +58,27 @@ const upgradeData = {
     },
   ],
 
-  // Bali 5N Relaxed (id: 2), Seminyak, Nusa Dua
+  // Bali 5N (id: 2), Seminyak, Ubud
   2: [
     {
-      cityIndex: 1, // Nusa Dua, 4★ → 5★
+      cityIndex: 0, // Seminyak, 4★ → 5★
       current: {
-        name: "Hilton Bali Resort",
+        name: "Seminyak Grand Resort",
         stars: 4,
         type: "Deluxe Room · Breakfast included",
         rating: 8.3,
         img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80&auto=format&fit=crop",
       },
       upgrade: {
-        name: "The Ritz-Carlton Bali",
+        name: "The Oberoi Seminyak",
         stars: 5,
-        type: "Cliff Villa · All meals included",
+        type: "Garden Villa · All meals included",
         rating: 9.3,
         img: "https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=600&q=80&auto=format&fit=crop",
         delta: 4200,
         perks: [
           "Private beach access",
-          "Couples spa treatment",
+          "Spa treatment for two",
           "Club lounge access",
           "Sunset dining experience",
         ],
@@ -87,19 +86,71 @@ const upgradeData = {
     },
   ],
 
-  // Bali 7N Explorer (id: 4), Ubud, Kintamani, Canggu
+  // Bali 7N draft (id: 3), Ubud, Nusa Penida, Seminyak
+  3: [
+    {
+      cityIndex: 0, // Ubud, 4★ → 5★
+      current: {
+        name: "Ubud Grand Resort",
+        stars: 4,
+        type: "Deluxe Room · Breakfast included",
+        rating: 8.4,
+        img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80&auto=format&fit=crop",
+      },
+      upgrade: {
+        name: "Viceroy Bali",
+        stars: 5,
+        type: "Pool Villa · All meals included",
+        rating: 9.2,
+        img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80&auto=format&fit=crop",
+        delta: 2100,
+        perks: [
+          "Private infinity pool",
+          "Valley view terrace",
+          "Daily breakfast and dinner",
+          "Spa session for two",
+        ],
+      },
+    },
+    {
+      cityIndex: 2, // Seminyak, 4★ → 5★
+      current: {
+        name: "Seminyak Grand Resort",
+        stars: 4,
+        type: "Deluxe Room · Breakfast included",
+        rating: 8.1,
+        img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80&auto=format&fit=crop",
+      },
+      upgrade: {
+        name: "W Bali Seminyak",
+        stars: 5,
+        type: "Ocean Suite · Breakfast included",
+        rating: 9.0,
+        img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=80&auto=format&fit=crop",
+        delta: 1900,
+        perks: [
+          "Beachfront suite",
+          "Two pools and a kids club",
+          "Club lounge access",
+          "Sunrise yoga on the sand",
+        ],
+      },
+    },
+  ],
+
+  // Bali 7N (id: 4), Seminyak, Ubud
   4: [
     {
-      cityIndex: 2, // Canggu, 4★ → 5★
+      cityIndex: 0, // Seminyak, 4★ → 5★
       current: {
-        name: "Canggu Beach Resort",
+        name: "Seminyak Grand Resort",
         stars: 4,
         type: "Garden Suite · Breakfast included",
         rating: 8.0,
         img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80&auto=format&fit=crop",
       },
       upgrade: {
-        name: "Como Uma Canggu",
+        name: "Alila Seminyak",
         stars: 5,
         type: "Penthouse Suite · All meals included",
         rating: 9.1,
@@ -107,7 +158,7 @@ const upgradeData = {
         delta: 3600,
         perks: [
           "Rooftop infinity pool",
-          "Surf lesson included",
+          "Beachfront pool",
           "Spa credit ₹5,000/day",
           "Sunset yoga sessions",
         ],

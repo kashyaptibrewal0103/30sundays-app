@@ -77,6 +77,8 @@ export function toDayOptions({ itinerary, dayIndex, plans, city }) {
     return {
       ...p,
       name: acts.join(", "),
+      // Kept as names, so a screen can say which of them a couple already saved.
+      activities: acts,
       images,
       video,
       mediaCount: images.length + (video ? 1 : 0),

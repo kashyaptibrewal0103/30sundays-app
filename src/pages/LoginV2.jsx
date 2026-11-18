@@ -81,7 +81,7 @@ const fmtPhone = (p) => (p.length === 10 ? `${p.slice(0, 5)} ${p.slice(5)}` : p)
 //   demoKeyboard                                 - the in-screen keyboard and message simulation
 //   initial { phase, channel, phone, timer }     - open straight on a state (demo links)
 //   failWhatsApp                                 - WhatsApp can't reach the number (demo)
-export default function LoginV2({ onComplete, onSkip: onSkipProp, onBack: onBackProp, validateOtp, showSkip = false, demoKeyboard = false, initial = null, failWhatsApp = false }) {
+export default function LoginV2({ onComplete, onSkip: onSkipProp, onBack: onBackProp, validateOtp, showSkip = false, demoKeyboard = false, initial = null, failWhatsApp = false, reason }) {
   const navigate = useNavigate();
   const [phase, setPhase] = useState(initial?.phase || "phone"); // phone | otp
   const [country, setCountry] = useState(countryCodes[0]);
@@ -385,7 +385,8 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, onBack: onBack
               <LogoMark height={88} />
             </div>
             <h1 style={{ margin: compact ? "14px 0 0" : "26px 0 0", fontSize: 25, fontWeight: 800, letterSpacing: -0.4, color: T.navy, animation: "lv2Up 0.6s cubic-bezier(0.4,0,0.2,1) 80ms both" }}>
-              Let's plan your getaway
+              {/* Why we are asking, when a tap brought them here (a heart, say). */}
+              {reason || "Let's plan your getaway"}
             </h1>
             <p style={{ margin: "10px 0 0", fontSize: 14.5, lineHeight: 1.5, color: T.muted, maxWidth: 320, animation: "lv2Up 0.6s cubic-bezier(0.4,0,0.2,1) 140ms both" }}>
               Your number helps our travel consultant reach you with a personalised itinerary

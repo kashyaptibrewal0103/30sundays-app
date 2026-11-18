@@ -65,11 +65,6 @@ export default function WatchCard({ video, onOpen, live = false, width, aspect =
         {/* Subtle vignette so chips read on any image */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.35) 100%)" }} />
 
-        {/* Save heart - top-left so the duration pill owns top-right */}
-        <div style={{ position: "absolute", top: 8, left: 8 }}>
-          <SaveHeart onPhoto size={28} saved={isSaved(video.id)} onToggle={() => toggle(video.id)} />
-        </div>
-
         {/* Duration pill - strong "this is a video" cue */}
         <div style={{
           position: "absolute", top: 8, right: 8,
@@ -102,14 +97,19 @@ export default function WatchCard({ video, onOpen, live = false, width, aspect =
             {cat.label}
           </span>
         </div>
-        <p style={{
-          fontSize: 13, fontWeight: 600, color: C.head,
-          margin: 0, lineHeight: 1.3,
-          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}>
-          {video.title}
-        </p>
+        {/* Title with its save heart, right aligned on the first line */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+          <p style={{
+            flex: 1, minWidth: 0,
+            fontSize: 13, fontWeight: 600, color: C.head,
+            margin: 0, lineHeight: 1.3,
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}>
+            {video.title}
+          </p>
+          <SaveHeart size={28} saved={isSaved(video.id)} onToggle={() => toggle(video.id)} style={{ marginTop: -6, marginRight: -6, marginBottom: -6 }} />
+        </div>
       </div>
     </div>
   );

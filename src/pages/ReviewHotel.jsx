@@ -1,7 +1,7 @@
 import { useParams, useSearchParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowDown, Check } from "lucide-react";
 import { C, allItineraries } from "../data";
-import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
+import { stayHotels, getStayInfo, formatHotelPrice } from "../data/hotelData";
 
 export default function ReviewHotel({ selectedHotels, setSelectedHotels }) {
   const { itineraryId, stayIndex } = useParams();
@@ -16,7 +16,7 @@ export default function ReviewHotel({ selectedHotels, setSelectedHotels }) {
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
 
   const hotels = itinerary && stayInfo
-    ? generateHotelsForCity(stayInfo.city, itinerary.dest, stayInfo.checkIn, stayInfo.checkOut, stayInfo.nights)
+    ? stayHotels(itinerary, Number(stayIndex))
     : [];
 
   const newHotel = hotels.find(h => h.id === decodeURIComponent(newHotelId));

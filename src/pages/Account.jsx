@@ -13,7 +13,6 @@ import { C } from "../data";
 import RatingSheet from "../components/RatingSheet";
 import EditProfileScreen from "../components/EditProfileScreen";
 import { useProfile, initialsOf } from "../data/profile";
-import { useDeals } from "../data/deals";
 import { useWishlist } from "../data/wishlist";
 import { useAIPhotos } from "../state/useAIPhotos";
 import { AI_PHOTOS_VARIANT } from "../data/aiPhotosVariant";
@@ -130,9 +129,8 @@ export default function Account({ userState, leadData, setUserState, setLeadData
   const isLoggedIn = userState !== "new";
   const profile = leadData || DEMO_PROFILES[userState] || null;
   const { values: pv } = useProfile();
-  const { wished } = useDeals();
   const { counts } = useWishlist();
-  const wishlistTotal = Object.values(wished || {}).filter(Boolean).length + (counts?.poiTotal || 0);
+  const wishlistTotal = counts.total;
 
   // AI Couple Photos. This is where the couple configures the feature: nothing
   // for it sits on the home screen.
@@ -169,7 +167,7 @@ export default function Account({ userState, leadData, setUserState, setLeadData
     { icon: Gift, label: "Gift cards", onClick: () => navigate("/gift-cards") },
     { icon: HeartHandshake, label: "Gift registry", onClick: () => navigate("/registry") },
     { icon: Share2, label: "Refer & Earn", onClick: () => setShowRefer(true) },
-    { icon: Bookmark, label: "Saved & Wishlist", badge: wishlistTotal || undefined, onClick: () => navigate("/saved") },
+    { icon: Bookmark, label: "Wishlist", badge: wishlistTotal || undefined, onClick: () => navigate("/saved") },
     { icon: Users, label: "Travellers & documents", onClick: () => setShowTravellers(true) },
     { icon: HelpCircle, label: "Contact Support", onClick: () => setShowSupport(true) },
     // Both open the same sheet, on the tab they are named after.

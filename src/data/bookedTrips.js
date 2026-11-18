@@ -82,7 +82,7 @@ function pick() {
 
     const byNights = new Map();
     allItineraries
-      .filter((it) => it.dest === dest)
+      .filter((it) => it.dest === dest && !it.sample)
       .sort((a, b) => a.nights - b.nights || num(a.price) - num(b.price))
       .forEach((it) => { if (!byNights.has(it.nights)) byNights.set(it.nights, it); });
 

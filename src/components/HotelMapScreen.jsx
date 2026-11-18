@@ -46,7 +46,11 @@ function placeHotels(all, centre) {
 }
 
 // ─── The pin ───
-function pricePin({ delta, selected }) {
+// A hotel on the wishlist carries a small pink heart in front of its price,
+// the same mark it has in the list, and sits above the pins around it.
+const PIN_HEART = `<svg width="11" height="11" viewBox="0 0 24 24" fill="${C.p600}" stroke="${C.p600}" stroke-width="2" style="flex-shrink:0"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`;
+
+function pricePin({ delta, selected, saved }) {
   const up = delta > 0;
   const flat = !delta;
   const col = flat ? C.sub : up ? "#B42318" : "#027A48";
@@ -63,7 +67,7 @@ function pricePin({ delta, selected }) {
     html: `<div style="display:flex;align-items:center;gap:3px;background:${bg};border:1.5px solid ${col};
         border-radius:999px;padding:3px 9px 3px 7px;white-space:nowrap;font-family:inherit;
         box-shadow:0 2px 8px rgba(16,24,40,${selected ? ".34" : ".18"});transform:scale(${selected ? 1.08 : 1})">
-      ${arrow}<span style="font-size:11.5px;font-weight:800;color:${fg}">${label}</span>
+      ${saved ? `<span style="display:inline-grid;place-items:center;${selected ? "background:#fff;border-radius:50%;width:15px;height:15px;" : ""}margin-right:1px">${PIN_HEART}</span>` : ""}${arrow}<span style="font-size:11.5px;font-weight:800;color:${fg}">${label}</span>
     </div>`,
     iconSize: [78, 24],
     iconAnchor: [39, 12],
@@ -151,7 +155,7 @@ function MiniCard({ hotel, nights, delta, onOpen }) {
   );
 }
 
-export default function HotelMapScreen({ hotels, allHotels, city, nights, currentHotel, onOpen, onClose }) {
+export default function HotelMapScreen({ hotels, allHotels, city, nights, currentHotel, onOpen, onClose, isSaved }) {
   const [sel, setSel] = useState(null);
   const centre = useMemo(() => coordsFor(city) || { lat: -8.5069, lng: 115.2625 }, [city]);
   const spots = useMemo(() => placeHotels(allHotels || hotels, centre), [allHotels, hotels, centre]);
@@ -182,8 +186,8 @@ export default function HotelMapScreen({ hotels, allHotels, city, nights, curren
           <Marker
             key={h.id}
             position={[h.lat, h.lng]}
-            icon={pricePin({ delta: deltaOf(h) ?? 0, selected: sel === h.id })}
-            zIndexOffset={sel === h.id ? 1000 : 0}
+            icon={pricePin({ delta: deltaOf(h) ?? 0, selected: sel === h.id, saved: isSaved?.(h) })}
+            zIndexOffset={sel === h.id ? 1000 : isSaved?.(h) ? 500 : 0}
             eventHandlers={{ click: () => setSel((s) => (s === h.id ? null : h.id)) }}
           />
         ))}

@@ -24,9 +24,12 @@ import LoginV2 from "./LoginV2";
 import NextStepNote from "../components/NextStepNote";
 import MonthWeather from "../components/MonthWeather";
 import DateRange from "../components/wizard/DateRange";
-import RoutePicker from "../components/wizard/RoutePicker";
+import RoutePicker, { split as splitNights } from "../components/wizard/RoutePicker";
+import { useWishlist } from "../data/wishlist";
+import { regionByCity } from "../data/discoverData";
+import WishlistPickSheet, { SavedHint, SavedMark } from "../components/WishlistPickSheet";
 import { BuildingView } from "./Generating";
-
+import ActivityPicker from "../components/wizard/ActivityPicker";
 // How long the wait screen holds before the itinerary opens. The real build
 // takes about a minute; this is a preview of it, long enough to read.
 const BUILD_WAIT = 6000;
@@ -168,6 +171,15 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   // trip): the trip already has day plans, so skip the Activities step and
   // finish on Route.
   const skipActivities = !!seedDest && params.get("skipActivities") === "1";
+  // Planning from a wishlist board. The board already says where (a saved
+  // itinerary, or the saved places), so the wizard asks only who is going
+  // and when, and makes the itinerary on the second Continue.
+  const fromBoard = seedDest && params.get("from") === "wishlist" ? params.get("use") : null; // "itin" | "saves"
+  const boardItin = fromBoard === "itin"
+    ? (allItineraries.find((i) => String(i.id) === params.get("itin")) || dealsCtx.getDeal(params.get("deal"))?.customItinerary || null)
+    : null;
+  const quick = fromBoard === "saves" || !!boardItin;
+  const { ofKind } = useWishlist();
 
   const [step, setStep] = useState(editMode ? editStep : (seedDest ? 1 : 0));
   const [dest, setDest] = useState(editBuilt?.dest || seedDest || null);
@@ -179,7 +191,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   const [vibes, setVibes] = useState(editBuilt?._vibes || []);
   const [startDate, setStartDate] = useState(editBuilt?.startDate || null);
   // Maldives asks for a fixed 3 or 4 nights, so it starts unset (no default fill).
-  const [nights, setNights] = useState(editBuilt?.nights || (seedDest && seedDest !== "Maldives" ? (destMeta[seedDest]?.defaultNights || 7) : null));
+  const [nights, setNights] = useState(editBuilt?.nights || boardItin?.nights || (seedDest && seedDest !== "Maldives" ? (destMeta[seedDest]?.defaultNights || 7) : null));
   const [route, setRoute] = useState(editBuilt?.route || null);
   const [picks, setPicks] = useState(() => {
     // In edit mode, pre-select the activities already in the built itinerary so
@@ -284,11 +296,14 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     return map;
   }, [route, vibes, picks]);
 
-  const doBuild = () => {
+  const doBuild = (given = {}) => {
+    const useRoute = given.route || route;
+    const usePicks = given.picksByCity || picksByCity;
     setBuilding(true);
     setTimeout(() => {
+      const route = useRoute;
       const it = synthesizeItinerary({
-        dest, nights: routeNights(route), route, picksByCity, vibes, startDate, party,
+        dest, nights: routeNights(route), route, picksByCity: usePicks, vibes, startDate, party,
       });
       it._vibes = vibes; // keep for potential re-entry
       it.leadName = name; // captured on the Travellers step, kept for re-entry
@@ -309,6 +324,51 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
       // Back from the itinerary doesn't return into the half-built wizard.
       navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${versionId}&saved=1`, { replace: true });
     }, BUILD_WAIT);
+  };
+
+  // ─── Straight from a board ───
+  // The saves: the saved regions are the route, with the towns of the other
+  // saves added when there is room (about two nights a town), the nights
+  // shared out the way the route step shares them, and the saved things to
+  // do already picked. With nothing placeable saved, our usual route.
+  const doBuildFromSaves = () => {
+    const areas = destAreas[dest] || [];
+    const canonical = areas.map((a) => a.city);
+    const rec = Object.fromEntries(areas.map((a) => [a.city, a.n]));
+    const n = nights || targetNights;
+    // Towns ranked by how much was saved in them (the town itself, and the
+    // hotels, food and things to do there). Day trips are not somewhere to
+    // stay, so they are visited from a base rather than given nights.
+    const weight = {};
+    ofKind("region", dest).forEach((i) => { weight[i.id] = (weight[i.id] || 0) + 1; });
+    ["activity", "hotel", "restaurant"].forEach((k) => ofKind(k, dest).forEach((i) => { if (i.city) weight[i.city] = (weight[i.city] || 0) + 1; }));
+    const wanted = Object.keys(weight)
+      .filter((c) => canonical.includes(c) && !regionByCity(dest, c)?.dayTrip)
+      .sort((a, b) => weight[b] - weight[a])
+      .slice(0, Math.max(1, Math.floor(n / 2)));
+    const cities = canonical.filter((c) => wanted.includes(c));
+    const r = cities.length ? splitNights(cities, rec, n) : recommendedRoute(dest, n);
+    const savedActs = new Set(ofKind("activity", dest).map((i) => i.name));
+    const p = {};
+    activityPool(dest, r, []).forEach((g) => { p[g.city] = g.activities.filter((a) => savedActs.has(a.name)).map((a) => a.name); });
+    doBuild({ route: r, picksByCity: p });
+  };
+  // A saved itinerary: that itinerary, on these dates, for these people.
+  const doBuildFromItin = () => {
+    const it = boardItin;
+    setBuilding(true);
+    setTimeout(() => {
+      const { dealId, versionId } = dealsCtx.createDeal({
+        itineraryId: it.id,
+        dest: it.dest,
+        title: it.route?.map((r) => r.city).join(" · ") || `${it.dest} trip`,
+        img: it.img,
+        customItinerary: it.custom ? it : null,
+        customizations: { leadName: name, selectedDayOptions: {}, selectedHotels: {}, travelDates: { fromDate: startDate, nights: nights || it.nights, travelers: travellers } },
+        indicativePrice: Number(String(it.price).replace(/,/g, "")) || 0,
+      });
+      navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${versionId}`, { replace: true });
+    }, 1400);
   };
 
   // Mobile OTP verification before the itinerary is created (non-skippable).
@@ -412,7 +472,9 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     }
     switch (step) {
       case 1: return { label: "Continue", onClick: goNext, enabled: partyOk && nameOk };
-      case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
+      case 2: return quick
+        ? { label: "Create my itinerary ✦", onClick: () => gatedBuild(boardItin ? doBuildFromItin : doBuildFromSaves), enabled: !!startDate && !!nights }
+        : { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
       case 3: return skipActivities
         ? { label: "Create my itinerary ✦", onClick: () => gatedBuild(doBuild), enabled: routeStepOk, onBlocked: nudgeRoute }
         : { label: "Looks good, continue", onClick: goNext, enabled: routeStepOk, onBlocked: nudgeRoute };
@@ -518,7 +580,8 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
           <div ref={stepBarRef} className="hide-scrollbar" style={{ flex: 1, display: "flex", gap: 10, minWidth: 0, overflowX: "auto" }}>
             {/* Activities is dropped for the edit flow and the ready-made-itinerary
                 flow (both non-Maldives end on Route). */}
-            {((editMode || skipActivities) && !isMaldives ? STEP_LABELS.slice(0, 4) : STEP_LABELS).map((label, i) => {
+            {/* From a board it is only who and when, so only those show. */}
+            {(quick && !isMaldives ? STEP_LABELS.slice(0, 3) : (editMode || skipActivities) && !isMaldives ? STEP_LABELS.slice(0, 4) : STEP_LABELS).map((label, i) => {
               const done = i < step;
               const current = i === step;
               // Steps before the edit entry are locked (dimmed); the entry and
@@ -578,7 +641,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
           tapping it produces and that the result can still be changed. */}
       {cta && (
         <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, background: C.white }}>
-        {(step === 4 || (step === 3 && skipActivities)) && <NextStepNote />}
+        {(step === 4 || (step === 3 && skipActivities) || (step === 2 && quick && !isMaldives)) && <NextStepNote />}
         <div style={{ padding: "12px 16px calc(12px + env(safe-area-inset-bottom))" }}>
           {/* A greyed CTA that answers when it is tapped. A button that does
               nothing at all leaves somebody guessing what is missing. */}
@@ -1432,14 +1495,6 @@ function CityDetail({ dest, city, onClose }) {
 // Portrait reel cards, 2 per row; tap opens the full-screen reel. A corner tick
 // toggles selection. "See more" reveals the rest; "Skip" auto-builds the best.
 function StepActivities({ dest, route, vibes, picks, setPicks }) {
-  const all = useMemo(() => flatActivities(dest, route, vibes), [dest, route, vibes]);
-  const [showAll, setShowAll] = useState(false);
-  const [reel, setReel] = useState(null);
-  const toggle = (id) => setPicks(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
-
-  const TOP = 8;
-  const shown = showAll ? all : all.slice(0, TOP);
-
   return (
     <div style={{ padding: "18px 16px 24px" }}>
       {/* The name of the step, like every other step. "What sounds fun?" asked
@@ -1448,32 +1503,19 @@ function StepActivities({ dest, route, vibes, picks, setPicks }) {
           at the moment somebody is being invited to choose. The caveat is true
           and worth one short clause, not a paragraph. */}
       <h1 style={titleStyle}>Select activities</h1>
-      <p style={subStyle}>Pick any activity you like. We fit in what we can.</p>
+      <p style={subStyle}>Choose what you’d love to do. We’ll plan your days around it.</p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
-        {shown.map(a => (
-          <ActivityCard key={a.id} a={a} on={picks.has(a.id)} onOpen={() => setReel(a)} onToggle={() => toggle(a.id)} />
-        ))}
-      </div>
-
-      {!showAll && all.length > TOP && (
-        <button onClick={() => setShowAll(true)} style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%", marginTop: 16,
-          padding: "13px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white,
-          fontSize: 14, fontWeight: 700, color: C.head, cursor: "pointer", fontFamily: "inherit",
-        }}>
-          See more activities <ChevronDown size={15} color={C.sub} />
-        </button>
-      )}
-
-      {reel && <ActivityReel a={reel} dest={dest} on={picks.has(reel.id)} onToggle={() => toggle(reel.id)} onClose={() => setReel(null)} />}
+      {/* Saved activities carry their heart on the card and lead each city's
+          row. No separate list of saves to open: that took people off the
+          step to find what was already here. */}
+      <ActivityPicker dest={dest} route={route} vibes={vibes} picks={picks} setPicks={setPicks} />
     </div>
   );
 }
 
 // Portrait reel card (mirrors the destination cards). Tap the card to watch the
 // reel; tap the corner tick to add/remove.
-function ActivityCard({ a, on, onOpen, onToggle }) {
+function ActivityCard({ a, on, saved, onOpen, onToggle }) {
   const { rating, reviews } = activityRating(a.id);
   return (
     <div onClick={onOpen} style={{
@@ -1498,7 +1540,10 @@ function ActivityCard({ a, on, onOpen, onToggle }) {
           <span style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{rating}</span>
           <span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.8)", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>({reviews})</span>
         </div>
-        <p style={{ margin: 0, color: "#fff", fontSize: 14, fontWeight: 800, letterSpacing: "-0.2px", lineHeight: 1.2 }}>{a.name}</p>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+          <p style={{ flex: 1, minWidth: 0, margin: 0, color: "#fff", fontSize: 14, fontWeight: 800, letterSpacing: "-0.2px", lineHeight: 1.2 }}>{a.name}</p>
+          {saved && <SavedMark onPhoto size={20} style={{ marginTop: -2, marginRight: -3 }} />}
+        </div>
         <p style={{ margin: "2px 0 0", display: "flex", alignItems: "center", gap: 3, color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
           <MapPin size={10} color="rgba(255,255,255,0.85)" /> {a.city}
         </p>

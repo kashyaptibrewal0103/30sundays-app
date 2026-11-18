@@ -1,4 +1,4 @@
-import { ChevronRight, ArrowLeftRight, Play, Layers, TriangleAlert, Heart, Zap, Gauge, Flame, Moon } from "lucide-react";
+import { ChevronRight, ArrowLeftRight, Play, Layers, TriangleAlert, Heart, Zap, Gauge, Flame, Moon, Lock } from "lucide-react";
 import { C } from "../data";
 import { SCORE_PALETTE, LEVEL_KEYS } from "../data/dayScoring";
 import { DayRatingPill } from "./DayRating";
@@ -53,8 +53,8 @@ function PaceChip({ pace, level }) {
 }
 
 export default function GlanceDayCard({
-  dayNum, city, lines, poster, videoCount = 0,
-  pace, paceLevel, rating, note, canChange,
+  dayNum, city, date, lines, poster, videoCount = 0,
+  pace, paceLevel, rating, kind, locked, note, canChange,
   onOpen, onChange, onOpenReviews, testId, changeTestId,
 }) {
   return (
@@ -94,14 +94,29 @@ export default function GlanceDayCard({
               display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0,
             }}>
               <span style={{ flexShrink: 0 }}>Day {dayNum}</span>
+              {/* The date in the same line, in a lighter weight: a second line
+                  per card would add a row to every day for a few characters. */}
+              {date && (
+                <span style={{ flexShrink: 0, fontWeight: 500, color: C.inact, textTransform: "none", letterSpacing: 0 }}>({date})</span>
+              )}
               <span style={{ opacity: 0.45, flexShrink: 0 }}>&middot;</span>
               <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{city}</span>
             </span>
-            <ChevronRight size={17} color={C.sub} style={{ flexShrink: 0, marginTop: -1 }} />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, marginTop: -1 }}>
+              {/* A day that cannot be changed says so with a lock and nothing
+                  more here. The reason is one line inside the day. */}
+              {locked && <Lock size={12} color={C.inact} strokeWidth={2.4} aria-label="This day can't be changed" />}
+              <ChevronRight size={17} color={C.sub} />
+            </span>
           </div>
 
-          {(rating || pace) && (
+          {(rating || kind || pace) && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              {/* Where the rating would be, in plain grey words rather than a
+                  chip, so it does not look like something to tap. */}
+              {!rating && kind && (
+                <span style={{ fontSize: 11.5, color: C.inact, marginRight: 2 }}>{kind}</span>
+              )}
               {/* The rating is a way in, not just a badge: it opens the day
                   already scrolled to what couples actually said. */}
               {rating && onOpenReviews ? (

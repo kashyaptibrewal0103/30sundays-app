@@ -3,20 +3,25 @@ import { C } from "../data";
 
 // ─── One wishlist control, everywhere ───
 //
-// The app had four hearts doing the same job. A pink disc with a white heart
-// inside it on the discover cards. A bare pink outline on the plan cards. A
-// white outline on a black disc over the video thumbnails. A heart that was
-// always filled on the saved screen. Four readings of one promise, so the
+// The app had four hearts doing the same job, each with its own look, so the
 // state of a save was something a couple had to learn again on every screen.
 //
-// One rule now. The heart is the brand pink wherever it appears. Outline means
-// not saved, solid means saved, and that is the only difference between the two
-// states. Over a photograph it sits in a white disc, because a pink outline on
-// a picture nobody has seen yet is a coin toss; on white it needs nothing
-// behind it.
+// One rule now. The heart sits beside the name of the thing it saves, right
+// aligned, never on the photo and never in the header: it belongs to the name,
+// and a photo stays a photo. Empty is a mid grey outline, saved is a solid
+// pink heart with no outline. Where a name is printed over a photo (white text
+// on a dark scrim) the empty heart is white instead, with a soft shadow,
+// because grey beside white text reads as disabled.
+//
+// The tap area stays generous while the drawn heart is small, so callers pull
+// it in with a negative margin to line the heart up with the text edge.
 
-export default function SaveHeart({ saved, onToggle, onPhoto = false, size = 32 }) {
-  const icon = Math.round(size * 0.53);
+const EMPTY = "#8A8F98";
+export const PHOTO_HEART_SHADOW = "drop-shadow(0 1px 2px rgba(0,0,0,0.35))";
+
+export default function SaveHeart({ saved, onToggle, onPhoto = false, size = 32, iconSize, style }) {
+  const icon = iconSize || Math.round(size * 0.6);
+  const stroke = saved ? C.p600 : onPhoto ? "#fff" : EMPTY;
   return (
     <button
       type="button"
@@ -25,14 +30,12 @@ export default function SaveHeart({ saved, onToggle, onPhoto = false, size = 32 
       aria-pressed={!!saved}
       style={{
         width: size, height: size, flexShrink: 0, padding: 0, cursor: "pointer",
-        borderRadius: "50%", border: "none",
+        borderRadius: "50%", border: "none", background: "transparent",
         display: "flex", alignItems: "center", justifyContent: "center",
-        background: onPhoto ? "rgba(255,255,255,0.96)" : "transparent",
-        boxShadow: onPhoto ? "0 2px 8px rgba(16,24,40,0.22)" : "none",
-        ...(onPhoto ? { backdropFilter: "blur(8px)" } : null),
+        ...style,
       }}
     >
-      <Heart size={icon} color={C.p600} fill={saved ? C.p600 : "none"} strokeWidth={2.2} />
+      <Heart size={icon} color={stroke} fill={saved ? C.p600 : "none"} strokeWidth={2} style={onPhoto ? { filter: PHOTO_HEART_SHADOW } : undefined} />
     </button>
   );
 }

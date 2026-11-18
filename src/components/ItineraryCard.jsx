@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, Calendar } from "lucide-react";
 import { C, VS, allItineraries } from "../data";
+import SaveHeart from "./SaveHeart";
+import { useWishlist } from "../data/wishlist";
 
 // Version tag, subtle uppercase label
 const versionBadgeStyle = {
@@ -104,6 +106,21 @@ function RouteTitle({ route, fullWidth }) {
 
 export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates, hideDest = false, showVersion = false }) {
   const v = VS[vibe || it.vibe];
+  // A ready-made itinerary saves as a trip, keyed by its own id, so the
+  // wishlist can open it straight from the card.
+  const { isSaved, toggle } = useWishlist();
+  const wishId = `it_${it.id}`;
+  const saved = isSaved("trip", it.dest, wishId);
+  const onHeart = () => toggle("trip", it.dest, wishId, {
+    name: `${it.dest} trip · ${it.nights}N`,
+    img: it.img,
+    sub: (it.route || []).map(r => `${r.n}N ${r.city}`).join(" · ") || it.name || null,
+    city: null,
+  });
+  // The heart rides beside whichever name the card prints, white over the photo
+  const heart = (mt) => (
+    <SaveHeart onPhoto saved={saved} onToggle={onHeart} style={{ marginTop: mt, marginBottom: -6, marginRight: -6 }} />
+  );
   const cardW = fullWidth ? "100%" : 272;
   const cardH = fullWidth ? 360 : 340;
   const hasDates = travelDates?.fromDate;
@@ -115,7 +132,7 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
         <img src={it.img} alt={it.dest} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.82) 100%)" }} />
 
-        {/* Vibe tag top-right, glassmorphism */}
+        {/* Vibe tag top-right */}
         <span style={{ position: "absolute", top: 12, right: 12, ...vibeChipStyle(v) }}>{it.vibe}</span>
 
         {/* Veg badge top-left */}
@@ -127,7 +144,10 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 14px 14px" }}>
           {it.highlightResort && it.resort ? (
             <>
-              <h3 style={{ fontSize: fullWidth ? 22 : 20, fontWeight: 700, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.3px", lineHeight: 1.15 }}>{it.resort}</h3>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6, margin: "0 0 4px" }}>
+                <h3 style={{ flex: 1, minWidth: 0, fontSize: fullWidth ? 22 : 20, fontWeight: 700, color: "#fff", margin: 0, letterSpacing: "-0.3px", lineHeight: 1.15 }}>{it.resort}</h3>
+                {heart(-4)}
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 6px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>{it.dest}</span>
                 <span style={{ fontSize: 14, lineHeight: 1, color: "rgba(255,255,255,0.65)" }}>•</span>
@@ -141,7 +161,10 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
           ) : hideDest ? (
             <>
               {/* Title: route inline with nights, 2-line cap with +N cities suffix */}
-              <RouteTitle route={it.route} fullWidth={fullWidth} />
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                <div style={{ flex: 1, minWidth: 0 }}><RouteTitle route={it.route} fullWidth={fullWidth} /></div>
+                {heart(-6)}
+              </div>
 
               {/* Meta row: dest · total nights · (version only in Plan) · resort */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 6px", flexWrap: "wrap" }}>
@@ -165,6 +188,8 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
                 <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)" }}>·</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>🌙 {it.nights}N</span>
                 {showVersion && <span style={versionBadgeStyle}>{getVersion(it)}</span>}
+                <span style={{ flex: 1 }} />
+                {heart(-6)}
               </div>
               {it.resort && <p style={{ fontSize: 14, color: C.p300, fontWeight: 600, margin: "0 0 4px" }}>★ {it.resort}</p>}
             </>

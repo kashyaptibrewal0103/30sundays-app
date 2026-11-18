@@ -72,6 +72,7 @@ export const destAreas = {
     { city: "Canggu", emoji: "🏄", n: 2, crowd: "Mixed", tag: "Surf, cafés and beach town", blurb: "Surf, hip cafés and a laid-back beach-town buzz." },
     { city: "Uluwatu", emoji: "🛕", n: 1, crowd: "Mixed", tag: "Clifftop temples and surf", blurb: "Clifftop temples and dramatic sunset surf breaks." },
     { city: "Nusa Penida", emoji: "🌊", n: 2, crowd: "Low", tag: "Cliffs, snorkelling and beaches", blurb: "Cliffs, snorkelling and that postcard beach." },
+    { city: "Gili Trawangan", emoji: "🐢", n: 2, crowd: "Low", tag: "Turtles, no cars and sunsets", blurb: "Car-free island: turtles, cycling and long sunsets." },
     { city: "Labuan Bajo", emoji: "🐉", n: 2, crowd: "Low", tag: "Komodo dragons and islands", blurb: "Gateway to Komodo: dragons, pink beaches and island-hopping. A short flight from Bali." },
   ],
   Vietnam: [
@@ -87,6 +88,7 @@ export const destAreas = {
     { city: "Chiang Mai", emoji: "🐘", n: 2, crowd: "Mixed", tag: "Old city and mountain air", blurb: "Old-city temples, sanctuaries and mountain air." },
     { city: "Krabi", emoji: "🪨", n: 3, crowd: "Mixed", tag: "Limestone cliffs and islands", blurb: "Limestone cliffs, island hops and Railay beaches." },
     { city: "Phuket", emoji: "🏖️", n: 3, crowd: "High", tag: "Big beaches and nightlife", blurb: "Big beaches, Phi Phi day trips and nightlife." },
+    { city: "Phi Phi", emoji: "🏝️", n: 2, crowd: "High", tag: "Maya Bay and island hops", blurb: "Maya Bay, viewpoints and a night on the island." },
     { city: "Koh Samui", emoji: "🥥", n: 3, crowd: "Mixed", tag: "Palm beaches and slow pace", blurb: "Palm-fringed beach clubs and a slower pace." },
   ],
   Maldives: [
@@ -118,6 +120,7 @@ export const cityCoords = {
   Ubud: { lat: -8.5069, lng: 115.2625 }, Seminyak: { lat: -8.6917, lng: 115.1686 },
   Sanur: { lat: -8.6878, lng: 115.2526 }, Canggu: { lat: -8.6478, lng: 115.1385 },
   Uluwatu: { lat: -8.8291, lng: 115.0849 }, "Nusa Penida": { lat: -8.7274, lng: 115.5444 },
+  "Gili Trawangan": { lat: -8.3496, lng: 116.0397 },
   "Labuan Bajo": { lat: -8.4964, lng: 119.8877 },
   // Vietnam
   Hanoi: { lat: 21.0285, lng: 105.8542 }, "Ha Long": { lat: 20.9101, lng: 107.1839 },
@@ -126,6 +129,7 @@ export const cityCoords = {
   // Thailand
   Bangkok: { lat: 13.7563, lng: 100.5018 }, "Chiang Mai": { lat: 18.7883, lng: 98.9853 },
   Krabi: { lat: 8.0863, lng: 98.9063 }, Phuket: { lat: 7.8804, lng: 98.3923 },
+  "Phi Phi": { lat: 7.7407, lng: 98.7784 },
   "Koh Samui": { lat: 9.5120, lng: 100.0136 },
   // Maldives
   "Malé": { lat: 4.1755, lng: 73.5093 }, "Baa Atoll": { lat: 5.2000, lng: 73.0700 },
@@ -428,8 +432,19 @@ export function buildDayMeta(dest, route, nights) {
 let buildSeq = 0;
 // Build a complete itinerary object the existing itinerary screen renders as-is.
 export function synthesizeItinerary({ dest, nights, route, picksByCity, vibes, startDate, party, id: idOverride }) {
+  // A city's days hold three activities, so a fourth pick in the same city has
+  // nowhere to go. It used to vanish without a word. Now it is written down,
+  // with the reason, so the itinerary can say what did not make it.
+  const ROOM = 3;
+  const actReport = { kept: [], dropped: [] };
+  route.forEach((stop) => {
+    (picksByCity?.[stop.city] || []).forEach((name, i) => {
+      if (i < ROOM) actReport.kept.push({ name, city: stop.city });
+      else actReport.dropped.push({ name, city: stop.city, reason: `Not enough time in ${stop.city}` });
+    });
+  });
   const days = route.map((stop) => {
-    const chosen = (picksByCity?.[stop.city] || []).slice(0, 3);
+    const chosen = (picksByCity?.[stop.city] || []).slice(0, ROOM);
     const fallback = topActivities(stop.city, 3);
     const sub = (chosen.length ? chosen : fallback).join(" · ");
     return { city: stop.city, n: stop.n, sub };
@@ -460,5 +475,6 @@ export function synthesizeItinerary({ dest, nights, route, picksByCity, vibes, s
     partySize: party || { couples: 1, adults: 0, kids: 0 },
     startDate: startDate || null,
     dayMeta: buildDayMeta(dest, route, nights),
+    actReport,
   };
 }

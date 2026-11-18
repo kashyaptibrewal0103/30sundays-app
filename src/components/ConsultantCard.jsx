@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Phone, X as XIcon, MessageCircle } from "lucide-react";
 import { C } from "../data";
+import { avatarFor } from "../data/consultants";
 
 function initials(name) {
   if (!name) return "?";
@@ -126,9 +127,11 @@ export default function ConsultantCard({ consultant, role = "Your travel consult
         <div style={{
           width: 44, height: 44, borderRadius: "50%", background: C.p100,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: C.p600, fontSize: 15, fontWeight: 700, flexShrink: 0,
+          color: C.p600, fontSize: 15, fontWeight: 700, flexShrink: 0, overflow: "hidden",
         }}>
-          {initials(consultant.name)}
+          {avatarFor(consultant.name)
+            ? <img src={avatarFor(consultant.name)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.7)", transformOrigin: "50% 30%" }} />
+            : initials(consultant.name)}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 12, color: C.sub, margin: 0, fontWeight: 500 }}>{role}</p>

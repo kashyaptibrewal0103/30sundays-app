@@ -51,7 +51,7 @@ const LOOK = {
   soft: { on: { bg: "#FFE6ED", bd: "#FD014F", fg: "#C00840", ico: "#C00840", shadow: "none" } },
 };
 
-export default function SectionNav({ sections, elFor, onJump, title, onBack, variant = "solid" }) {
+export default function SectionNav({ sections, elFor, onJump, title, onBack, variant = "solid", inset = 0 }) {
   const look = (LOOK[variant] || LOOK.solid).on;
   const wrapRef = useRef(null);
   const barRef = useRef(null);
@@ -170,6 +170,8 @@ export default function SectionNav({ sections, elFor, onJump, title, onBack, var
           WebkitBackdropFilter: "blur(14px) saturate(1.4)",
           borderBottom: `1px solid ${C.div}`,
           boxShadow: "0 10px 20px -18px rgba(0,0,0,0.55)",
+          // A screen that runs up under the status bar keeps the chips below it.
+          paddingTop: inset,
           opacity: shown ? 1 : 0,
           transform: shown ? "none" : "translateY(-8px)",
           pointerEvents: shown ? "auto" : "none",

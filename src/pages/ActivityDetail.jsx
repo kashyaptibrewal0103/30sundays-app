@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { C, allItineraries, destData } from "../data";
 import { getTripById } from "../data/tripData";
+import SaveHeart from "../components/SaveHeart";
+import Logo from "../components/Logo";
 import { buildActivityDetail, flagChipList } from "../data/activityData";
 
 // ─── Resolve activity from either source ───
@@ -106,6 +108,7 @@ export default function ActivityDetail() {
           >
             <ArrowLeft size={18} color="#181E4C" />
           </button>
+          <Logo variant="lockup" height={30} />
         </div>
 
         <ActivityDetailScroll detail={detail} />
@@ -116,7 +119,8 @@ export default function ActivityDetail() {
 }
 
 // ─── Reusable activity-detail content (used by the page AND the in-reel bottom sheet) ───
-export function ActivityDetailScroll({ detail }) {
+// saved/onSave are optional: when given, the wishlist heart sits beside the name.
+export function ActivityDetailScroll({ detail, saved, onSave }) {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [aboutExpanded, setAboutExpanded] = useState(false);
@@ -134,7 +138,10 @@ export function ActivityDetailScroll({ detail }) {
 
       {/* Title block */}
       <div style={{ padding: "16px 16px 0" }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#181E4C", margin: 0, lineHeight: 1.25 }}>{detail.name}</h1>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <h1 style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: 700, color: "#181E4C", margin: 0, lineHeight: 1.25 }}>{detail.name}</h1>
+          {onSave && <SaveHeart size={32} saved={!!saved} onToggle={onSave} style={{ marginTop: -4, marginRight: -6 }} />}
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
             <Star size={13} fill="#FBBC05" color="#FBBC05" />

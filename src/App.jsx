@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BrowserRouter, Routes, Route, useLocation, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import PhoneFrame from "./components/PhoneFrame";
 import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
@@ -19,10 +19,10 @@ import HomeV6 from "./pages/HomeV6";
 import NudgeOptions from "./pages/NudgeOptions";
 import AISectionOptions from "./pages/AISectionOptions";
 import AIPhotos from "./pages/AIPhotos";
+import HeartLab from "./pages/HeartLab";
 import { HomeLabIndex, CtaLab, CardsLab, PlansLab, StatesLab, HOME_LAB_PAGES } from "./pages/home_lab";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
-import MaldivesDestination from "./pages/MaldivesDestination";
 import MaldivesQuote from "./pages/MaldivesQuote";
 import ResortDetail from "./pages/ResortDetail";
 import Listing from "./pages/Listing";
@@ -44,6 +44,8 @@ import RatingLab from "./pages/RatingLab";
 import StepperLab from "./pages/StepperLab";
 import ProfileLab from "./pages/ProfileLab";
 import ActivitiesEduLab from "./pages/ActivitiesEduLab";
+import ActivityPickLab from "./pages/ActivityPickLab";
+import ActivityNoteLab from "./pages/ActivityNoteLab";
 import SaveVersionLab from "./pages/SaveVersionLab";
 import WeatherOptionsLab from "./pages/WeatherOptionsLab";
 import DestWeatherLab from "./pages/DestWeatherLab";
@@ -98,14 +100,18 @@ import Discover from "./pages/Discover";
 import DiscoverRoutes from "./pages/DiscoverRoutes";
 import RoutesCouples from "./pages/RoutesCouples";
 import DiscoverWF from "./pages/DiscoverWF";
+import DestinationV7, { DestinationV7Index } from "./pages/DestinationV7";
 import WishlistWF from "./pages/WishlistWF";
 import RoutesWF from "./pages/RoutesWF";
 import CompareVersions from "./pages/CompareVersions";
 import SavedWishlist from "./pages/SavedWishlist";
+import { WishlistHome, WishlistBoard } from "./pages/WishlistBoards";
+import WishlistHomeLab from "./pages/WishlistHomeLab";
 import WishlistHotelDetail from "./pages/WishlistHotelDetail";
 import WishlistActivityDetail from "./pages/WishlistActivityDetail";
 import { DealsProvider } from "./data/deals";
-import { SavesProvider } from "./data/saves";
+import WishlistToast from "./components/WishlistToast";
+import WishlistLoginGate from "./components/WishlistLoginGate";
 import { WishlistProvider } from "./data/wishlist";
 import { ProfileProvider } from "./data/profile";
 import { AIPhotosProvider } from "./state/useAIPhotos";
@@ -113,14 +119,11 @@ import { GiftingProvider } from "./state/useGifting";
 import { AI_PHOTOS_VARIANT } from "./data/aiPhotosVariant";
 import { LAB_VARIANT } from "./data/labVariant";
 
-// Destination pages: new discover-style layout everywhere except Maldives and
-// Mauritius, which keep their existing layouts.
+// Destination pages: one design for every country (the v7 to v9 work on the
+// design canvas, approved 2026-11-02). The earlier layouts stay reachable on
+// their own routes (/wf/:name, /old-bali-page).
 function DestinationLayout() {
-  const { name } = useParams();
-  const dn = decodeURIComponent(name || "");
-  if (dn === "Maldives") return <MaldivesDestination />;
-  if (dn === "Mauritius") return <Destination />;
-  return <DiscoverWF />;
+  return <DestinationV7 />;
 }
 
 function AppContent({ userState, setUserState, otpVerified, setOtpVerified, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
@@ -142,7 +145,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
   // show only the screen, no demo-state switcher.
   // Design labs hide it too, so the cards can be judged without it on top of them.
-  const shareLink = pathname.startsWith("/day-media/") || pathname === "/otp-sms" ||pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/pending-lab" || pathname === "/stage-home" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
+  const shareLink = pathname.startsWith("/destination-v7") || pathname === "/otp-sms" || pathname === "/pending-lab" || pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/stage-home" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
 
   // The photo lab is a desktop testing tool that talks to Gemini for real, so
   // it sits outside the phone frame and outside the app shell entirely. On its
@@ -176,6 +179,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/v5" element={<HomeV2 />} />
         <Route path="/v6" element={<HomeV6 userState={userState} />} />
         {/* Home page lab: ten takes on everything above Sunday School */}
+        <Route path="/heart-lab" element={<HeartLab />} />
         <Route path="/home-lab" element={<HomeLabIndex />} />
         <Route path="/home-lab/cta" element={<CtaLab />} />
         <Route path="/home-lab/cards" element={<CardsLab />} />
@@ -193,6 +197,8 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/chat" element={<ChatScreen />} />
         <Route path="/resort/:resortId" element={<ResortDetail />} />
         <Route path="/maldives-quote" element={<MaldivesQuote />} />
+        <Route path="/destination-v7" element={<DestinationV7Index />} />
+        <Route path="/destination-v7/:name" element={<DestinationV7 />} />
         <Route path="/destination/:name" element={<DestinationLayout />} />
         <Route path="/destination/:name/region/:city" element={<RegionDetail />} />
         <Route path="/old-bali-page" element={<Destination name="Bali" />} />
@@ -205,9 +211,17 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
         <Route path="/compare/:dealId" element={<CompareVersions />} />
-        <Route path="/saved" element={<SavedWishlist />} />
-        <Route path="/saved/hotel/:id" element={<WishlistHotelDetail />} />
-        <Route path="/saved/activity/:id" element={<WishlistActivityDetail />} />
+        <Route path="/saved" element={<WishlistHome />} />
+        <Route path="/saved/board/:dest" element={<WishlistBoard />} />
+        <Route path="/saved/home/:v" element={<WishlistHomeLab />} />
+        {/* The group board: people on it, who saved what, love it too. Ships
+            after the one-person board above. */}
+        <Route path="/saved/group" element={<WishlistHome group />} />
+        <Route path="/saved/group/board/:dest" element={<WishlistBoard group />} />
+        {/* The wishlist before trip boards, kept to compare. */}
+        <Route path="/saved/classic" element={<SavedWishlist />} />
+        <Route path="/saved/activity/:dest/:id" element={<WishlistActivityDetail />} />
+        <Route path="/saved/hotel/:dest/:id" element={<WishlistHotelDetail />} />
         <Route path="/build" element={<Build userState={userState} otpVerified={otpVerified} setOtpVerified={setOtpVerified} />} />
         <Route path="/login-v2" element={<LoginV2 showSkip />} />
         <Route path="/otp-sms" element={<OtpSmsLab />} />
@@ -225,6 +239,8 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/stepper-lab" element={<StepperLab />} />
         <Route path="/profile-lab" element={<ProfileLab />} />
         <Route path="/activities-lab" element={<ActivitiesEduLab />} />
+        <Route path="/activity-pick-lab" element={<ActivityPickLab />} />
+        <Route path="/activity-note-lab" element={<ActivityNoteLab />} />
         <Route path="/save-lab" element={<SaveVersionLab />} />
         <Route path="/weather-lab" element={<WeatherOptionsLab />} />
         <Route path="/dest-weather-lab" element={<DestWeatherLab />} />
@@ -280,6 +296,8 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
       {showNudge && (leadData?.salesRequest ? <CallbackNudge /> : <TripNudge userState={userState} />)}
       {showNudge && <ProfileGate userState={userState} />}
       {!hideShell && <BottomNav userState={userState} />}
+      <WishlistToast />
+      <WishlistLoginGate onLoggedIn={() => setOtpVerified?.(true)} />
     </PhoneFrame>
   );
 }
@@ -294,9 +312,8 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <WishlistProvider loggedIn={userState !== "new" || otpVerified}>
     <DealsProvider>
-    <SavesProvider>
-    <WishlistProvider>
     <ProfileProvider>
     <AIPhotosProvider>
     <GiftingProvider>
@@ -317,9 +334,8 @@ export default function App() {
     </GiftingProvider>
     </AIPhotosProvider>
     </ProfileProvider>
-    </WishlistProvider>
-    </SavesProvider>
     </DealsProvider>
+    </WishlistProvider>
     </ErrorBoundary>
   );
 }

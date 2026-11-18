@@ -1,16 +1,26 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { C } from "../data";
-import { getWishlistActivity } from "../data/wishlistData";
+import { activityById } from "../data/discoverData";
 import { buildActivityDetail } from "../data/activityData";
+import { useWishlist } from "../data/wishlist";
+import Logo from "../components/Logo";
+import { activityMeta } from "../data/saves";
 import { ActivityDetailScroll } from "./ActivityDetail";
 
-// Saved activity → the same activity screen used elsewhere (planning context:
-// no booked-guide video, no dates).
+// A saved activity, opened from the wishlist: the same activity screen used
+// everywhere else, in planning context (no booked-guide video, no dates). The
+// heart beside the name lets a couple take it off the list from here.
 export default function WishlistActivityDetail() {
-  const { id } = useParams();
+  const { dest: rawDest, id: rawId } = useParams();
+  const dest = decodeURIComponent(rawDest || "");
+  const id = decodeURIComponent(rawId || "");
   const navigate = useNavigate();
-  const activity = getWishlistActivity(id);
+  const { isSaved, toggle, get } = useWishlist();
+
+  const live = activityById(dest, id);
+  const saved = get("activity", dest, id);
+  const activity = live || (saved ? { name: saved.name, img: saved.img, city: saved.city } : null);
 
   if (!activity) {
     return (
@@ -23,7 +33,7 @@ export default function WishlistActivityDetail() {
 
   const detail = buildActivityDetail(
     { name: activity.name, img: activity.img },
-    { city: activity.city, country: activity.dest, isBooked: false }
+    { city: activity.city || "", country: dest, isBooked: false }
   );
 
   return (
@@ -33,8 +43,9 @@ export default function WishlistActivityDetail() {
           <button onClick={() => navigate(-1)} aria-label="Back" style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.9)", border: `1px solid ${C.div}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
             <ArrowLeft size={18} color="#181E4C" />
           </button>
+          <Logo variant="lockup" height={30} />
         </div>
-        <ActivityDetailScroll detail={detail} />
+        <ActivityDetailScroll detail={detail} saved={isSaved("activity", dest, id)} onSave={() => toggle("activity", dest, id, activityMeta(dest, id))} />
       </div>
     </div>
   );

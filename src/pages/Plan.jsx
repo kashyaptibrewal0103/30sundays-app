@@ -141,13 +141,6 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   const [welcomeFadingOut, setWelcomeFadingOut] = useState(false);
   // Bottom "older plans" accordion (closed/expired vacations), collapsed by default.
   const [showOlder, setShowOlder] = useState(false);
-  const [savedToast, setSavedToast] = useState(null); // destination name after hearting a plan
-  const savedTimer = useRef(null);
-  const showSavedToast = (d) => {
-    setSavedToast(d);
-    if (savedTimer.current) clearTimeout(savedTimer.current);
-    savedTimer.current = setTimeout(() => setSavedToast(null), 3200);
-  };
 
 
   const funLine = useMemo(() => funLines[Math.floor(Math.random() * funLines.length)], []);
@@ -318,15 +311,6 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 700, background: C.white, position: "relative" }}>
 
-      {/* Saved-to-wishlist toast */}
-      {savedToast && (
-        <div style={{ position: "absolute", left: 16, right: 16, bottom: 84, zIndex: 60, background: C.head, color: "#fff", borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.22)", animation: "scaleIn 0.2s ease-out" }}>
-          <span style={{ flex: 1, fontSize: 13, lineHeight: "18px" }}>{savedToast} saved to your wishlist.</span>
-          <button onClick={() => { setSavedToast(null); navigate("/saved"); }} style={{ flexShrink: 0, background: "none", border: "none", color: "#fff", fontSize: 13, fontWeight: 800, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
-            View wishlist
-          </button>
-        </div>
-      )}
 
       {/* ═══ CURATING TRANSIENT STATE ═══ */}
       {phase === "curating" && (
@@ -462,7 +446,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
             {activeCards.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {activeCards.map(card => (
-                  <TripPlanCard key={card.id} deal={card} onOpen={(v) => openVersion(card, v)} onStartNew={() => navigate("/build")} onSaved={showSavedToast} />
+                  <TripPlanCard key={card.id} deal={card} onOpen={(v) => openVersion(card, v)} onStartNew={() => navigate("/build")} />
                 ))}
               </div>
             ) : (

@@ -1,12 +1,15 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { Fragment, useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice, legDateLabel } from "../data/flightData";
 import { FlightsSection, FlightChooser, FlightDetailSheet, CitySheet, useTripFlights, resolveTrip, materialize, recheck, flightChanges, fetchFails } from "../components/flights/TripFlights";
-import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
+import { generateDayOptions, getAllDayCombinations, cityVibes } from "../data/dayOptions";
 import { Camera, Volume2, VolumeX, FileText, ChevronLeft, Compass, Route, BedDouble, Headphones, Map as MapIcon, IndianRupee, Moon, Car, Baby, User } from "lucide-react";
 import ChangeDayScreen from "./ChangeDayScreen";
+import SaveHeart from "../components/SaveHeart";
+import MissedPicksNote, { NOTE_VARIANTS } from "../components/MissedPicksNote";
+import { useWishlist } from "../data/wishlist";
 import { toDayOptions, optionScoring } from "../data/dayOptionShape";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
@@ -25,7 +28,9 @@ import { getTourRating, RATING_META } from "../data/tourRatings";
 import { getDayRating, tourKeysForDay } from "../data/dayRatings";
 import { DayRatingPill, DayRatingRow } from "../components/DayRating";
 import GlanceDayCard from "../components/GlanceDayCard";
-import { getDayNote } from "../data/dayNotes";
+import PopularActivities, { DayPickSheet } from "../components/PopularActivities";
+import HotelPicks from "../components/HotelPicks";
+import BetterTrip, { BetterTripConfirm } from "../components/BetterTrip";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
@@ -43,7 +48,7 @@ import { DayMediaDetail } from "./DayDetailImmersive";
 import { toMediaDays } from "../data/dayMediaShape";
 import { buildActivityDetail } from "../data/activityData";
 import { getMauritiusHotel } from "../data/mauritiusData";
-import { generateHotelsForCity, getStayInfo } from "../data/hotelData";
+import { stayHotels, stayCard } from "../data/hotelData";
 import { copyOf } from "../data/copyTrip";
 import { BOOKED_TRIPS } from "../data/bookedTrips";
 import InclusionsDrawer from "../components/InclusionsDrawer";
@@ -58,6 +63,11 @@ const PREBOOKING_CONSULTANTS = [
 import { getUpgradeInfo } from "../data/upgradeData";
 import { useDeals, computePrice, effectiveStatus, isExpired, QUOTE_VALID_DAYS, STATUS_LABEL } from "../data/deals";
 import { runLiveCheck, stayState } from "../data/liveCheck";
+import { useCoverage, CoverageLine, CoverageSheet } from "../components/wishlist/WishlistCoverage";
+
+// The "People like you also chose" activity row after each town's days. Off
+// on every itinerary for now (user, 2026-11-04); flip to bring it back.
+const SHOW_POPULAR_ACTIVITIES = false;
 
 const Divider = () => <div style={{ height: 6, background: "#F5F5F5", margin: "20px 0" }} />;
 
@@ -88,25 +98,20 @@ function getDayActivities(it) {
   return expanded;
 }
 
-// Sample hotels per city
-// Hotel-property photos for the stub (resorts/rooms, not activities)
-const HOTEL_STUB_IMGS = [
-  "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80&auto=format&fit=crop",
-];
 
 function getHotels(it) {
   return it.days.map((day, i) => {
+    // Name, stars, score and photo come from the same place the hotel behind
+    // the card does, so the card and the hotel page agree.
+    const card = stayCard(it, i);
     const base = {
       city: day.city,
       dayRange: `Day ${it.days.slice(0, i).reduce((a, d) => a + d.n, 0) + 1}–${it.days.slice(0, i + 1).reduce((a, d) => a + d.n, 0)}`,
       name: `${day.city} Grand Resort`,
       type: "Deluxe Room · Breakfast included",
-      stars: [4, 5, 4, 5][i % 4],
-      rating: [8.4, 8.9, 8.1, 8.7][i % 4], // Booking.com 10-point scale
-      img: HOTEL_STUB_IMGS[i % HOTEL_STUB_IMGS.length],
+      stars: card.stars,
+      rating: card.rating,
+      img: card.img,
     };
     // Mauritius uses real hotels from the sheet, each carrying its inclusions
     // (honeymoon perks + value add-ons) surfaced in the accordion below.
@@ -537,7 +542,6 @@ const NAV_SECTIONS = [
   { key: "together", label: "Plan together", Icon: Users },
   { key: "flights", label: "Flights", Icon: Plane },
   { key: "consultant", label: "Consultant", Icon: Headphones },
-  { key: "reviews", label: "Reviews", Icon: Star },
   { key: "map", label: "Journey map", Icon: MapIcon },
   { key: "cost", label: "Cost", Icon: IndianRupee },
 ];
@@ -558,6 +562,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     setParams(next, { replace: true });
   };
   const dealsCtx = useDeals();
+  const wishlist = useWishlist();
   // Seed itineraries resolve from static data; trips built from scratch resolve
   // from the deal that stores their synthesized itinerary.
   const rawIt = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId, dealId);
@@ -577,6 +582,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const elForSection = useCallback((key) => sectionEls.current[key] || null, []);
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open
   const [dayDetailIndex, setDayDetailIndex] = useState(null); // which day's full-screen detail is open
+  const [popularAct, setPopularAct] = useState(null); // { act, city } opened from a People like you also chose card
+  const [popularDayPick, setPopularDayPick] = useState(null); // { name, days } for View plans
+  const [hotelInView, setHotelInView] = useState(0); // the hotel card the picks under the row follow
+  const [betterPick, setBetterPick] = useState(null); // a route from People like you also tried, awaiting OK
   const [dayDetailJump, setDayDetailJump] = useState(null);   // section to land on, e.g. "reviews"
   const [optionPreview, setOptionPreview] = useState(null);   // the day plan opened from Change day plan
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
@@ -620,6 +629,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // they are out of the total from the moment it is made.
   const noFlights = !!rawIt?.noFlights;
   const [flightsIncluded, setFlightsIncluded] = useState(!rawIt?.noFlights);
+  // A draft carries no flights. They come in when they are added (where the
+  // app can add them) or through the consultant (where it cannot yet).
+  const [draftFlightsAdded, setDraftFlightsAdded] = useState(false);
   // The trip can arrive a render after this screen does, when the copy that
   // made it is still settling into the deals store. So the initial value is a
   // guess and this is the correction: once we know it is a copy, flights come
@@ -913,6 +925,49 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     }, 520);
   };
 
+  // ─── Picks that did not fit ───
+  //
+  // A built trip carries the activities its days had no room for. They show
+  // once, above Itinerary at a glance, until closed; after that first visit
+  // they stay gone. ?actnote=<one of NOTE_VARIANTS> forces a version on,
+  // and on a seed trip (which was never built from picks) invents a pair of
+  // left-out picks so the versions can be compared on a real page.
+  const noteParam = params.get("actnote");
+  const noteVariant = NOTE_VARIANTS.includes(noteParam) ? noteParam : "stackCity";
+  const actReport = useMemo(() => {
+    if (it.actReport) return it.actReport;
+    if (!noteParam) return null;
+    // ?actdrop=N leaves out N (default 2), taken city by city, so the "N
+    // more" on the Not included list can be seen as well as on Included.
+    const want = Math.max(1, Number(params.get("actdrop")) || 2);
+    const dropped = [];
+    it.days.forEach((d) => {
+      // Nothing that shares a word with what the day already shows: "Old
+      // Quarter walking tour" left out of a day that says "Old Quarter" reads
+      // as a contradiction rather than a demo.
+      const inPlan = d.sub.split(" · ");
+      const words = new Set(inPlan.flatMap((p) => p.toLowerCase().split(/\s+/)));
+      const spare = (cityVibes[d.city] || []).flatMap((v) => v.activities)
+        .filter((a) => !a.toLowerCase().split(/\s+/).some((w) => words.has(w)));
+      spare.slice(0, 2).forEach((name) => {
+        if (dropped.length < want) dropped.push({ name, city: d.city, reason: `Not enough time in ${d.city}` });
+      });
+    });
+    return {
+      kept: it.days.flatMap((d) => d.sub.split(" · ").map((name) => ({ name, city: d.city }))),
+      dropped,
+    };
+  }, [it, noteParam, params]);
+  const noteKey = `actnote:${versionId || it.id}`;
+  const [noteOpen, setNoteOpen] = useState(() => {
+    if (noteParam) return true;
+    try { return !localStorage.getItem(noteKey); } catch { return true; }
+  });
+  useEffect(() => {
+    if (!actReport?.dropped?.length || noteParam) return;
+    try { localStorage.setItem(noteKey, "1"); } catch { /* private window */ }
+  }, [actReport, noteKey, noteParam]);
+
   const customise = (key) => {
     setCustomiseOpen(false);
     if (key === "dates") setDateSheet(true);
@@ -1011,7 +1066,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // (they were priced from the trip's home). Until the customer re-selects, the
   // intl flights show an empty prompt and drop out of the costing.
   const deptChanged = departureCity !== "Indore";
-  const flightPerPerson = !flightsIncluded ? 0 : (
+  // ?flights=add shows the version with an Add flights button; without it,
+  // flights are added by the consultant.
+  const draftFlightsMode = params.get("flights") === "add" ? "add" : "consultant";
+  const draftNoFlights = !quoted && !viewOnly && flightsIncluded && !draftFlightsAdded;
+  const flightPerPerson = (!flightsIncluded || draftNoFlights) ? 0 : (
     (!deptChanged && (intlMode === "roundtrip" || outAdded) && selOut ? selOut.price : 0) +
     (!deptChanged && (intlMode === "roundtrip" || retAdded) && selRet ? selRet.price : 0) +
     domesticLegs.reduce((s, { i }) => s + (getFlightForLeg(i)?.price || 0), 0)
@@ -1192,10 +1251,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         }
       : { ...h, hotelId: `${h.city}-hotel-0` }; // default to first hotel
     // Pull refundability from the real generated hotel behind this stay.
-    const si = getStayInfo(it, i);
-    const match = si && generateHotelsForCity(si.city, it.dest, si.checkIn, si.checkOut, si.nights).find(x => x.id === resolved.hotelId);
+    const match = stayHotels(it, i).find(x => x.id === resolved.hotelId);
     return { ...resolved, freeCancellation: match ? match.freeCancellation : undefined };
   });
+
+  // How much of the wishlist for this destination the trip holds, said in one
+  // line under the title; View opens the breakdown.
+  const coverage = useCoverage({ dest: it.dest, days: it.days, dayActs: daysWithActivities, picked: selectedDayOptions, hotels });
+  const [coverageOpen, setCoverageOpen] = useState(false);
+  const [changeDayPick, setChangeDayPick] = useState(null); // a saved activity to start ticked
 
   // Stays the customer chose to book themselves — set from the hotel chooser,
   // stored in App selectedHotels so both screens agree. Excluded from cost.
@@ -1354,14 +1418,47 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // than off the stay's activity list. Used by the glance cards and the day
   // detail, so the two cannot drift apart.
   const dayIsFree = (day, i) => !selectedDayOptions[i] && (day.leisure || day.departure);
+  // Demo switches, so the two empty states can be seen on a real trip:
+  // ?unrated=5 shows Day 5 with no rating yet, ?noscore=6 shows Day 6 with no
+  // score yet. Comma lists work too.
+  const demoDays = (key) => new Set((params.get(key) || "").split(",").map(Number).filter(Boolean));
+  const unratedDays = demoDays("unrated");
+  const noScoreDays = demoDays("noscore");
+  // The score (how the day feels) is for days with tours. A leisure day,
+  // arrival or departure included, is not scored at all.
   const scoringForDay = (day, i) => {
+    if (noScoreDays.has(day.dayNum) || dayIsFree(day, i)) return null;
+    return getDayScoring(day, i, daysWithActivities);
+  };
+  const ratingForDay = (day, i) => (dayIsFree(day, i) || unratedDays.has(day.dayNum) ? null : dayRatingFor(day, i));
+  // Any day built around a transfer (arriving, leaving, moving hotels) cannot
+  // be changed: the rest of the day hangs off the drive. The bar inside the
+  // day says why; the glance card only shows a lock. A trip that cannot be
+  // edited at all is not "locked" day by day, so it says nothing.
+  const lockReasonFor = (day, i) => {
+    if (!editable) return null;
     const isFirst = i === 0;
     const isLast = i === daysWithActivities.length - 1;
-    const hasTransfer = !!day.transfers?.length || isFirst || isLast;
-    if (!dayIsFree(day, i)) return getDayScoring(day, i, daysWithActivities);
-    return hasTransfer ? getDayScoring({ ...day, activities: [] }, i, daysWithActivities) : null;
+    if (day.departure || isLast) return "Departure day, so it can't be changed.";
+    if (isFirst) return "Arrival day, so it can't be changed.";
+    if (day.transfers?.length) return "Hotel change day, so it can't be changed.";
+    return null;
   };
-  const ratingForDay = (day, i) => (dayIsFree(day, i) ? null : dayRatingFor(day, i));
+  // Why a day has no rating, said where the rating would be.
+  const dayKindFor = (day, i) => {
+    if (dayIsFree(day, i)) return "No tours today";
+    return ratingForDay(day, i) ? null : "Not rated yet";
+  };
+  // Dates on the glance cards only when they are the traveller's own. The
+  // demo start date fills the day detail, but on the list it would read as a
+  // booking somebody never made.
+  // A saved plan already shows its dates at the top, so its days do too.
+  const hasOwnDates = !!(inDeal || exploreStart || travelDates?.fromDate || (it.custom && it.startDate));
+  const glanceDate = (i) => {
+    const d = new Date(tripStart);
+    d.setDate(d.getDate() + i);
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  };
 
   // The day detail screen takes days in its own shape. Built here so the day
   // deck can swipe across the whole trip without rebuilding on every swipe.
@@ -1372,10 +1469,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
     },
     scoringFor: (day, i) => scoringForDay(day, i),
-  }), [daysWithActivities, it.dest, tripStart]);
+    lockFor: (day, i) => lockReasonFor(day, i),
+  }), [daysWithActivities, it.dest, tripStart, editable, selectedDayOptions]);
 
   // Every plan on offer for the day being changed, as cards.
-  const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
 
   // ─── Change Day handlers ───
   const pillHidden = pillAway || !!toast || topCustomiseSeen;
@@ -1565,6 +1662,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Selecting a day option stages a confirmation; nothing changes until Continue.
   const handleChangeDaySelect = (dayIndex, option) => {
     setChangeDayIndex(null);
+    setChangeDayPick(null);
     setPreviewDay(null);
     setAllCombosIndex(null);
     setPendingDayChange({ dayIndex, option });
@@ -1685,6 +1783,36 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const dayHasOptions = (dayIndex) => {
     const data = generateDayOptions(it, dayIndex, daysWithActivities);
     return data && data.options.length > 1;
+  };
+  // The days in a city whose plans include an activity, for "View plans".
+  // Every day of the city comes back, in order; the ones that cannot take it
+  // carry a reason, so the day step can show them greyed.
+  const planDaysFor = (city, name) => {
+    const want = String(name).toLowerCase();
+    return daysWithActivities.map((d, i) => ({ d, i })).filter(({ d }) => d.city === city).map(({ d, i }) => {
+      const lock = lockReasonFor(d, i);
+      const plans = lock || !dayHasOptions(i) ? [] : [
+        ...(generateDayOptions(it, i, daysWithActivities)?.options || []),
+        ...(getAllDayCombinations(it, i, daysWithActivities)?.combinations || []),
+      ].filter((p) => !p.isCurrent);
+      const has = plans.some((p) => (p.activities || []).some((n) => n.toLowerCase() === want));
+      const acts = (selectedDayOptions[i]?.activities || (d.activities || []).map((a) => a?.name || a)).filter(Boolean);
+      return {
+        index: i,
+        dayNum: d.dayNum,
+        date: hasOwnDates ? glanceDate(i) : null,
+        now: acts.join(", "),
+        free: dayIsFree(d, i) || !acts.length,
+        reason: lock || (has ? null : "No plans with this activity"),
+      };
+    });
+  };
+  const openPlansFor = (name, city) => {
+    const days = planDaysFor(city, name);
+    const open = days.filter((x) => !x.reason);
+    if (!open.length) return;
+    if (open.length === 1) { setChangeDayPick(name); setChangeDayIndex(open[0].index); return; }
+    setPopularDayPick({ name, days });
   };
 
   // ─── Deal actions ───
@@ -1846,9 +1974,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <span>{tripTitle} · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
             {inDeal && versionId && (
-              <button onClick={() => dealsCtx.toggleWish(versionId)} aria-label={dealsCtx.isWished(versionId) ? "Remove from wishlist" : "Save to wishlist"} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", flexShrink: 0, padding: 0 }}>
-                <Heart size={16} color="#fff" fill={dealsCtx.isWished(versionId) ? "#fff" : "none"} />
-              </button>
+              <SaveHeart onPhoto saved={dealsCtx.isWished(versionId)} onToggle={() => dealsCtx.toggleWish(versionId)} style={{ margin: "-2px -6px -2px 0" }} />
             )}
             {/* Which version this is, beside the heart. A trip that has been
                 rebuilt a few times has several, and the number is how
@@ -2016,10 +2142,20 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         </div>
       )}
 
+      <CoverageLine dest={it.dest} cov={coverage} onView={() => setCoverageOpen(true)} />
       <Divider />
 
       {/* ═══ 3. Itinerary at a Glance ═══ */}
       <div ref={setSectionEl("itinerary")} style={{ padding: "0 16px" }}>
+        {noteOpen && (
+          <MissedPicksNote
+            report={actReport}
+            dest={it.dest}
+            variant={noteVariant}
+            onClose={() => setNoteOpen(false)}
+            onFix={() => customise("cities")}
+          />
+        )}
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 16 }}>Itinerary at a glance</p>
         {/* Every day shows upfront now. The poster-left card carries the day's
             video count, pace, rating and any heads-up note, so there is nothing
@@ -2027,7 +2163,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {/* A note earns its place once. Repeating the same warning on three
               days running is noise, and it teaches people to skip the band. */}
-          {(() => { const notesShown = new Set(); return daysWithActivities.map((day, i) => {
+          {(() => { return daysWithActivities.map((day, i) => {
             const swapped = selectedDayOptions[i];
             // What a day carries decides what the card can say about it.
             //   tours    → pace, rating, videos, and alternatives to swap to
@@ -2061,31 +2197,48 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 .filter(Boolean);
             }
 
-            const candidate = getDayNote(free ? { city: day.city } : { activities: acts });
-            const note = candidate && !notesShown.has(candidate) ? candidate : null;
-            if (note) notesShown.add(note);
+            // After the last day in a city: what other travellers add there.
+            // Only on a trip that can still change.
+            const lastInCity = isLast || daysWithActivities[i + 1]?.city !== day.city;
+            const cityNames = lastInCity
+              ? daysWithActivities.filter((d) => d.city === day.city)
+                  .flatMap((d) => (d.activities || []).map((a) => a?.name || a?.title || a))
+              : null;
 
             return (
+              <Fragment key={i}>
               <GlanceDayCard
-                key={i}
                 testId={`day-details-${i}`}
                 changeTestId={`change-day-${i}`}
                 dayNum={day.dayNum}
                 city={day.city}
+                date={hasOwnDates ? glanceDate(i) : null}
+                locked={!!lockReasonFor(day, i)}
+                kind={dayKindFor(day, i)}
                 lines={lines}
                 poster={poster}
                 videoCount={videoCount}
                 pace={scoring?.pace.label}
                 paceLevel={scoring?.pace.level}
                 rating={ratingForDay(day, i)}
-                note={note}
                 // A transfer day has nothing to swap. A free day does: the
                 // alternatives are tours you can add to it.
-                canChange={editable && dayHasOptions(i) && !(free && hasTransfer)}
+                canChange={editable && dayHasOptions(i) && !lockReasonFor(day, i)}
                 onOpen={() => { setDayDetailJump(null); setDayDetailIndex(i); }}
                 onOpenReviews={() => { setDayDetailJump("reviews"); setDayDetailIndex(i); }}
                 onChange={() => setChangeDayIndex(i)}
               />
+              {SHOW_POPULAR_ACTIVITIES && lastInCity && editable && (
+                <PopularActivities
+                  dest={it.dest}
+                  city={day.city}
+                  exclude={cityNames}
+                  onOpen={(act) => setPopularAct({ act, city: day.city })}
+                  canPlan={(name) => planDaysFor(day.city, name).some((x) => !x.reason)}
+                  onPlans={(act) => openPlansFor(act.name, day.city)}
+                />
+              )}
+              </Fragment>
             );
           }); })()}
         </div>
@@ -2106,13 +2259,29 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         )}
       </div>
 
+      {/* Other shapes of this trip: more relaxed, one more place, one more
+          night. Each makes a new itinerary, so only on a plan that can be
+          rebuilt into a new version. */}
+      {wizardEditable && (
+        <>
+          <Divider />
+          <BetterTrip dest={it.dest} route={tripRoute} onPick={(card) => setBetterPick(card)} />
+        </>
+      )}
+
       <Divider />
 
       {/* ═══ 4. Hotels ═══ */}
       <div id="hotels-section" ref={setSectionEl("hotels")} style={{ scrollMarginTop: 62 }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
 
-        <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
+        <div
+          className="hs"
+          // Which card is in view, so the picks under the row follow it. Cards
+          // are 280 wide with a 12 gap.
+          onScroll={(e) => setHotelInView(Math.min(hotels.length - 1, Math.round(e.currentTarget.scrollLeft / 292)))}
+          style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}
+        >
           {hotels.map((h, i) => {
             const selfBooked = selfBookedStays.has(i);
             const ls = stayState(liveResult, i);
@@ -2163,6 +2332,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 roomType={h.type}
                 city={h.city}
                 freeCancellation={h.freeCancellation}
+                saved={wishlist.isSaved("hotel", it.dest, h.name)}
+                onSave={() => wishlist.toggle("hotel", it.dest, h.name, { name: h.name, img: h.img, sub: `${h.city}${h.stars ? ` · ${h.stars}-star` : ""}`, city: h.city, stars: h.stars, score: h.rating })}
                 to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${h.roomId ? `&room=${encodeURIComponent(h.roomId)}` : ""}${dealQS}${viewOnly ? "&view=1" : ""}`}
                 footer={
                   <>
@@ -2224,8 +2395,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
         {/* Sold-out is communicated on the hotel card itself (badge) + toast; no section banner. */}
 
+        {/* What travellers like you chose instead, following the hotel in
+            view. It takes the place of the upgrade banner on a trip that can
+            still change. */}
+        {editable && (
+          <HotelPicks
+            it={it}
+            stays={hotels.map((h, i) => (selfBookedStays.has(i) ? null : h))}
+            active={hotelInView}
+            onOpenHotel={(i, id) => navigate(`/hotel-detail/${it.id}/${i}/${encodeURIComponent(id)}?current=${encodeURIComponent(hotels[i]?.hotelId || "")}${dealQS}`)}
+            onOpenRoom={(i, id, roomId) => navigate(`/hotel-detail/${it.id}/${i}/${encodeURIComponent(id)}?current=${encodeURIComponent(hotels[i]?.hotelId || "")}&room=${encodeURIComponent(roomId)}${dealQS}`)}
+          />
+        )}
+
         {/* Single hotel-upgrade banner (per-card chips removed) */}
-        {upgradeInfo.upgradeCount >= 1 && (
+        {!editable && upgradeInfo.upgradeCount >= 1 && (
           <div onClick={() => setShowUpgradeDrawer(true)} style={{
             margin: "16px 16px 0", background: "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)", border: "1.5px solid #E8D5A3",
             borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
@@ -2359,10 +2543,28 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             {/* Section header: Flights + remove/add-flights toggle */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
               <p style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Flights</p>
-              {flightsMenu}
+              {!draftNoFlights && flightsMenu}
             </div>
 
-            {!flightsIncluded ? (
+            {draftNoFlights ? (
+              /* A draft: no flight cards at all, one line saying so and the
+                 one way to get them. */
+              <div data-testid="flights-draft" style={{ display: "flex", alignItems: "center", gap: 12, marginTop: -4 }}>
+                <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 13, color: C.sub, lineHeight: "19px" }}>
+                  <strong style={{ color: C.head, fontWeight: 700 }}>Flights not included.</strong>{" "}
+                  {draftFlightsMode === "add" ? "Add them to see the full price." : "Your travel consultant can add them."}
+                </p>
+                {draftFlightsMode === "add" ? (
+                  <button onClick={() => setDraftFlightsAdded(true)} style={{
+                    flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 20,
+                    border: `1px solid ${C.p600}`, background: C.white, color: C.p600, fontSize: 12.5, fontWeight: 700,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}>
+                    <Plus size={13} strokeWidth={2.6} /> Add
+                  </button>
+                ) : null}
+              </div>
+            ) : !flightsIncluded ? (
               /* Package only — no flights, no flight cost */
               <div style={{ ...padCard, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", padding: "24px 16px" }}>
                 <Plane size={20} color={C.sub} />
@@ -2456,35 +2658,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           <Divider />
         </>
       )}
-
-      {/* ═══ 7. Traveler Stories ═══ */}
-      <div ref={setSectionEl("reviews")} style={{ padding: "0 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          <span style={{ fontSize: 20, fontWeight: 700, color: C.head }}>4.6</span>
-          <span style={{ fontSize: 12, color: C.sub }}>/5</span>
-          <div style={{ display: "flex", gap: 1, marginLeft: 4 }}>{[1,2,3,4,5].map(s => <Star key={s} size={12} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}</div>
-        </div>
-        <p style={{ fontSize: 12, color: C.sub, marginBottom: 14 }}>Based on Google reviews</p>
-        <p style={{ fontSize: 14, fontWeight: 600, color: C.head, marginBottom: 10 }}>Our customers say</p>
-        {destReviews.slice(0, 3).map((r, i) => (
-          <div key={i}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0" }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#F0F0F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: C.sub, flexShrink: 0 }}>{r.name[0]}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{r.name}</p>
-                  <div style={{ display: "flex", gap: 1 }}>{[1,2,3,4,5].map(s => <Star key={s} size={10} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}</div>
-                </div>
-                <p style={{ fontSize: 13, color: C.sub, margin: "4px 0 0", lineHeight: "18px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>"{r.text}"</p>
-              </div>
-            </div>
-            {i < 2 && <div style={{ height: 1, background: C.div }} />}
-          </div>
-        ))}
-      </div>
-
-      <Divider />
 
       {/* ═══ 6. Journey Map ═══ */}
       <div ref={setSectionEl("map")} style={{ padding: "0 16px" }}>
@@ -2756,7 +2929,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             tripDays={daysWithActivities.length}
             jumpTo={dayDetailJump}
             onClose={() => { setDayDetailIndex(null); setDayDetailJump(null); }}
-            onChangeDay={editable && dayHasOptions(dayDetailIndex)
+            // A locked day is locked here too: the glance card offers no change
+            // on it, so the day itself cannot either.
+            onChangeDay={editable && dayHasOptions(dayDetailIndex) && !lockReasonFor(daysWithActivities[dayDetailIndex], dayDetailIndex)
               ? () => { const i = dayDetailIndex; setDayDetailIndex(null); setDayDetailJump(null); setChangeDayIndex(i); }
               : null}
           />
@@ -2914,15 +3089,52 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         </div>
       )}
 
+      {/* ═══ An activity opened from People like you also chose ═══ */}
+      {popularDayPick && (
+        <DayPickSheet
+          activity={popularDayPick.name}
+          days={popularDayPick.days}
+          frameStyle={overlayFrame}
+          onClose={() => setPopularDayPick(null)}
+          onPick={(i) => { const name = popularDayPick.name; setPopularDayPick(null); setChangeDayPick(name); setChangeDayIndex(i); }}
+        />
+      )}
+      {popularAct && (
+        <ActivityDetailSheet
+          detail={buildActivityDetail(popularAct.act, { city: popularAct.city, country: it.dest })}
+          onClose={() => setPopularAct(null)}
+        />
+      )}
+
       {/* ═══ Change day plan, full screen ═══ */}
+      {coverageOpen && (
+        <CoverageSheet
+          dest={it.dest}
+          cov={coverage}
+          onClose={() => setCoverageOpen(false)}
+          onAdd={editable ? (r) => {
+            setCoverageOpen(false);
+            if (r.kind === "hotel") {
+              const at = it.days.findIndex((d) => d.city === r.city);
+              if (at >= 0) return openHotelFlow(at, hotels[at]?.hotelId);
+            }
+            if (r.kind === "activity") {
+              const at = daysWithActivities.findIndex((d) => d.city === r.city);
+              if (at >= 0 && dayHasOptions(at)) { setChangeDayPick(r.name); return setChangeDayIndex(at); }
+            }
+            customise("cities");
+          } : null}
+        />
+      )}
       {changeDayData && (
         <ChangeDayScreen
           frameStyle={overlayFrame}
+          preselect={changeDayPick}
           dayNumber={changeDayData.dayNumber}
           city={changeDayData.city}
           options={dayOptionCards}
           onOpen={(opt) => setOptionPreview(opt)}
-          onClose={() => setChangeDayIndex(null)}
+          onClose={() => { setChangeDayIndex(null); setChangeDayPick(null); }}
           onLeisureDay={() => handleChangeDaySelect(changeDayIndex, {
             id: "leisure-day",
             activities: ["Free day, explore at your own pace"],
@@ -3043,6 +3255,20 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </div>
         );
       })()}
+
+      {betterPick && (
+        <BetterTripConfirm
+          from={tripRoute}
+          to={betterPick.route}
+          frameStyle={overlayFrame}
+          onClose={() => setBetterPick(null)}
+          onConfirm={() => {
+            const next = betterPick.route;
+            setBetterPick(null);
+            startBuild("route", `${next.map((r) => r.city).join(" · ")} · ${routeNights(next)} nights`, () => rebuild(next, tripStart));
+          }}
+        />
+      )}
 
       {/* ═══ Toast Notification ═══ */}
       {/* Adding, changing and reading flights */}
@@ -4049,7 +4275,9 @@ function RecommendedActivitiesSheet({ ideas = [], city, onClose }) {
 
 // ═══ Activity detail - draggable bottom drawer (opens at 50%, snaps 50% ↔ 92%) ═══
 const SHEET_SNAPS = [0.5, 0.92];
-function ActivityDetailSheet({ detail, onClose }) {
+// `footer` is optional: the wizard's activities step passes a select button so
+// somebody can decide from the sheet without closing it first.
+export function ActivityDetailSheet({ detail, onClose, footer }) {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -4112,6 +4340,11 @@ function ActivityDetailSheet({ detail, onClose }) {
         <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: 24 }}>
           <ActivityDetailScroll detail={detail} />
         </div>
+        {footer && (
+          <div style={{ flexShrink: 0, padding: "10px 16px 18px", borderTop: `1px solid ${C.div}`, background: "#fff" }}>
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

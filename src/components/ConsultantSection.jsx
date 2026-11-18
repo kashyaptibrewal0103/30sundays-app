@@ -31,7 +31,7 @@ function Face({ person, size = 44 }) {
         <img
           src={person.avatar}
           alt={person.name}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", objectPosition: "center top" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", objectPosition: "center top", transform: "scale(1.7)", transformOrigin: "50% 30%" }}
         />
       ) : (
         <AvatarArt size={size} />

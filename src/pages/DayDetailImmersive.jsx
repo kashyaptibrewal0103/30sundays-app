@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Heart, Timer, Car, Users,
-  Volume2, VolumeX, Play, Images, RefreshCw, ThumbsUp, Clock,
+  Volume2, VolumeX, Play, Images, RefreshCw, ThumbsUp, Clock, Lock, Check, Star, Sparkles,
 } from "lucide-react";
 import { C } from "../data";
 import { getDayScoring } from "../data/dayScoring";
@@ -348,7 +348,7 @@ function DurationChip({ hours, onTap }) {
     }}>
       <Clock size={13} color={SUB} />
       <span style={{ fontSize: 12.5, fontWeight: 600, color: HEAD, whiteSpace: "nowrap" }}>
-        Day duration {longH(hours)}
+        Total duration: {longH(hours)}
       </span>
       <ChevronRight size={13} color="#A4A7AE" />
     </button>
@@ -535,7 +535,7 @@ function CustomerReviews({ rating, tours }) {
 
 // District's bottom bar: a floating dark pill with the context on the left and
 // the action as a white pill on the right.
-function DayActionBar({ day, tripDays, onChangeDay, ctaLabel = "Change this day", ctaNote }) {
+function DayActionBar({ day, tripDays, onChangeDay, ctaLabel = "Change this day", ctaNote, lock }) {
   const shortDate = (day.date || "").replace(/,? \d{4}$/, "");
 
   // Choosing a plan: a flat bar, the price difference as text, one button. The
@@ -579,7 +579,7 @@ function DayActionBar({ day, tripDays, onChangeDay, ctaLabel = "Change this day"
         background: HEAD, borderRadius: 999, padding: "8px 8px 8px 20px",
         boxShadow: "0 12px 30px -10px rgba(16,24,40,0.55)",
       }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: lock ? 96 : 0 }}>
           {shortDate ? (
             <>
               <p style={{ margin: 0, fontSize: 10.5, fontWeight: 600, color: "rgba(255,255,255,0.6)", lineHeight: 1.3 }}>
@@ -598,6 +598,17 @@ function DayActionBar({ day, tripDays, onChangeDay, ctaLabel = "Change this day"
         {/* No handler, no button. A greyed "Change this day" on a trip being
             read is a control that cannot be pressed, which is worse than the
             day simply not offering one. */}
+        {/* Where Change this day would be, on a day that cannot change:
+            the lock and the reason, quiet, not a button. */}
+        {!onChangeDay && lock && (
+          <span style={{
+            flexShrink: 1, minWidth: 0, maxWidth: "58%", display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "10px 12px 10px 0", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.72)",
+          }}>
+            <Lock size={12} color="rgba(255,255,255,0.72)" style={{ flexShrink: 0 }} />
+            <span style={{ lineHeight: "15px", textAlign: "left" }}>{lock.replace(/, so it can't be changed\.$/, ", can't be changed")}</span>
+          </span>
+        )}
         {onChangeDay && (
           <button onClick={onChangeDay} style={{
             flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7,
@@ -614,7 +625,91 @@ function DayActionBar({ day, tripDays, onChangeDay, ctaLabel = "Change this day"
   );
 }
 
+// ─── A day that cannot be changed ───
+//
+// One line, grey, with a lock: the reason and nothing else. It sits under the
+// date, which is where somebody looking at the day reads what kind of day it is.
+function LockLine({ text }) {
+  return (
+    <p style={{ margin: "6px 0 0", display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: SUB }}>
+      <Lock size={12} color="#A4A7AE" strokeWidth={2.4} style={{ flexShrink: 0 }} />
+      {text}
+    </p>
+  );
+}
+
+// The same, as a chip beside the duration that opens to the line.
+function LockChip({ text, open, onToggle }) {
+  return (
+    <button onClick={onToggle} aria-expanded={open} aria-label={text} style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      padding: "6px 10px", borderRadius: 999,
+      border: `1px solid ${LINE}`, background: "#fff",
+      cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, color: SUB,
+    }}>
+      <Lock size={12} color="#A4A7AE" strokeWidth={2.4} />
+      Fixed day
+    </button>
+  );
+}
+
+// Where the rating would be, when there is none. Plain grey words, not a
+// chip: a chip looks like something to tap, and there is nothing behind this.
+function NotRated({ noTours }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", padding: "6px 0", fontSize: 12.5, color: SUB }}>
+      {noTours ? "No tours today, so no rating" : "Not rated yet"}
+    </span>
+  );
+}
+
+// How this day feels, on a day it cannot be worked out for yet.
+function PaceCardSoon() {
+  return (
+    <div>
+      <p style={{ margin: "0 0 7px", fontSize: 10.5, fontWeight: 700, color: SUB, letterSpacing: 0.6, textTransform: "uppercase" }}>
+        How this day feels
+      </p>
+      {/* Words, not a box: a box reads as something to press. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 0" }}>
+        <Sparkles size={16} color="#A4A7AE" style={{ flexShrink: 0 }} />
+        <span style={{ fontSize: 12.5, color: SUB, lineHeight: "18px" }}>
+          Still getting a feel for this day. Back with it soon.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// A move from one hotel to the next, said plainly: it is included, and
+// between which two hotels. Nothing about the van or the hours.
+function HotelMove({ move }) {
+  return (
+    <div style={{ padding: "18px 20px 0" }}>
+      <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 500, color: HEAD }}>Hotel transfer</h3>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
+        <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#ECFDF3", display: "grid", placeItems: "center", flexShrink: 0 }}>
+          <Check size={12} color="#027A48" strokeWidth={3} />
+        </span>
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: HEAD, lineHeight: "22px" }}>Hotel-to-hotel transfer included</span>
+          <span style={{ display: "block", fontSize: 12, color: SUB, lineHeight: "17px" }}>{move.from} to {move.to}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── One day card: media, the sheet over it, and the day's own CTA ─────────
+
+// How a locked day says so: in the bottom bar, where Change this day would
+// be (default). ?lock=line and ?lock=chip keep the two alternatives.
+const lockStyleNow = () => {
+  try {
+    const v = new URLSearchParams(window.location.search).get("lock");
+    return ["line", "chip", "bar"].includes(v) ? v : "bar";
+  } catch { return "bar"; }
+};
 
 function DayCard({
   day, shapeIdx, scoring, rating, photos, tripDays, width, restWidth, radius, mediaH,
@@ -624,6 +719,8 @@ function DayCard({
 }) {
   const [metric, setMetric] = useState(null);
   const [activity, setActivity] = useState(null);
+  const [lockOpen, setLockOpen] = useState(false);
+  const [lockStyle] = useState(lockStyleNow);
   const scroller = useRef(null);
   const reviews = useRef(null);
   const duration = useRef(null);
@@ -634,6 +731,7 @@ function DayCard({
   });
 
   const ratedTours = day.tours.filter((t) => t.activities.length);
+  const hasTours = ratedTours.length > 0;
   const scrollTo = (ref) => {
     const box = scroller.current, el = ref.current;
     if (!box || !el) return;
@@ -697,20 +795,31 @@ function DayCard({
           <div style={{ padding: "6px 20px 0" }}>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: HEAD, lineHeight: 1.25 }}>{day.title}</h2>
             {day.date && <p style={{ margin: "3px 0 0", fontSize: 12.5, color: SUB }}>{day.date}</p>}
+            {day.lock && lockStyle === "line" && <LockLine text={day.lock} />}
           </div>
 
           {/* A free day has neither a rating nor a duration, so the chip row
               goes rather than leaving a gap under the title. */}
-          {(rating || scoring) && (
+          {(
             <div style={{ padding: "12px 20px 0", display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {rating && <DayRatingRow rating={rating} onOpen={toReviews} />}
+              {rating
+                ? <DayRatingRow rating={rating} onOpen={toReviews} />
+                : <NotRated noTours={!hasTours} />}
               {scoring && <DurationChip hours={scoring.duration.totalHrs} onTap={toDuration} />}
+              {day.lock && lockStyle === "chip" && <LockChip text={day.lock} open={lockOpen} onToggle={() => setLockOpen((v) => !v)} />}
             </div>
           )}
+          {day.lock && lockStyle === "chip" && lockOpen && (
+            <div style={{ padding: "0 20px" }}><LockLine text={day.lock} /></div>
+          )}
 
-          {scoring && (
+
+          {/* A day with tours always has a score; when it is not ready yet,
+              the space says so. A day with no tours has nothing to score, so
+              the section is not there at all. */}
+          {(scoring || hasTours) && (
             <div style={{ padding: "14px 16px 0" }}>
-              <PaceCard scoring={scoring} onOpen={setMetric} />
+              {scoring ? <PaceCard scoring={scoring} onOpen={setMetric} /> : <PaceCardSoon />}
             </div>
           )}
 
@@ -739,11 +848,21 @@ function DayCard({
             </div>
           ) : null}
 
+          {/* Its own small section after the day's plan: by the time somebody
+              has read the day, what is left to know is that the move is done
+              for them. */}
+          {day.hotelMove && (
+            <>
+              <div style={{ height: 6, background: "#F5F5F5", marginTop: 18 }} />
+              <HotelMove move={day.hotelMove} />
+            </>
+          )}
+
           {scoring && (
             <>
               <div style={{ height: 6, background: "#F5F5F5", marginTop: 18 }} />
               <div ref={duration} style={{ padding: "18px 20px 0" }}>
-                <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 500, color: HEAD }}>Day duration</h3>
+                <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 500, color: HEAD }}>Total duration</h3>
                 <DurationBody
                   data={scoring.duration}
                   scoring={scoring}
@@ -820,9 +939,9 @@ function DayCard({
              With nothing to do with the day, the bar goes too: the header above
              already says which day this is, so an empty pill repeating it is a
              control-shaped thing that is not a control. */}
-      {(onChangeDay || ctaNote) && (
+      {(onChangeDay || ctaNote || (day.lock && lockStyle === "bar")) && (
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6 }}>
-          <DayActionBar day={day} tripDays={tripDays} onChangeDay={onChangeDay} ctaLabel={ctaLabel} ctaNote={ctaNote} />
+          <DayActionBar day={day} tripDays={tripDays} onChangeDay={onChangeDay} ctaLabel={ctaLabel} ctaNote={ctaNote} lock={lockStyle === "bar" ? day.lock : null} />
         </div>
       )}
 

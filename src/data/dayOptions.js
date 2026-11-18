@@ -40,6 +40,11 @@ export const cityVibes = {
     { vibe: "Chill & Scenic", activities: ["Island-hop by boat", "Manta Point snorkel", "Harbour sunset cruise"], pace: "relaxed", activityHours: 5, travelHours: 2, crowdLevel: "low" },
     { vibe: "Off the Beaten Path", activities: ["Rangko Cave swim", "Cunca Wulang waterfall", "Local fishing village"], pace: "balanced", activityHours: 6, travelHours: 2.5, crowdLevel: "low" },
   ],
+  "Gili Trawangan": [
+    { vibe: "Chill & Scenic", activities: ["Turtle snorkel at Turtle Point", "Island cycling loop", "Sunset at Sunset Point"], pace: "relaxed", activityHours: 3, travelHours: 0.5, crowdLevel: "low" },
+    { vibe: "Adventure Day", activities: ["Three Gilis snorkel trip", "Intro scuba dive", "Stand-up paddleboarding"], pace: "active", activityHours: 5, travelHours: 1, crowdLevel: "moderate" },
+    { vibe: "The Classic", activities: ["Beach day on the east coast", "Glass-bottom boat", "Night market dinner"], pace: "relaxed", activityHours: 4, travelHours: 0.5, crowdLevel: "moderate" },
+  ],
   "Nusa Penida": [
     { vibe: "Adventure Day", activities: ["Kelingking Beach hike", "Broken Beach viewpoint", "Snorkeling with mantas"], pace: "active", activityHours: 6, travelHours: 2, crowdLevel: "moderate" },
     { vibe: "Chill & Scenic", activities: ["Crystal Bay beach", "Angel's Billabong", "Island sunset"], pace: "relaxed", activityHours: 4, travelHours: 1.5, crowdLevel: "low" },
@@ -126,6 +131,11 @@ export const cityVibes = {
     { vibe: "Culture Deep Dive", activities: ["Doi Suthep temple", "Night Bazaar walk", "Monk chat session"], pace: "balanced", activityHours: 5, travelHours: 1, crowdLevel: "moderate" },
     { vibe: "Adventure Day", activities: ["Elephant sanctuary", "Zip-lining", "Waterfall hike"], pace: "active", activityHours: 6, travelHours: 1.5, crowdLevel: "low" },
     { vibe: "Foodie Trail", activities: ["Khao Soi tasting", "Cooking class", "Sunday walking street"], pace: "relaxed", activityHours: 4, travelHours: 0.5, crowdLevel: "moderate" },
+  ],
+  "Phi Phi": [
+    { vibe: "The Classic", activities: ["Maya Bay boat trip", "Phi Phi viewpoint hike", "Long Beach sunset"], pace: "balanced", activityHours: 5, travelHours: 1, crowdLevel: "high" },
+    { vibe: "Adventure Day", activities: ["Snorkel at Bamboo Island", "Kayak to Monkey Beach", "Cliff jumping"], pace: "active", activityHours: 5, travelHours: 1, crowdLevel: "moderate" },
+    { vibe: "Chill & Scenic", activities: ["Loh Dalum beach day", "Sunset longtail boat", "Beachfront dinner"], pace: "relaxed", activityHours: 3, travelHours: 0.5, crowdLevel: "moderate" },
   ],
   Krabi: [
     { vibe: "Adventure Day", activities: ["4-island hop", "Rock climbing", "Kayaking through mangroves"], pace: "active", activityHours: 6, travelHours: 1.5, crowdLevel: "moderate" },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { HomeWishlistCard } from "../components/wishlist/WishlistEntry";
 import { Star, ArrowRight, X as XIcon, Heart, IndianRupee, ShieldCheck } from "lucide-react";
 import { C, destData, destinations, reviews, customerPhotos } from "../data";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
@@ -327,6 +328,8 @@ function PerfectMatch() {
 
 export default function HomeV5() {
   const [hero, setHero] = useState(0);
+  // ?wish=empty shows the wishlist card as someone with no saves sees it.
+  const [search] = useSearchParams();
   const [showVideo, setShowVideo] = useState(false);
 
   useEffect(() => {
@@ -346,6 +349,7 @@ export default function HomeV5() {
 
       <Destinations />
       <PerfectMatch />
+      <HomeWishlistCard forceEmpty={search.get("wish") === "empty"} headStyle={HOME_HEAD} />
 
       {/* ─── The stippled half ───
           The ground picks up a dot every sixteen pixels from here down, in the

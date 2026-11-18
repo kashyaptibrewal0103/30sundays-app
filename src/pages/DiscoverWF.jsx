@@ -96,12 +96,11 @@ export default function DiscoverWF() {
             <div key={r.city} onClick={() => navigate(`/destination/${encodeURIComponent(dest)}/region/${encodeURIComponent(r.city)}`)} style={{ flexShrink: 0, width: 148, position: "relative", borderRadius: 16, overflow: "hidden", aspectRatio: "9 / 16", background: C.div, cursor: "pointer" }}>
               <img src={r.img} alt={r.city} className="wf-kb" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", animationDelay: `${(i % 4) * -3.5}s` }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.18) 28%, rgba(0,0,0,0.72) 100%)" }} />
-              
-              <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: 8, right: 8 }}>
-                <SaveHeart onPhoto saved={isRegionSaved(r.city)} onToggle={() => toggleRegion(dest, r.city)} />
-              </div>
               <div style={{ position: "absolute", left: 11, right: 11, bottom: 11 }}>
-                <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.55)" }}>{r.emoji} {r.city}</p>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+                  <p style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 800, color: "#fff", margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.55)" }}>{r.emoji} {r.city}</p>
+                  <SaveHeart onPhoto size={28} saved={isRegionSaved(r.city)} onToggle={() => toggleRegion(dest, r.city)} style={{ margin: "-6px -6px -6px 0" }} />
+                </div>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.92)", margin: "2px 0 0", textShadow: "0 1px 3px rgba(0,0,0,0.55)" }}>{r.dayTrip ? "Day trip" : `${r.n}-${r.n + 1} Nights`}</p>
               </div>
             </div>
@@ -149,10 +148,12 @@ export default function DiscoverWF() {
               <div style={{ position: "relative", height: 168, borderRadius: 14, overflow: "hidden" }}>
                 <img src={a.img} alt={a.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.7) 100%)" }} />
-                <div style={{ position: "absolute", top: 8, right: 8 }}><SaveHeart onPhoto saved={isActivitySaved(a.id)} onToggle={() => toggleActivity(dest, a.id)} /></div>
                 <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}><Play size={15} color={C.head} fill={C.head} /></div>
                 <div style={{ position: "absolute", left: 9, right: 9, bottom: 9 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "15px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{a.name}</p>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+                    <p style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "15px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{a.name}</p>
+                    <SaveHeart onPhoto size={28} saved={isActivitySaved(a.id)} onToggle={() => toggleActivity(dest, a.id)} style={{ margin: "-7px -6px -7px 0" }} />
+                  </div>
                   <p style={{ fontSize: 10, color: "rgba(255,255,255,0.9)", margin: "1px 0 0", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{a.city} · {a.dur}</p>
                 </div>
               </div>
@@ -214,9 +215,9 @@ export function DestReel({ dest, reel, saved, onToggleSave, onClose }) {
       {/* Bottom: kicker, name + heart, social proof, caption */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `0 ${PAD}px 30px` }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)", textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>{kicker}</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 10px" }}>
-          <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.4px", textShadow: "0 1px 12px rgba(0,0,0,0.5)" }}>{name}</p>
-          <SaveHeart onPhoto size={34} saved={saved} onToggle={onToggleSave} />
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "4px 0 10px" }}>
+          <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 24, fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.4px", textShadow: "0 1px 12px rgba(0,0,0,0.5)" }}>{name}</p>
+          <SaveHeart onPhoto size={34} saved={saved} onToggle={onToggleSave} style={{ margin: "-3px -7px -3px 0" }} />
         </div>
         {isRegion ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>

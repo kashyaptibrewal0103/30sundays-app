@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { Star, ChevronUp, ChevronDown, UtensilsCrossed, ArrowLeftRight, Sparkles, Check } from "lucide-react";
 import { C, allItineraries } from "../data";
-import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
+import { stayHotels, getStayInfo, formatHotelPrice } from "../data/hotelData";
 import { getMauritiusHotel } from "../data/mauritiusData";
 import { useDeals, computePrice } from "../data/deals";
+import { useWishlist } from "../data/wishlist";
 import InclusionsSection from "../components/InclusionsSection";
 import HotelV3 from "../components/hotel_v3/HotelV3";
 import { detailFromHotel } from "../data/hotelDetailAdapter";
@@ -25,6 +26,7 @@ export default function HotelPDP() {
   // trip, and a reader does not.
   const readOnly = params.get("view") === "1";
   const dealsCtx = useDeals();
+  const wishlist = useWishlist();
   const [showCurrentDetails, setShowCurrentDetails] = useState(false); // expand current-hotel in the bar
   const [confirmReplace, setConfirmReplace] = useState(false); // warning popup
   const [showUpgrade, setShowUpgrade] = useState(false); // upgrade details sheet
@@ -34,7 +36,7 @@ export default function HotelPDP() {
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
 
   const hotels = itinerary && stayInfo
-    ? generateHotelsForCity(stayInfo.city, itinerary.dest, stayInfo.checkIn, stayInfo.checkOut, stayInfo.nights)
+    ? stayHotels(itinerary, Number(stayIndex))
     : [];
   const hotel = hotels.find(h => h.id === decodeURIComponent(hotelId));
 
@@ -49,7 +51,11 @@ export default function HotelPDP() {
     : null;
   const currentRoomPrice = currentRoom ? currentRoom.pricePerNight : 0;
 
+  // room: a room to open straight away, from the room upgrade under the
+  // trip's hotels. It starts picked, with its details open.
+  const openRoomId = params.get("room");
   const [selectedRoomId, setSelectedRoomId] = useState(() => {
+    if (openRoomId && hotel?.rooms?.some((r) => r.id === openRoomId)) return openRoomId;
     if (isCurrentHotel && currentRoom) return currentRoom.id;
     return hotel?.rooms?.[0]?.id || null;
   });
@@ -60,6 +66,20 @@ export default function HotelPDP() {
 
   const nights = stayInfo.nights;
   const selectedRoom = hotel.rooms.find(r => r.id === selectedRoomId);
+
+  // The heart over the photos. Hotels are regenerated for every set of dates
+  // and their ids are positional, so the wishlist keys them by name, filed
+  // under the trip's destination with the stay's town alongside.
+  const wishDest = itinerary.dest;
+  const isWished = wishlist.isSaved("hotel", wishDest, hotel.name);
+  const toggleWish = () => wishlist.toggle("hotel", wishDest, hotel.name, {
+    name: hotel.name,
+    img: hotel.images?.[0]?.url,
+    sub: `${stayInfo.city} · ${hotel.stars}-star`,
+    city: stayInfo.city,
+    stars: hotel.stars,
+    score: hotel.bookingScore,
+  });
   const isSameAsCurrent = isCurrentHotel && selectedRoomId === currentRoom?.id;
   // Your own hotel, opened from your own trip: the page leads with your room
   // and keeps Change hotel on screen the whole way down.
@@ -418,6 +438,7 @@ export default function HotelPDP() {
       hotel={shown}
       onBack={goBack}
       selectedRoomId={readOnly ? null : selectedRoomId}
+      openRoomId={readOnly ? null : openRoomId}
       onPickRoom={readOnly ? undefined : (room) => setSelectedRoomId(room.id)}
       readOnly={readOnly}
       roomsTitle={readOnly ? "The room on this trip" : undefined}
@@ -433,6 +454,8 @@ export default function HotelPDP() {
       )}
       bottomBar={readOnly ? null : ownStay && isSameAsCurrent ? ownBar : bottomBar}
       overlay={readOnly ? null : overlay}
+      saved={isWished}
+      onSave={toggleWish}
     />
   );
 }

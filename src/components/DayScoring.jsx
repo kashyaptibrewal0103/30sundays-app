@@ -300,7 +300,7 @@ export function DurationBody({ data, scoring, dayLabel }) {
         background: "#FFF4F7", border: "1px solid #FFE4E8",
       }}>
         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: C.p600 }}>
-          APPROXIMATE DAY DURATION
+          APPROXIMATE TOTAL DURATION
         </p>
         <p style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 700, color: "#181E4C", letterSpacing: -0.4 }}>
           ≈ {data.totalText}

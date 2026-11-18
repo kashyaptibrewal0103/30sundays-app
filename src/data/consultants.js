@@ -7,11 +7,22 @@
 // Everything else is shared, so there is one component and one set of copy.
 export const TRIPS_THRESHOLD = 100;
 
+// The travel avatars, in the style the team makes them in Trailix: one for a
+// woman, one for a man, until each consultant's own avatar comes through.
+export const AVATAR = { female: "/consultant-female.jpg", male: "/consultant-male.jpg" };
+const AVATAR_BY_NAME = {
+  "Meera Nair": AVATAR.female, "Riya Shah": AVATAR.female, "Sana Kapoor": AVATAR.female,
+  "Aarav Mehta": AVATAR.male, "Kabir Iyer": AVATAR.male,
+};
+// The avatar for a consultant by name, or null (the card then shows initials).
+export const avatarFor = (name) => AVATAR_BY_NAME[name] || null;
+
 export const teamLeads = {
   aarav: {
     id: "aarav",
     name: "Aarav Mehta",
     role: "Team Lead",
+    avatar: AVATAR.male,
     phone: "+919876500022",
     destination: "Bali",
     teamSize: 6,
@@ -25,14 +36,13 @@ export const teamLeads = {
 // Same person, two demo profiles, so both versions are reviewable in one build.
 // In production this comes from the deal's assigned consultant.
 //
-// `avatar` is optional. With one the card shows the photo, without one it falls
-// back to initials, which is what a consultant with no photo on file will get.
-// The team leads deliberately have none, so both states are on screen at once.
+// `avatar` is optional. With one the card shows it, without one it falls back
+// to initials, which is what a consultant with no avatar on file will get.
 export const consultantProfiles = {
   v1: {
     id: "meera-senior",
     name: "Meera Nair",
-    avatar: "/consultant-meera.jpg",
+    avatar: AVATAR.female,
     phone: "+919876500011",
     destination: "Bali",
     tripsPlanned: 2000,
@@ -43,7 +53,7 @@ export const consultantProfiles = {
   v2: {
     id: "meera-new",
     name: "Meera Nair",
-    avatar: "/consultant-meera.jpg",
+    avatar: AVATAR.female,
     phone: "+919876500011",
     destination: "Bali",
     tripsPlanned: 42,

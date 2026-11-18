@@ -1,17 +1,37 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { C } from "../data";
-import { getWishlistHotel } from "../data/wishlistData";
+import { generateHotelsForCity } from "../data/hotelData";
+import { useWishlist } from "../data/wishlist";
 import HotelV3 from "../components/hotel_v3/HotelV3";
 import { detailFromHotel } from "../data/hotelDetailAdapter";
 
-// Read-only hotel view for the wishlist: same screen as the booking flow, minus
-// dates, availability, prices and the replace bar.
+// A saved hotel, opened from the wishlist: the same hotel page the region page
+// opens, read-only, because from a board there is no stay to price and nothing
+// to swap. The hotel is looked up in its town's list by name (that is how the
+// wishlist keys hotels); a hotel that list does not hold, an older save or one
+// from a seeded board, is drawn from what was kept when it was saved.
 export default function WishlistHotelDetail() {
-  const { id } = useParams();
+  const { dest: rawDest, id: rawId } = useParams();
+  const dest = decodeURIComponent(rawDest || "");
+  const id = decodeURIComponent(rawId || "");
   const navigate = useNavigate();
-  const hotel = getWishlistHotel(id);
-  const detail = useMemo(() => (hotel ? detailFromHotel(hotel) : null), [hotel]);
+  const { get, isSaved, toggle } = useWishlist();
+  // Kept from the first render, so taking the heart off here does not empty
+  // the page out from under the person reading it.
+  const [saved] = useState(() => get("hotel", dest, id));
+
+  const hotel = useMemo(() => {
+    const city = saved?.city;
+    const live = city ? generateHotelsForCity(city, dest, "2026-11-10", "2026-11-17", 7).find((h) => h.name === id) : null;
+    if (live) return live;
+    if (!saved) return null;
+    return {
+      id, name: saved.name || id, city, neighbourhood: city,
+      stars: saved.stars, bookingScore: saved.score,
+      images: saved.img ? [{ url: saved.img, category: "Hotel" }] : [],
+    };
+  }, [saved, dest, id]);
 
   if (!hotel) {
     return (
@@ -23,10 +43,14 @@ export default function WishlistHotelDetail() {
   }
 
   return (
-    <HotelV3
-      hotel={detail}
-      onBack={() => navigate(-1)}
-      readOnly
-    />
+    <div style={{ position: "absolute", inset: 0, background: C.white }}>
+      <HotelV3
+        hotel={detailFromHotel(hotel)}
+        onBack={() => navigate(-1)}
+        readOnly
+        saved={isSaved("hotel", dest, id)}
+        onSave={() => toggle("hotel", dest, id, saved || { name: hotel.name, city: hotel.city })}
+      />
+    </div>
   );
 }

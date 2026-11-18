@@ -33,7 +33,7 @@ function Avatar({ name, src, size }) {
             width: "100%", height: "100%", objectFit: "cover", display: "block",
             // Portrait source, square frame: hold the crop at the top so the
             // face stays in the circle instead of the chin being cut off.
-            objectPosition: "center top",
+            objectPosition: "center top", transform: "scale(1.7)", transformOrigin: "50% 30%",
           }}
         />
       </div>

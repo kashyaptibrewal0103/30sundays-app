@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, createElement } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, createElement } from "react";
 import { allItineraries } from "../data";
+import { useWishlist } from "./wishlist";
 
 // ─── Versioned deals store ───
 // Mirrors the back-office model: a deal holds versions. A version is an
@@ -163,14 +164,23 @@ function persist(deals) {
   try { localStorage.setItem(KEY, JSON.stringify(deals)); } catch { /* ignore */ }
 }
 
-// Wishlist is a single shared set of version ids, so a heart toggled in My Plans
-// shows up in Compare (and anywhere else a version is listed).
-const WISH_KEY = "30s_wished_versions_v1";
-function loadWished() {
-  try { return JSON.parse(localStorage.getItem(WISH_KEY)) || {}; } catch { return {}; }
+// Hearted plan versions live on the one wishlist now (kind "trip", keyed by
+// version id, filed under the trip's destination). The old set of version ids
+// is read once and carried across so nobody loses a heart.
+const OLD_WISH_KEY = "30s_wished_versions_v1";
+function takeOldWished() {
+  let w = null;
+  try { w = JSON.parse(localStorage.getItem(OLD_WISH_KEY)); localStorage.removeItem(OLD_WISH_KEY); } catch { w = null; }
+  return w && typeof w === "object" ? Object.keys(w).filter((id) => w[id]) : [];
 }
-function persistWished(w) {
-  try { localStorage.setItem(WISH_KEY, JSON.stringify(w)); } catch { /* ignore */ }
+
+// A version and the deal it sits in, whichever shape the deal has.
+function findVersion(deals, versionId) {
+  for (const d of deals) {
+    for (const v of d.versions || []) if (v.id === versionId) return { deal: d, v };
+    for (const p of d.properties || []) for (const v of p.versions || []) if (v.id === versionId) return { deal: d, v, property: p };
+  }
+  return null;
 }
 
 let seq = 0;
@@ -198,11 +208,45 @@ export function DealsProvider({ children }) {
   const [deals, setDeals] = useState(load);
   useEffect(() => { persist(deals); }, [deals]);
 
-  // Shared wishlist (version id -> true).
-  const [wished, setWished] = useState(loadWished);
-  useEffect(() => { persistWished(wished); }, [wished]);
-  const toggleWish = useCallback((id) => setWished(w => ({ ...w, [id]: !w[id] })), []);
+  // Hearted versions, on the one wishlist. `wished` keeps the old shape
+  // (version id -> true) for the screens that read it.
+  const wishlist = useWishlist();
+  const tripMeta = useCallback((versionId) => {
+    const hit = findVersion(deals, versionId);
+    if (!hit) return null;
+    const { deal, v, property } = hit;
+    const dest = v.destination ?? deal.dest ?? "Trips";
+    const it = allItineraries.find(i => i.id === (v.itineraryId ?? deal.itineraryId));
+    return {
+      dest,
+      meta: {
+        name: `${dest} trip`,
+        img: deal.img || it?.img || null,
+        sub: property || (it?.route || []).map(r => `${r.n}N ${r.city}`).join(" · ") || deal.title || null,
+        city: null,
+      },
+    };
+  }, [deals]);
+  const wished = useMemo(() => {
+    const w = {};
+    wishlist.ofKind("trip").forEach((it) => { w[it.id] = true; });
+    return w;
+  }, [wishlist]);
   const isWished = useCallback((id) => !!wished[id], [wished]);
+  const toggleWish = useCallback((id) => {
+    const t = tripMeta(id);
+    if (!t) return;
+    wishlist.toggle("trip", t.dest, id, t.meta);
+  }, [tripMeta, wishlist]);
+  // One-time carry-over of the hearts from before the lists merged.
+  useEffect(() => {
+    takeOldWished().forEach((id) => {
+      const t = tripMeta(id);
+      if (t && !wishlist.isSaved("trip", t.dest, id)) wishlist.save("trip", t.dest, id, t.meta, { silent: true });
+    });
+    // Runs once, on mount, against whatever deals loaded with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Create a brand-new deal with an editable Draft (Version 1).
   const createDeal = useCallback((init) => {

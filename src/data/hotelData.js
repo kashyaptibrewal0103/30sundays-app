@@ -1,3 +1,5 @@
+import { getMauritiusHotel } from "./mauritiusData";
+
 // ─── Hotel Data Layer ───
 // Deterministic hotel generation for the 30 Sundays app
 
@@ -70,6 +72,7 @@ const neighbourhoods = {
     Sanur: ["Sanur Beach", "Mertasari", "Sindhu Beach"],
     "Nusa Dua": ["ITDC Complex", "Tanjung Benoa", "Sawangan"],
     "Nusa Penida": ["Crystal Bay", "Toyapakeh", "Banjar Nyuh"],
+    "Gili Trawangan": ["Sunset Point", "Main Strip", "North Beach"],
     Kintamani: ["Lake Batur", "Penelokan", "Batur Village"],
     Amed: ["Lipah Beach", "Jemeluk Bay", "Japanese Wreck"],
     Uluwatu: ["Bingin Beach", "Padang Padang", "Dreamland"],
@@ -95,6 +98,7 @@ const neighbourhoods = {
     "Chiang Mai": ["Old City", "Nimmanhaemin", "Riverside", "Night Bazaar"],
     "Chiang Rai": ["Clock Tower", "White Temple Area"],
     Krabi: ["Ao Nang Beach", "Railay", "Klong Muang"],
+    "Phi Phi": ["Tonsai Village", "Long Beach", "Loh Dalum"],
     "Koh Samui": ["Chaweng Beach", "Lamai", "Bophut", "Maenam"],
     Pai: ["Pai Walking Street", "Pai Canyon"],
   },
@@ -360,6 +364,79 @@ export function generateHotelsForCity(city, destination, checkIn, checkOut, nigh
 
   // Sort by price (default)
   return hotels.sort((a, b) => a.pricePerNight - b.pricePerNight);
+}
+
+// ─── The hotel on the trip card ───
+//
+// The itinerary's hotel cards show a stay as "Ubud Grand Resort, 4 star, 8.4"
+// (or the real hotel, on Mauritius). The hotel behind that card is the first
+// one generated for the town, and it used to be whatever the generator made
+// it: a 5 star at the top price behind a 4 star card. Every screen measured
+// against that hotel, so a 5 star upgrade read as "lesser by". stayHotels
+// gives that hotel the card's name, stars, score and photo, and a price that
+// fits its stars, so the card, the list, the hotel page and the picks under
+// the hotels all describe the same stay.
+export const HOTEL_STUB_IMGS = [
+  "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80&auto=format&fit=crop",
+];
+
+export function stayCard(itinerary, stayIndex) {
+  const day = itinerary?.days?.[stayIndex];
+  if (!day) return null;
+  const card = {
+    name: `${day.city} Grand Resort`,
+    stars: [4, 5, 4, 5][stayIndex % 4],
+    rating: [8.4, 8.9, 8.1, 8.7][stayIndex % 4], // Booking.com 10-point scale
+    img: HOTEL_STUB_IMGS[stayIndex % HOTEL_STUB_IMGS.length],
+  };
+  if (itinerary.dest === "Mauritius") {
+    const m = getMauritiusHotel(itinerary.id, stayIndex, day.city);
+    if (m) return { ...card, name: m.name, stars: m.stars, img: m.img };
+  }
+  return card;
+}
+
+// A night in the cheapest room, by stars: above most hotels a star down and
+// below most a star up, so there is something on either side of it.
+const CARD_PRICE = { 3: 3000, 4: 4800, 5: 8000 };
+
+function asCard(h, card) {
+  const k = (CARD_PRICE[card.stars] || h.rooms[0].pricePerNight) / h.rooms[0].pricePerNight;
+  const rooms = h.rooms.map((r) => {
+    const pricePerNight = Math.round((r.pricePerNight * k) / 100) * 100;
+    return { ...r, pricePerNight, taxPerNight: Math.round(pricePerNight * 0.03) };
+  });
+  const viewTags = h.viewTags.filter((t) => t !== "5 star" && t !== "9+ rated");
+  if (card.stars === 5) viewTags.push("5 star");
+  if (card.rating >= 9) viewTags.push("9+ rated");
+  return {
+    ...h,
+    name: card.name,
+    stars: card.stars,
+    bookingScore: card.rating,
+    images: card.img ? [{ url: card.img, category: h.images[0]?.category }, ...h.images.slice(1)] : h.images,
+    rooms,
+    viewTags,
+    pricePerNight: rooms[0].pricePerNight,
+    roomType: rooms[0].name,
+    bedSummary: rooms[0].bedType,
+    mealPlan: rooms[0].mealPlan,
+  };
+}
+
+// The hotels for one stay of a trip, with the card's hotel in its place.
+export function stayHotels(itinerary, stayIndex) {
+  const si = itinerary ? getStayInfo(itinerary, stayIndex) : null;
+  if (!si) return [];
+  const all = generateHotelsForCity(si.city, itinerary.dest, si.checkIn, si.checkOut, si.nights);
+  const card = stayCard(itinerary, stayIndex);
+  const id = `${si.city}-hotel-0`;
+  return all
+    .map((h) => (h.id === id && card ? asCard(h, card) : h))
+    .sort((a, b) => a.pricePerNight - b.pricePerNight);
 }
 
 // ─── Get stay info from itinerary ───

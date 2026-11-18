@@ -158,13 +158,15 @@ export default function Discover({ routesBase = "/discover" }) {
               <div style={{ position: "relative", height: 120 }}>
                 <img src={r.img} alt={r.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 50%)" }} />
-                <div style={{ position: "absolute", top: 9, right: 9 }}><SaveHeart onPhoto saved={isRegionSaved(r.city)} onToggle={() => toggleRegion(dest, r.city)} /></div>
                 <span style={{ position: "absolute", left: 9, bottom: 9, display: "inline-flex", alignItems: "center", gap: 4, background: r.dayTrip ? "rgba(255,255,255,0.94)" : C.p100, color: r.dayTrip ? C.sub : C.p600, fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 999 }}>
                   {r.dayTrip ? "Day trip" : `Base · ${r.n}N`}
                 </span>
               </div>
               <div style={{ padding: "10px 11px 12px" }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: 0 }}>{r.emoji} {r.city}</p>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+                  <p style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 700, color: C.head, margin: 0 }}>{r.emoji} {r.city}</p>
+                  <SaveHeart size={28} saved={isRegionSaved(r.city)} onToggle={() => toggleRegion(dest, r.city)} style={{ margin: "-6px -6px -6px 0" }} />
+                </div>
                 <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0", lineHeight: "15px", height: 30, overflow: "hidden" }}>{r.blurb}</p>
               </div>
             </div>
@@ -202,12 +204,14 @@ export default function Discover({ routesBase = "/discover" }) {
               <div style={{ position: "relative", height: 176, borderRadius: 14, overflow: "hidden" }}>
                 <img src={a.img} alt={a.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.7) 100%)" }} />
-                <div style={{ position: "absolute", top: 9, right: 9 }}><SaveHeart onPhoto saved={isActivitySaved(a.id)} onToggle={() => toggleActivity(dest, a.id)} /></div>
                 <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Play size={16} color={C.head} fill={C.head} />
                 </div>
                 <div style={{ position: "absolute", left: 10, right: 10, bottom: 9 }}>
-                  <p style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "15px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{a.name}</p>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+                    <p style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "15px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{a.name}</p>
+                    <SaveHeart onPhoto size={28} saved={isActivitySaved(a.id)} onToggle={() => toggleActivity(dest, a.id)} style={{ margin: "-7px -6px -7px 0" }} />
+                  </div>
                   <p style={{ fontSize: 10, color: "rgba(255,255,255,0.9)", margin: "1px 0 0", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{a.city} · {a.dur}</p>
                 </div>
               </div>

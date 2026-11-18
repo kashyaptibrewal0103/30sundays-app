@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
-import { X, Check, ChevronRight, AlertTriangle } from "lucide-react";
+import { X, Check, ChevronRight, AlertTriangle, Heart } from "lucide-react";
 import { C } from "../../data";
 import { destAreas, areaImg, cityCoords } from "../../data/buildData";
 import { cityTags, cityPhotos } from "../../data/cityTags";
 import RegionDetail from "../../pages/RegionDetail";
+import { useWishlist } from "../../data/wishlist";
+import { SavedMark } from "../WishlistPickSheet";
 
 // ─── Choose the cities ───
 //
@@ -32,7 +34,7 @@ const PAD = 16;
 //
 // Our suggested length per city, scaled to fit the trip they have booked, with
 // the remainder going to the longer stays first so nothing ends up at nought.
-function split(cities, rec, target) {
+export function split(cities, rec, target) {
   if (!cities.length) return [];
   const want = cities.map((c) => Math.max(1, rec[c] ?? 2));
   const total = want.reduce((a, b) => a + b, 0);
@@ -207,7 +209,8 @@ const nightsRange = (n) => {
 //
 // The photograph runs the full height of the card and flush to its edge, so
 // the card is as tall as its words with no band of nothing to manage.
-function CityCard({ area, picked, onToggle, onOpen }) {
+// saved: the region is on the wishlist, which the card marks and nothing more.
+function CityCard({ area, picked, saved, onToggle, onOpen }) {
   // A chip or two for what the line above cannot say: how booked the place is
   // and how busy it gets. See cityTags.
   const tags = useMemo(() => cityTags(area.dest, area.city), [area.dest, area.city]);
@@ -288,6 +291,7 @@ function CityCard({ area, picked, onToggle, onOpen }) {
           <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {area.city}
           </span>
+          {saved && <SavedMark size={18} />}
           {/* ─── The one thing to tap ───
               The tick used to appear only once a city was chosen, so an
               unchosen card showed nothing at all: a photograph, a name and a
@@ -589,14 +593,28 @@ export default function RoutePicker({
   const picked = useMemo(() => new Set(route.map((r) => r.city)), [route]);
   const note = useMemo(() => fit(route, rec, nights), [route, rec, nights]);
 
-  // Chosen cities first, in the order the trip runs them, then the rest. The
-  // list can be a dozen long; what somebody has already decided should not be
-  // something they scroll to find.
+  // The regions hearted for this destination before the wizard was opened. A
+  // mark on their cards, and one line under the question that opens them so
+  // they can be added from here. Not pre-chosen: a save is interest, a pick is
+  // a decision, and the nights are worked out from the picks.
+  const { ofKind } = useWishlist();
+  // With the card's photograph, so the sheet shows the place and not a blank.
+  const savedRegions = useMemo(
+    () => ofKind("region", dest).map((it) => ({ ...it, img: it.img || cards.find((c) => c.city === it.id)?.img || null })),
+    [ofKind, dest, cards]
+  );
+  const savedCities = useMemo(() => new Set(savedRegions.map((i) => i.id)), [savedRegions]);
+
+  // The saved cities come first, under their own heading, right here in the
+  // list they are chosen from: nobody has to go somewhere else to find what
+  // they already said they wanted. Within each group, chosen cities first, in
+  // the order the trip runs them. Still nothing pre-ticked.
   const shown = useMemo(() => {
     const order = route.map((s) => s.city);
     const rank = (a) => (order.includes(a.city) ? order.indexOf(a.city) : 1000 + cards.indexOf(a));
-    return [...cards].sort((a, b) => rank(a) - rank(b));
-  }, [cards, route]);
+    return [...cards].sort((a, b) => (savedCities.has(b.city) - savedCities.has(a.city)) || (rank(a) - rank(b)));
+  }, [cards, route, savedCities]);
+  const savedShown = shown.filter((a) => savedCities.has(a.city)).length;
 
   const seen = useRef(false);
   if (nudge) seen.current = true;
@@ -838,19 +856,34 @@ export default function RoutePicker({
             color: C.head, textAlign: "center", letterSpacing: "-0.2px",
           }}>
             {cards.length} cities in {dest}
+            {savedShown > 0 && <span style={{ color: C.p600 }}> · {savedShown} saved</span>}
           </p>
         </div>
 
         <div style={{ padding: `4px ${PAD}px 16px`, borderTop: `1px solid ${C.div}` }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12 }}>
-            {shown.map((a) => (
-              <CityCard
-                key={a.city}
-                area={a}
-                picked={picked.has(a.city)}
-                onToggle={() => toggle(a)}
-                onOpen={() => setReading(a.city)}
-              />
+            {shown.map((a, i) => (
+              <div key={a.city} style={{ display: "contents" }}>
+                {savedShown > 0 && i === 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 -2px" }}>
+                    <Heart size={16} color={C.p600} fill={C.p600} />
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: C.head }}>From your wishlist</p>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.p600 }}>{savedShown} saved</span>
+                  </div>
+                )}
+                {savedShown > 0 && i === savedShown && (
+                  <p style={{ margin: "8px 0 -2px", paddingTop: 16, borderTop: `1px solid ${C.div}`, fontSize: 15, fontWeight: 800, color: C.head }}>
+                    All cities in {dest}
+                  </p>
+                )}
+                <CityCard
+                  area={a}
+                  picked={picked.has(a.city)}
+                  saved={savedCities.has(a.city)}
+                  onToggle={() => toggle(a)}
+                  onOpen={() => setReading(a.city)}
+                />
+              </div>
             ))}
           </div>
         </div>

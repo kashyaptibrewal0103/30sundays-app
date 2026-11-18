@@ -595,8 +595,8 @@ function RoomSheet({ room, chosen, onClose, onPick }) {
   );
 }
 
-export function Rooms({ hotel, onPick, selectedId, readOnly = false, nights = 3, title, currentId }) {
-  const [detail, setDetail] = useState(null);
+export function Rooms({ hotel, onPick, selectedId, readOnly = false, nights = 3, title, currentId, openId = null }) {
+  const [detail, setDetail] = useState(() => (openId ? hotel.rooms.find((r) => r.id === openId) || null : null));
 
   // Your own hotel is a different question from a hotel you are looking at.
   // The room is already chosen, so the section leads with it, marked plainly,

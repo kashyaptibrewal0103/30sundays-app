@@ -5,6 +5,7 @@ import {
   Clock, Timer, Car, Info, RefreshCw, Play,
 } from "lucide-react";
 import { C } from "../data";
+import Logo from "../components/Logo";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { TourReviewsSheet } from "./ItineraryDetail";
 import { buildActivityDetail } from "../data/activityData";
@@ -499,7 +500,12 @@ export function ChangeDayCTA() {
 }
 
 // The app's own activity detail screen, full screen over the day.
-export function ActivityScreen({ activity, city, dayNum, onClose, country = "Vietnam", isBooked = true }) {
+//
+// `saved` and `onSave` are optional. A region page is browsing, and browsing
+// is where a couple wants to keep a thing for later, so it passes both and
+// gets a heart beside the back control. A day in a booked trip passes neither
+// and the header stays as it was.
+export function ActivityScreen({ activity, city, dayNum, onClose, country = "Vietnam", isBooked = true, saved, onSave }) {
   const detail = useMemo(
     // isBooked gates the video hero on the activity page. Reaching it from a
     // day in your own itinerary is exactly the case that should get it; a
@@ -517,8 +523,9 @@ export function ActivityScreen({ activity, city, dayNum, onClose, country = "Vie
           >
             <ArrowLeft size={18} color={HEAD} />
           </button>
+          <Logo variant="lockup" height={30} />
         </div>
-        <ActivityDetailScroll detail={detail} />
+        <ActivityDetailScroll detail={detail} saved={saved} onSave={onSave} />
       </div>
     </div>
   );

@@ -1,80 +1,47 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, createElement } from "react";
+import { useCallback, useMemo } from "react";
+import { useWishlist } from "./wishlist";
+import { regionByCity, activityById } from "./discoverData";
 
-// ─── Saves store (single-user wishlist) ───
-// The discover flow lets a couple save what they love — regions (a base they
-// sleep in, or a day-trip spot) and activities — and those saves drive the
-// routes we generate. Single-user for now; a partner is an invite stub.
-// Shape: { [dest]: { regions: string[], activities: string[] } }
+// ─── Discover saves, read off the one wishlist ───
+//
+// The discover flow saves regions (a base to sleep in, or a day-trip spot) and
+// activities, and those saves drive the routes it generates. They used to live
+// in their own store. They are wishlist items now, kind "region" and
+// "activity", and this hook keeps the shape the discover screens already read:
+// forDest(dest) → { regions: [city], activities: [id] }.
 
-const KEY = "30s_saves_v1";
-const SEED_KEY = "30s_saves_seeded_v1";
+const KIND_OF = { regions: "region", activities: "activity" };
 
-// A demo Bali wishlist so the routes screen opens with something to show.
-// Regions reference real cities in destAreas (so route-gen + activities work).
-function seed() {
-  return {
-    Bali: {
-      regions: ["Ubud", "Seminyak", "Canggu", "Sanur", "Nusa Penida"],
-      activities: [],
-    },
-  };
+// What a region or activity looks like as a wishlist row, looked up from the
+// live data so the snapshot is never stale. Falls back to the key itself for
+// things the catalogue does not know (a video lesson's topic, say).
+export function regionMeta(dest, city) {
+  const r = regionByCity(dest, city);
+  return { name: city, img: r?.img || null, sub: r?.blurb || null, city };
 }
-
-function load() {
-  let data;
-  try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { data = {}; }
-  try {
-    if (!localStorage.getItem(SEED_KEY)) {
-      data = seed();
-      localStorage.setItem(SEED_KEY, "1");
-      localStorage.setItem(KEY, JSON.stringify(data));
-    }
-  } catch { /* ignore */ }
-  return data;
-}
-function persist(data) {
-  try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* ignore */ }
-}
-
-const SavesContext = createContext(null);
-
-export function SavesProvider({ children }) {
-  const [saves, setSaves] = useState(load);
-  useEffect(() => { persist(saves); }, [saves]);
-
-  const forDest = useCallback((dest) => saves[dest] || { regions: [], activities: [] }, [saves]);
-
-  const toggle = useCallback((dest, kind, key) => {
-    setSaves(prev => {
-      const cur = prev[dest] || { regions: [], activities: [] };
-      const list = cur[kind] || [];
-      const next = list.includes(key) ? list.filter(x => x !== key) : [...list, key];
-      return { ...prev, [dest]: { ...cur, [kind]: next } };
-    });
-  }, []);
-
-  const toggleRegion = useCallback((dest, city) => toggle(dest, "regions", city), [toggle]);
-  const toggleActivity = useCallback((dest, id) => toggle(dest, "activities", id), [toggle]);
-
-  const remove = useCallback((dest, kind, key) => {
-    setSaves(prev => {
-      const cur = prev[dest] || { regions: [], activities: [] };
-      return { ...prev, [dest]: { ...cur, [kind]: (cur[kind] || []).filter(x => x !== key) } };
-    });
-  }, []);
-
-  const clearDest = useCallback((dest) => {
-    setSaves(prev => ({ ...prev, [dest]: { regions: [], activities: [] } }));
-  }, []);
-
-  const value = useMemo(() => ({ saves, forDest, toggleRegion, toggleActivity, remove, clearDest }),
-    [saves, forDest, toggleRegion, toggleActivity, remove, clearDest]);
-
-  return createElement(SavesContext.Provider, { value }, children);
+export function activityMeta(dest, id) {
+  const a = activityById(dest, id);
+  const [city, name] = String(id).includes("::") ? String(id).split("::") : [null, String(id)];
+  return { name: a?.name || name, img: a?.img || null, city: a?.city || city, sub: a?.city || city || null };
 }
 
 export function useSaves() {
-  const ctx = useContext(SavesContext);
-  if (!ctx) throw new Error("useSaves must be used within SavesProvider");
-  return ctx;
+  const w = useWishlist();
+
+  const forDest = useCallback((dest) => ({
+    regions: w.ofKind("region", dest).map((it) => it.id),
+    activities: w.ofKind("activity", dest).map((it) => it.id),
+  }), [w]);
+
+  const toggleRegion = useCallback((dest, city) => w.toggle("region", dest, city, regionMeta(dest, city)), [w]);
+  const toggleActivity = useCallback((dest, id) => w.toggle("activity", dest, id, activityMeta(dest, id)), [w]);
+
+  const remove = useCallback((dest, kind, key) => w.remove(KIND_OF[kind] || kind, dest, key), [w]);
+
+  const clearDest = useCallback((dest) => {
+    w.forDest(dest).forEach((it) => { if (it.kind === "region" || it.kind === "activity") w.remove(it.kind, dest, it.id); });
+  }, [w]);
+
+  return useMemo(() => ({ forDest, toggleRegion, toggleActivity, remove, clearDest }),
+    [forDest, toggleRegion, toggleActivity, remove, clearDest]);
 }

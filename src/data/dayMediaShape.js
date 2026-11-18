@@ -93,7 +93,7 @@ function transferTour(t, dayCity, fallbackImg) {
  * @param opts   { dateFor(day, index) → a date line for the day }
  */
 export function toMediaDays(days, dest, opts = {}) {
-  const { dateFor, scoringFor } = opts;
+  const { dateFor, scoringFor, lockFor } = opts;
   const photoPool = (dest && customerPhotos[dest]) || [];
 
   return days.map((day, i) => {
@@ -169,6 +169,11 @@ export function toMediaDays(days, dest, opts = {}) {
         : `Nothing is booked today. ${day.city} is yours to wander, and your consultant can add a tour if you would rather not.`),
       media: { video, images: video ? images.slice(1) : images },
       photos: photoPool,
+      // Why the day cannot be changed, in one line, or null when it can.
+      lock: lockFor ? lockFor(day, i) : null,
+      // A move from one hotel to the next, when the day has one. Airport runs
+      // are not hotel to hotel, so they do not count.
+      hotelMove: (day.transfers || []).find((t) => t.from && t.to && !/airport/i.test(`${t.from} ${t.to}`)) || null,
     };
   });
 }

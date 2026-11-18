@@ -2,9 +2,12 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Star } from "lucide-react";
 import { C } from "../data";
 import { CATEGORY_COLORS, CATEGORY_META, getRoomSplitLabel } from "../data/resortData";
+import { useWishlist } from "../data/wishlist";
+import SaveHeart from "./SaveHeart";
 
 // Each card represents ONE night config for a resort (no toggles)
 export default function ResortCard({ resort, nights, showCategoryBadge, query }) {
+  const wishlist = useWishlist();
   const config = resort.night_configs.find(c => c.nights === nights) || resort.night_configs[0];
   const defaultCombo = config ? (config.combos.find(c => c.is_default) || config.combos[0]) : null;
   const roomSplit = defaultCombo ? getRoomSplitLabel(defaultCombo) : "";
@@ -13,6 +16,17 @@ export default function ResortCard({ resort, nights, showCategoryBadge, query })
   const badgeCat = showCategoryBadge && resort.categories[0];
   const badgeColor = badgeCat ? CATEGORY_COLORS[badgeCat] : null;
   const badgeLabel = badgeCat ? CATEGORY_META[badgeCat]?.label : null;
+
+  // The wishlist keys a resort by name under Maldives, with its atoll as the
+  // town, the same way a hotel elsewhere carries the city of its stay.
+  const saved = wishlist.isSaved("hotel", "Maldives", resort.name);
+  const toggleSave = () => wishlist.toggle("hotel", "Maldives", resort.name, {
+    name: resort.name,
+    img: resort.hero_image,
+    sub: `${resort.atoll || "Maldives"} · ${resort.star_rating}-star`,
+    city: resort.atoll || null,
+    stars: resort.star_rating,
+  });
 
   return (
     <Link
@@ -66,7 +80,7 @@ export default function ResortCard({ resort, nights, showCategoryBadge, query })
 
         {/* Card content */}
         <div style={{ padding: "12px 14px 14px" }}>
-          {/* Resort name + star rating */}
+          {/* Resort name, star rating, and the heart at the far right */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
             <h4 style={{ fontSize: 15, fontWeight: 700, color: C.head, margin: 0, lineHeight: "20px", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {resort.name}
@@ -75,6 +89,7 @@ export default function ResortCard({ resort, nights, showCategoryBadge, query })
               <Star size={12} color="#F59E0B" fill="#F59E0B" />
               <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>{resort.star_rating}</span>
             </div>
+            <SaveHeart saved={saved} onToggle={toggleSave} size={28} style={{ margin: "-4px -6px -4px 4px" }} />
           </div>
 
           {/* Atoll + transfer */}
