@@ -178,9 +178,9 @@ export default function HotelV3({
   // rooms section then leads with it and keeps the rest behind one tap.
   currentRoomId,
   nights = 3,
-  // Which paper the honest bit is written on. The postcard is the one we
-  // picked, so it is what every screen gets unless it asks for the other.
-  honestVariant = "postcard",
+  // Which paper the honest bit is written on. Every screen gets the short
+  // handwritten note; the postcard and index card remain for the hotel labs.
+  honestVariant = "note",
   // The wishlist heart beside the hotel name. The screen that opens this knows
   // which destination it is in, so it owns the save and hands it down here.
   saved = false,

@@ -655,6 +655,10 @@ export const HOTEL = {
     "Guests must be 16 or older. Photo ID is checked at check-in for every guest.",
   ],
 
+  // The honest bit as it is shown: one or two lines, the way you would say it
+  // to a friend. The list below stays for anything that wants the detail.
+  honestNote: "Get to the pool before 9 am and it is all yours. The sea out front is rarely swimmable after 2 pm.",
+
   honest: [
     {
       icon: "waves",

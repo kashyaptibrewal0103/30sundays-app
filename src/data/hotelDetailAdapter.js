@@ -158,6 +158,7 @@ export function detailFromHotel(h, opts = {}) {
     reels: HOTEL.reels.map((r, i) => ({ ...r, poster: photos[i % photos.length]?.url || r.poster })),
     aboutShort: h.description || tell(HOTEL.aboutShort),
     aboutSections: HOTEL.aboutSections.map((sec) => ({ ...sec, body: tell(sec.body) })),
+    honestNote: tell(HOTEL.honestNote),
     honest: HOTEL.honest.map((x) => ({ ...x, title: tell(x.title), short: tell(x.short || x.title), body: tell(x.body) })),
     reviewSummary: { ...HOTEL.reviewSummary, text: tell(HOTEL.reviewSummary.text) },
     reviews: HOTEL.reviews.map((r) => ({ ...r, text: tell(r.text) })),

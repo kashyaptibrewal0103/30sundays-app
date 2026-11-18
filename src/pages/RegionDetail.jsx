@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import HonestNote, { honestLine } from "../components/HonestNote";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
@@ -1811,61 +1812,6 @@ function Shopping({ list, dest, city, onMap }) {
   );
 }
 
-// ─── The honest read, posted ───
-// The same lines, on a postcard. The hotel page already writes its honest bit
-// this way, and the form carries the meaning: a card from someone who went,
-// not a disclaimer at the foot of a sales page.
-const PAPER = "#FCF6E7";
-const PAPER_EDGE = "#E6DCC4";
-const RULE = "#D3C8AE";
-const PAPER_INK = "#181D27";
-const TICK = "#027A48";
-const CROSS = "#B45309";
-
-function Postcard({ city, pros, cons }) {
-  const lines = [
-    ...pros.slice(0, 3).map((t) => ({ good: true, t })),
-    ...cons.slice(0, 3).map((t) => ({ good: false, t })),
-  ];
-  return (
-    <div style={{
-      background: PAPER, border: `1px solid ${PAPER_EDGE}`, borderRadius: 5,
-      boxShadow: "0 6px 14px rgba(24,29,39,0.09)", padding: "11px 14px 12px",
-      display: "flex", flexDirection: "column", gap: 9,
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
-          <span style={{ fontFamily: "Caveat, cursive", fontSize: 24, lineHeight: "25px", fontWeight: 700, color: PAPER_INK }}>
-            {city}, honestly
-          </span>
-          <span style={{ width: 88, height: 1, background: RULE }} />
-        </div>
-        <img src="/stamp-honest.png" alt="" style={{ width: 50, height: 50, flexShrink: 0, objectFit: "contain", transform: "rotate(2deg)" }} />
-      </div>
-
-      <span style={{ height: 1, background: RULE }} />
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {lines.map((l, i) => (
-          <div key={i} style={{ display: "flex", gap: 8 }}>
-            <span style={{ marginTop: 1, display: "flex" }}>
-              {l.good
-                ? <Check size={13} color={TICK} strokeWidth={3} style={{ flexShrink: 0 }} />
-                : <XIcon size={13} color={CROSS} strokeWidth={3} style={{ flexShrink: 0 }} />}
-            </span>
-            <span style={{ fontSize: 12.5, lineHeight: "17px", fontWeight: 500, color: PAPER_INK }}>{l.t}</span>
-          </div>
-        ))}
-      </div>
-
-      <span style={{
-        fontFamily: "Caveat, cursive", fontSize: 15, lineHeight: "16px", fontWeight: 600,
-        color: "#8A7F66", alignSelf: "flex-end",
-      }}>Happy travels, with love. 30 Sundays</span>
-    </div>
-  );
-}
-
 // ─── Where to stay ───
 //
 // Two questions, and neither of them is which part of town. The page answers
@@ -2461,7 +2407,10 @@ export default function RegionDetail({
               one. */}
           {(r.pros.length > 0 || r.cons.length > 0) && (
             <Sec>
-              <Postcard city={r.city} pros={r.pros} cons={r.cons} />
+              <HonestNote
+                title={`${r.city}, honestly`}
+                line={honestLine(r.pros, r.cons)}
+              />
             </Sec>
           )}
           <WhenToGo r={r} />

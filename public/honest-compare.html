@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Honest Bit Styles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Caveat:wght@700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --pink: #E31B53; --ink: #181D27; --sub: #535862; --line: #E9EAEB; --bg: #FFFFFF; --chip: #F5F5F6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --chip: #1C1F25; }
+  }
+  :root[data-theme="dark"] { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --chip: #1C1F25; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Manrope, system-ui, sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 16px 60px; }
+  .kicker { font-size: 11px; font-weight: 800; letter-spacing: .7px; color: var(--pink); margin: 0; }
+  h1 { font-size: 26px; margin: 6px 0 6px; letter-spacing: -.4px; }
+  .lead { color: var(--sub); font-size: 14px; line-height: 21px; margin: 0 0 18px; max-width: 640px; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 5; }
+  .tab { border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 8px 15px; font: 700 13px Manrope, sans-serif; cursor: pointer; }
+  .tab[aria-selected="true"] { border-color: var(--pink); color: var(--pink); }
+  .row { display: flex; gap: 16px; overflow-x: auto; padding: 4px 2px 14px; scroll-snap-type: x mandatory; }
+  .shot { flex: 0 0 236px; scroll-snap-align: start; margin: 0; }
+  .shot img { width: 100%; display: block; border-radius: 22px; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(16,24,40,.10); background: #fff; }
+  .num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--pink); color: #fff; font-size: 12px; font-weight: 800; margin-right: 7px; }
+  figcaption { margin-top: 10px; }
+  .name { font-size: 14.5px; font-weight: 800; display: flex; align-items: center; }
+  .desc { font-size: 12.5px; color: var(--sub); line-height: 18px; margin-top: 4px; }
+  .hand { font-family: Caveat, cursive; font-size: 22px; color: var(--pink); }
+  .hint { font-size: 12px; color: var(--sub); margin: 2px 0 10px; }
+  @media (min-width: 1240px) { .row { overflow: visible; } .shot { flex: 1 1 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">THE HONEST BIT</p>
+  <h1>5 handwritten styles, on the real screens</h1>
+  <p class="lead">The same short note in each style, shown where it actually sits. Pick a screen, then swipe across the five.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-screen="hotel" aria-selected="true">Hotel page</button>
+    <button class="tab" role="tab" data-screen="region" aria-selected="false">Region page</button>
+    <button class="tab" role="tab" data-screen="list" aria-selected="false">Hotel list</button>
+  </div>
+  <p class="hint" id="hint">Swipe sideways to see all five.</p>
+
+  <div class="row" id="row"></div>
+</div>
+
+<script>
+  const LOOKS = [
+    { key: "slip", name: "Taped slip", desc: "Cream slip of paper, taped on. Quick pen hand." },
+    { key: "sticky", name: "Sticky note", desc: "Yellow sticky with a curled corner. Felt-tip hand." },
+    { key: "notebook", name: "Notebook page", desc: "Torn, ruled page with a red margin. Neat hand." },
+    { key: "scribble", name: "Margin scribble", desc: "No paper. Pen on the page, pink underline." },
+    { key: "tag", name: "Luggage tag", desc: "Kraft paper travel tag on a string. Marker hand." },
+  ];
+  const row = document.getElementById("row");
+  function show(screen) {
+    row.innerHTML = LOOKS.map((l, i) => `
+      <figure class="shot">
+        <img src="honest-shots/${l.key}-${screen}.jpg" alt="${l.name} on the ${screen} screen" loading="lazy" />
+        <figcaption>
+          <div class="name"><span class="num">${i + 1}</span>${l.name}</div>
+          <div class="desc">${l.desc}</div>
+        </figcaption>
+      </figure>`).join("");
+    row.scrollLeft = 0;
+    document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", t.dataset.screen === screen ? "true" : "false"));
+    try { localStorage.setItem("honestScreen", screen); } catch (e) {}
+  }
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(t.dataset.screen)));
+  let start = "hotel";
+  try { start = localStorage.getItem("honestScreen") || "hotel"; } catch (e) {}
+  show(start);
+</script>
+</body>
+</html>

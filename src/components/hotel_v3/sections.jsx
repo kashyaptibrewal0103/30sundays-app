@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import HonestNote from "../HonestNote";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import L from "leaflet";
 import {
@@ -287,10 +288,23 @@ const HONEST_SUB = {
   postcard: "Sent to you before you book, not after you land.",
 };
 
-export function HonestBit({ hotel, variant = "index" }) {
+// One or two lines in a hand, the same note as everywhere else the honest
+// bit appears. The note carries its own heading, so the section has none.
+// (The index card and postcard above are kept for the hotel labs.)
+export function HonestBit({ hotel, variant = "note" }) {
+  if (variant === "postcard" || variant === "index") {
+    return (
+      <Section title="The honest bit" sub={HONEST_SUB[variant]}>
+        {variant === "postcard" ? <Postcard hotel={hotel} /> : <IndexCard hotel={hotel} />}
+      </Section>
+    );
+  }
+  const line = hotel.honestNote
+    || [hotel.honest?.find((h) => h.good), hotel.honest?.find((h) => !h.good)]
+      .filter(Boolean).map((h) => `${h.short || h.title}.`).join(" ");
   return (
-    <Section title="The honest bit" sub={HONEST_SUB[variant] || HONEST_SUB.index}>
-      {variant === "postcard" ? <Postcard hotel={hotel} /> : <IndexCard hotel={hotel} />}
+    <Section>
+      <HonestNote line={line} />
     </Section>
   );
 }

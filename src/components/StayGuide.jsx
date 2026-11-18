@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import HonestNote from "./HonestNote";
 import { BedDouble, Hotel, X as XIcon } from "lucide-react";
 import { C } from "../data";
 
@@ -13,7 +14,6 @@ import { C } from "../data";
 //
 // `stay` is regionGuide(dest, city).stay: { headline, note, rooms }.
 
-const PAPER = "#FCF6E7";
 
 // "A pool villa, not a hotel room" -> "In Ubud, choose a pool villa." The
 // advice, said plainly, without the contrast the headline is built on.
@@ -24,48 +24,12 @@ export function stayLine(city, stay) {
 
 export function HonestBand({ city, stay, onOpen }) {
   if (!stay) return null;
+  // The same handwritten note as the hotel and region pages, with the stay
+  // guide one tap away under the line.
   return (
-    <button data-testid="stay-guide" onClick={onOpen} style={{
-      display: "flex", flexDirection: "column", margin: "0 -16px", width: "calc(100% + 32px)",
-      border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "center",
-    }}>
-      <Wave flip={false} />
-      <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: "100%", boxSizing: "border-box", background: PAPER, padding: "6px 24px 8px" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 9, width: "100%" }}>
-          <span aria-hidden style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(227,27,83,0), rgba(227,27,83,0.55))" }} />
-          <Sparkle />
-          <span style={{ fontFamily: "Caveat, cursive", fontSize: 23, lineHeight: "24px", fontWeight: 700, color: C.head, whiteSpace: "nowrap" }}>The honest bit</span>
-          <Sparkle />
-          <span aria-hidden style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(227,27,83,0.55), rgba(227,27,83,0))" }} />
-        </span>
-        <span style={{ fontSize: 13.5, lineHeight: "19px", fontWeight: 400, color: "#3F3A2E" }}>
-          {stayLine(city, stay)}{" "}
-          <span style={{ fontWeight: 600, color: C.p600, whiteSpace: "nowrap" }}>Read why ›</span>
-        </span>
-      </span>
-      <Wave flip />
-    </button>
-  );
-}
-
-function Sparkle() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden style={{ flexShrink: 0 }}>
-      <path d="M12 0c1 7 4 10 12 12-8 2-11 5-12 12-1-7-4-10-12-12 8-2 11-5 12-12z" fill={C.p600} />
-    </svg>
-  );
-}
-
-// The scalloped edge, top or bottom. Stretched to the width, so it holds its
-// rhythm on any phone.
-function Wave({ flip }) {
-  const d = flip
-    ? "M0 0 Q 16.25 10 32.5 5 T 65 5 T 97.5 5 T 130 5 T 162.5 5 T 195 5 T 227.5 5 T 260 5 T 292.5 5 T 325 5 T 357.5 5 T 390 5 V 0 Z"
-    : "M0 10 Q 16.25 0 32.5 5 T 65 5 T 97.5 5 T 130 5 T 162.5 5 T 195 5 T 227.5 5 T 260 5 T 292.5 5 T 325 5 T 357.5 5 T 390 5 V 10 Z";
-  return (
-    <svg width="100%" height="10" viewBox="0 0 390 10" preserveAspectRatio="none" aria-hidden style={{ display: "block" }}>
-      <path d={d} fill={PAPER} />
-    </svg>
+    <div data-testid="stay-guide" onClick={onOpen} style={{ cursor: "pointer" }}>
+      <HonestNote line={stayLine(city, stay)} action="Read why" onAction={onOpen} tilt={1} testId="honest-note-list" />
+    </div>
   );
 }
 
