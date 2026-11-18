@@ -302,6 +302,8 @@ export function HonestBit({ hotel, variant = "note" }) {
   const line = hotel.honestNote
     || [hotel.honest?.find((h) => h.good), hotel.honest?.find((h) => !h.good)]
       .filter(Boolean).map((h) => `${h.short || h.title}.`).join(" ");
+  // No note, no section: no empty space where it would have been.
+  if (!line) return null;
   return (
     <Section>
       <HonestNote line={line} />

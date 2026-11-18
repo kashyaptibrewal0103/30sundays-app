@@ -207,7 +207,9 @@ export default function HotelV3({
 
   // A chip that scrolls to nothing is worse than a missing chip, so the nav
   // drops any section this hotel does not have.
-  const nav = NAV.filter((n) => n.key !== "similar" || hotel.similar?.length > 0);
+  const nav = NAV.filter((n) =>
+    (n.key !== "similar" || hotel.similar?.length > 0)
+    && (n.key !== "honest" || !!hotel.honestNote || hotel.honest?.length > 0));
 
   const toReviews = () => {
     const el = sectionEls.current.reviews;

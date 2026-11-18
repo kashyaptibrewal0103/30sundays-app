@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Honest Bit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Caveat:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one reading column, the same as the destination, OTP and flights one-pagers.
+   Each case is a row of fact + link, with phone screenshots under it. */
+:root {
+  --bg: #FFFFFF;
+  --ink: #254342;
+  --text: #2E3A39;
+  --sub: #5E6B6A;
+  --line: #E7E3DF;
+  --well: #F6F4F2;
+  --pink: #E31B53;       /* the app's action pink: links only */
+  --lagoon: #00A898;     /* kickers */
+  --gold: #B54708;       /* things to decide */
+  --gold-bg: #FFF7E6;
+  --phone: #EAE6E3;
+  --display: "DM Serif Display", Georgia, "Times New Roman", serif;
+  --body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111817; --ink: #CFE5E2; --text: #DCE3E2; --sub: #93A3A1; --line: #2A3534; --well: #18211F;
+    --pink: #FF5C85; --lagoon: #3BD1C0; --gold: #F5B451; --gold-bg: #2A2112; --phone: #222C2B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111817; --ink: #CFE5E2; --text: #DCE3E2; --sub: #93A3A1; --line: #2A3534; --well: #18211F;
+  --pink: #FF5C85; --lagoon: #3BD1C0; --gold: #F5B451; --gold-bg: #2A2112; --phone: #222C2B;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+img { max-width: 100%; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); font-weight: 400; color: var(--ink); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(34px, 6vw, 48px); line-height: 1.05; }
+h2 { font-size: 28px; line-height: 1.15; }
+h3 { font-size: 15px; font-weight: 800; color: var(--ink); margin: 0; }
+p { margin: 0; }
+a { color: var(--pink); font-weight: 700; text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; border-radius: 4px; }
+.lede { margin-top: 12px; color: var(--sub); max-width: 62ch; }
+.base { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13.5px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; background: var(--well); padding: 3px 8px; border-radius: 6px; color: var(--ink); overflow-wrap: anywhere; }
+section { margin-top: 52px; display: flex; flex-direction: column; gap: 18px; }
+.kicker { font-size: 12.5px; font-weight: 800; color: var(--lagoon); }
+.cases { border-top: 1px solid var(--line); }
+.case { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.case p { color: var(--sub); font-size: 14px; margin-top: 3px; }
+.links { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: flex-end; font-size: 13.5px; white-space: nowrap; }
+@media (max-width: 560px) {
+  .case { grid-template-columns: minmax(0, 1fr); }
+  .links { justify-content: flex-start; }
+}
+.strip { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+figure { margin: 0; flex: 0 0 196px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 7px; }
+figure img { width: 100%; aspect-ratio: 375 / 812; object-fit: cover; object-position: top;
+  border-radius: 18px; border: 6px solid var(--phone); background: var(--phone); display: block; }
+figcaption { font-size: 12.5px; color: var(--sub); line-height: 1.4; }
+figcaption b { color: var(--ink); font-weight: 800; }
+.decide { background: var(--gold-bg); border-radius: 14px; padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+.decide h3 { color: var(--gold); }
+.decide ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.note { font-size: 13px; color: var(--sub); }
+ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 800; color: var(--sub); background: var(--well); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); }
+th { font-size: 12.5px; font-weight: 800; color: var(--sub); }
+.scroll { overflow-x: auto; }
+.copy td:first-child { color: var(--sub); width: 34%; }
+.scroll table { min-width: 600px; }
+.formula { margin: 8px 0 0; padding: 10px 12px; background: var(--well); border-radius: 10px; font-size: 14px; font-weight: 700; color: var(--ink); }
+.case ul.plain { color: var(--sub); font-size: 14px; }
+.hand { font-family: "Caveat", cursive; }
+.sample { padding: 14px 0 4px; }
+.sample .t { font-family: "Caveat", cursive; font-size: 21px; font-weight: 700; color: var(--pink); display: inline-block; border-bottom: 2px solid var(--pink); border-radius: 0 0 40% 20%; line-height: 1.1; padding-bottom: 1px; }
+.sample .l { font-family: "Caveat", cursive; font-size: 25px; line-height: 1.15; font-weight: 600; color: var(--ink); margin-top: 8px; max-width: 30ch; }
+.sample .s { font-family: "Caveat", cursive; font-size: 16px; color: var(--pink); margin-top: 6px; }
+.good td:first-child { color: #027A48; font-weight: 700; width: 18%; }
+.bad td:first-child { color: #B42318; font-weight: 700; width: 18%; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <h1>The honest bit</h1>
+  <p class="lede">The one thing we would tell a friend before they booked, written by hand on the page. It used to be a postcard of six or seven ticks and crosses, which read like a list the hotel had to publish. Now it is one or two lines in handwriting, with a pink underline, signed by us. It shows on the hotel page, the region page and the hotel list. Open the links on a phone or in a narrow window.</p>
+  <div class="base"><span>Prototype at</span><code>30sundays-app-two.vercel.app</code><a href="https://30sundays-app-two.vercel.app/hotel-detail/900000/0/Hanoi-hotel-0?current=Hanoi-hotel-0" target="_blank" rel="noopener">Open a hotel</a></div>
+  <p class="note" style="margin-top:10px">The hotel note in the prototype is a sample. Hotels and prices in the prototype are samples too.</p>
+
+  <div class="sample" aria-label="Example note">
+    <span class="t">The honest bit</span>
+    <p class="l">Get to the pool before 9 am and it is all yours. The sea out front is rarely swimmable after 2 pm.</p>
+    <p class="s">30 Sundays &#9825;</p>
+  </div>
+
+  <section>
+    <span class="kicker">Try it</span>
+    <h2>Three places, one note</h2>
+    <div class="cases">
+      <div class="case">
+        <div><h3>Hotel page</h3><p>The first thing after the stay dates, before About the stay. Titled The honest bit. The Honest bit chip in the section bar jumps to it.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/hotel-detail/900000/0/Hanoi-hotel-0?current=Hanoi-hotel-0" target="_blank" rel="noopener">Open hotel</a></div>
+      </div>
+      <div class="case">
+        <div><h3>Region page</h3><p>After Things to do, before When to go. Titled with the city: Ubud, honestly.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/destination/Bali/region/Ubud" target="_blank" rel="noopener">Open Ubud</a></div>
+      </div>
+      <div class="case">
+        <div><h3>Hotel list</h3><p>Between the hotels, after the second one (or after the last, if there are fewer). Says what kind of stay to choose in that city, with Read why, which opens the stay guide.</p></div>
+        <div class="links"><a href="https://30sundays-app-two.vercel.app/hotels/900000/0?current=Hanoi-hotel-0" target="_blank" rel="noopener">Open Hanoi hotels</a></div>
+      </div>
+    </div>
+    <div class="strip">
+      <figure><img src="honest-shots/scribble-hotel.jpg" alt="The honest bit on the hotel page" loading="lazy"><figcaption><b>Hotel page.</b> Before About the stay.</figcaption></figure>
+      <figure><img src="honest-shots/scribble-region.jpg" alt="Ubud, honestly on the region page" loading="lazy"><figcaption><b>Region page.</b> Ubud, honestly.</figcaption></figure>
+      <figure><img src="honest-shots/scribble-list.jpg" alt="The honest bit between hotels in the list" loading="lazy"><figcaption><b>Hotel list.</b> After the second hotel.</figcaption></figure>
+      <figure><img src="honest-shots/read-why.jpg" alt="Stay guide opened from Read why" loading="lazy"><figcaption><b>Read why.</b> Opens the stay guide.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">Design</span>
+    <h2>Handwriting on the page</h2>
+    <div class="cases">
+      <div class="case"><div><h3>No box</h3><p>Written straight on the white page. No card, no paper, no tinted fill, so it reads as a note in the margin rather than another section.</p></div></div>
+      <div class="case"><div><h3>Three parts</h3><p>A small pink title with a hand-drawn pink underline. The note, in larger dark handwriting. Signed 30 Sundays &#9825; in pink, at the bottom right. On the hotel list, Read why sits at the bottom left in pink.</p></div></div>
+      <div class="case"><div><h3>Font</h3><p>Caveat for all of it. Title 21, note 24, sign-off 15. Read why stays in the app font, so it reads as something to tap.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">Writing it</span>
+    <h2>One or two lines, and true</h2>
+    <div class="cases">
+      <div class="case"><div><h3>Length</h3><p>One or two sentences, under 110 characters for a hotel and under 95 for a region. That is two or three handwritten lines on a phone. The app does not cut a note short, so the limit is for whoever writes it.</p></div></div>
+      <div class="case"><div><h3>What to say</h3><p>The catch is what makes it honest. Lead with one real good thing if it fits, then the catch. If both do not fit, write the catch alone.</p></div></div>
+      <div class="case"><div><h3>How to say it</h3><p>Specific: a time, a distance, a number. Plain words, the way you would say it to a friend. No marketing words, no lists, no em dashes.</p></div></div>
+      <div class="case"><div><h3>Where it comes from</h3><p>Hotels: written for each hotel by the content team, from our own stays and traveller reviews. Regions: the first good point and the first catch from the region guide we already hold, joined when they fit under 95 characters, otherwise the catch alone. Hotel list: what kind of hotel to choose in that city, from the same guide.</p></div></div>
+    </div>
+    <div class="scroll">
+      <table class="copy">
+        <tr><th></th><th>Example</th></tr>
+        <tr class="good"><td>Good</td><td>No beach. The nearest swim is ninety minutes away.</td></tr>
+        <tr class="good"><td>Good</td><td>Thirty kilometres of clean, swimmable beach. It lacks the character of Hanoi or Hoi An.</td></tr>
+        <tr class="good"><td>Good</td><td>In Hanoi, choose a small boutique.</td></tr>
+        <tr class="bad"><td>Too long</td><td>Terraces, river gorges and temples all within twenty minutes of town. No beach. The nearest swim is ninety minutes away.</td></tr>
+        <tr class="bad"><td>Not honest</td><td>A stunning resort with world-class service and breathtaking views.</td></tr>
+        <tr class="bad"><td>A list</td><td>Great pool. Big rooms. Busy beach. Pricey bar. Building work.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">Edge cases</span>
+    <h2>When there is no note</h2>
+    <ul class="plain">
+      <li><b>No note written for a hotel or region:</b> nothing shows. No empty space, no placeholder, and no Honest bit chip in the hotel section bar.</li>
+      <li><b>Region with only good points or only a catch:</b> the note uses the one it has.</li>
+      <li><b>Hotel list with no stay guide for that city:</b> no note in the list.</li>
+      <li><b>Hotel list shorter than two hotels:</b> the note sits after the last hotel.</li>
+      <li><b>Hotel opened from someone else's trip (read only):</b> the note still shows. It is advice, not a choice.</li>
+      <li><b>A note that runs long:</b> shown in full, never cut with dots. Fix the copy instead.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="kicker">Tracking</span>
+    <h2>Events</h2>
+    <ul class="plain">
+      <li><b>honest_note_viewed</b>: screen (hotel, region, hotel_list), hotel or city, destination. Sent once a visit, when at least half the note is on screen.</li>
+      <li><b>honest_read_why_tapped</b>: city, destination (hotel list only).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="decide">
+      <h3>To check</h3>
+      <ol>
+        <li>Who writes the hotel notes and where they live, so they can be edited without a release. Start with the top 10 hotels and top 10 cities.</li>
+        <li>The character limits (110 for a hotel, 95 for a region). Check them on the smallest phone we support.</li>
+        <li>Caveat has to load before the note shows, or the note flashes in the normal font first.</li>
+        <li>Whether a hotel with a known problem (building work, a closed pool) should show that ahead of the usual catch for those dates.</li>
+      </ol>
+    </div>
+  </section>
+
+  <p class="note" style="margin-top:28px">Four other handwritten styles were weighed against this one. They stay side by side at <a href="https://30sundays-app-two.vercel.app/honest-compare.html" target="_blank" rel="noopener">honest-compare.html</a>. Screenshots from the live prototype at 30sundays-app-two.vercel.app.</p>
+</div>
+</body>
+</html>
