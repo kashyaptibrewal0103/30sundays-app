@@ -29,7 +29,6 @@ import { getDayRating, tourKeysForDay } from "../data/dayRatings";
 import { DayRatingPill, DayRatingRow } from "../components/DayRating";
 import GlanceDayCard from "../components/GlanceDayCard";
 import PopularActivities, { DayPickSheet } from "../components/PopularActivities";
-import HotelPicks from "../components/HotelPicks";
 import BetterTrip, { BetterTripConfirm } from "../components/BetterTrip";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
@@ -2395,21 +2394,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
         {/* Sold-out is communicated on the hotel card itself (badge) + toast; no section banner. */}
 
-        {/* What travellers like you chose instead, following the hotel in
-            view. It takes the place of the upgrade banner on a trip that can
-            still change. */}
-        {editable && (
-          <HotelPicks
-            it={it}
-            stays={hotels.map((h, i) => (selfBookedStays.has(i) ? null : h))}
-            active={hotelInView}
-            onOpenHotel={(i, id) => navigate(`/hotel-detail/${it.id}/${i}/${encodeURIComponent(id)}?current=${encodeURIComponent(hotels[i]?.hotelId || "")}${dealQS}`)}
-            onOpenRoom={(i, id, roomId) => navigate(`/hotel-detail/${it.id}/${i}/${encodeURIComponent(id)}?current=${encodeURIComponent(hotels[i]?.hotelId || "")}&room=${encodeURIComponent(roomId)}${dealQS}`)}
-          />
-        )}
-
         {/* Single hotel-upgrade banner (per-card chips removed) */}
-        {!editable && upgradeInfo.upgradeCount >= 1 && (
+        {upgradeInfo.upgradeCount >= 1 && (
           <div onClick={() => setShowUpgradeDrawer(true)} style={{
             margin: "16px 16px 0", background: "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)", border: "1.5px solid #E8D5A3",
             borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
