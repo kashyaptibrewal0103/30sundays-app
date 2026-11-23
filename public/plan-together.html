@@ -63,7 +63,7 @@
 
   <div class="links">
     <a class="btn solid" href="/together">Open the prototype, every screen</a>
-    <a class="btn outline local-only" href="/itinerary/1?dealId=demo_bali&amp;versionId=demo_bali_v1">Try it on a real trip</a>
+    <a class="btn outline" href="/itinerary/1?dealId=demo_bali&amp;versionId=demo_bali_v1">Try it on a real trip</a>
   </div>
   <p class="url">Prototype link: <span id="proto-url">/together</span>. Every button moves on to the next screen, as Kashyap (who invites) and then as Priya (who is invited).</p>
 
@@ -320,8 +320,6 @@ Open your trip: {trip link}</pre>
   });
   // The full address of the prototype, wherever this page is opened.
   document.getElementById("proto-url").textContent = location.origin + "/together";
-  // The real trip screen is only in the local prototype for now.
-  if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.querySelectorAll(".local-only").forEach((a) => a.remove());
 </script>
 </body>
 </html>
