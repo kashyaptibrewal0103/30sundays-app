@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Two Options Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --pink: #E31B53; --ink: #181D27; --sub: #535862; --line: #E9EAEB; --bg: #FFFFFF; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; }
+  }
+  :root[data-theme="dark"] { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Manrope, system-ui, sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 16px 60px; }
+  .kicker { font-size: 11px; font-weight: 800; letter-spacing: .7px; color: var(--pink); margin: 0; }
+  h1 { font-size: 26px; margin: 6px 0 6px; letter-spacing: -.4px; }
+  .lead { color: var(--sub); font-size: 14px; line-height: 21px; margin: 0 0 8px; max-width: 680px; }
+  .try { display: inline-block; margin: 6px 0 4px; padding: 10px 16px; border-radius: 999px; background: var(--pink); color: #fff; font-weight: 700; font-size: 13.5px; text-decoration: none; }
+  h2 { font-size: 17px; margin: 34px 0 2px; }
+  .part { font-size: 13px; color: var(--sub); margin: 0 0 12px; max-width: 680px; line-height: 19px; }
+  .row { display: flex; gap: 16px; overflow-x: auto; padding: 4px 2px 14px; scroll-snap-type: x mandatory; }
+  .shot { flex: 0 0 236px; scroll-snap-align: start; margin: 0; }
+  .shot img { width: 100%; display: block; border-radius: 22px; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(16,24,40,.10); background: #fff; }
+  figcaption { margin-top: 10px; }
+  .name { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 7px; }
+  .num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 11.5px; font-weight: 800; flex-shrink: 0; }
+  .new .num { background: var(--pink); color: #fff; }
+  .tag { font-size: 10px; font-weight: 800; letter-spacing: .4px; color: var(--pink); border: 1px solid var(--pink); border-radius: 999px; padding: 1px 7px; }
+  .desc { font-size: 12.5px; color: var(--sub); line-height: 18px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">NEW TRIP FLOW</p>
+  <h1>Two trips to choose from, sooner</h1>
+  <p class="lead">Three short questions, then two trips to pick from, with no login. A trip can be read and switched before it is saved. Saving asks for the mobile number, keeps that trip only, and customising starts after. Choosing their own cities sits beside the two trips, as a third choice. Screens marked New are the ones added or changed.</p>
+  <a class="try" href="/build-options">Try it in the prototype</a>
+
+  <div id="parts"></div>
+</div>
+
+<script>
+  const PARTS = [
+    { title: "1. Three short questions", note: "The same first steps as today. Starting from a destination page skips the first one. The dates are the last question: the button there says Show my trips.", shots: [
+      ["01-destination", "Destination", "Pick where to go."],
+      ["02-travellers", "Travellers", "Name and who is travelling."],
+      ["03-dates", "Dates", "Start and end date, then Show my trips.", true],
+    ] },
+    { title: "2. Two trips, with no login", note: "No mobile number yet. The wait screen is about two trips, not one itinerary. Then three rows of the same size: the two trips and choosing their own cities. The picked one opens up, and one button at the bottom acts on it.", shots: [
+      ["04-building", "Finding your trips", "Steps for two trips: routes, stays, experiences, prices, compare.", true],
+      ["05-options", "Pick your trip", "Three equal rows. The most booked trip starts picked and open. One button says what it will open.", true],
+    ] },
+    { title: "3. Read, switch, then save", note: "A chosen trip opens to read, not to change: no Customise, no Change day plan, no Change hotel, no flights. The switch above Save swaps to the other trip. The mobile number is asked only when they tap Save Itinerary.", shots: [
+      ["06-draft-option-1", "Opens unsaved", "Nothing to edit yet. The switch and Save Itinerary sit at the bottom.", true],
+      ["07-draft-option-2", "Switch trips", "One tap swaps to the other trip. The route and price change with it.", true],
+      ["08-mobile-number", "Mobile number, on Save", "Asked once, for someone not logged in. The save carries on after the code.", true],
+    ] },
+    { title: "4. After the save, everything as usual", note: "The saved trip is version 1 and behaves like any plan. The other option is let go: there is no switching to it after a save.", shots: [
+      ["09-saved-v1", "Saved as V1", "Customise, How customising works and the change buttons appear now.", true],
+      ["10-my-plans", "My Plans", "One plan, V1. No other option beside it.", true],
+    ] },
+    { title: "5. If they choose their own cities", note: "From Choose your own cities on the two-trips screen. Who is going and when are already answered, so it opens on the cities. The mobile number comes after the activities step. Then we build, and the trip is saved as V1 on its own, as it works today.", shots: [
+      ["11-own-cities", "Cities", "Destination, travellers and dates are carried over and locked.", true],
+      ["12-own-activities", "Activities", "Optional, as today."],
+      ["13-own-mobile-number", "Mobile number", "After the activities, before we build."],
+      ["14-own-saved", "Saved as V1", "Lands saved, with Customise ready.", true],
+    ] },
+  ];
+  let n = 0;
+  document.getElementById("parts").innerHTML = PARTS.map((p) => `
+    <h2>${p.title}</h2>
+    <p class="part">${p.note}</p>
+    <div class="row">
+      ${p.shots.map(([file, name, desc, isNew]) => { n += 1; return `
+        <figure class="shot${isNew ? " new" : ""}">
+          <img src="two-options-shots/${file}.jpg" alt="${name}" loading="lazy" />
+          <figcaption>
+            <div class="name"><span class="num">${n}</span>${name}${isNew ? '<span class="tag">NEW</span>' : ""}</div>
+            <div class="desc">${desc}</div>
+          </figcaption>
+        </figure>`; }).join("")}
+    </div>`).join("");
+  // The prototype screens behind these buttons are not on the live site yet,
+  // so the buttons only show where the prototype runs.
+  if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.querySelectorAll(".try").forEach((a) => a.remove());
+</script>
+</body>
+</html>

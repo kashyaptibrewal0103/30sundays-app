@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pick Your Trip Looks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --pink: #E31B53; --ink: #181D27; --sub: #535862; --line: #E9EAEB; --bg: #FFFFFF; --soft: #FAFAFA; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --soft: #16181D; }
+  }
+  :root[data-theme="dark"] { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --soft: #16181D; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Manrope, system-ui, sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 64px; }
+  .kicker { font-size: 11px; font-weight: 800; letter-spacing: .7px; color: var(--pink); margin: 0; }
+  h1 { font-size: 27px; margin: 6px 0 8px; letter-spacing: -.4px; }
+  .lead { color: var(--sub); font-size: 14.5px; line-height: 22px; margin: 0; max-width: 720px; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 22px 0 6px; padding: 0; list-style: none; }
+  .rules li { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .rules b { display: block; font-size: 13.5px; margin-bottom: 3px; }
+  .rules span { font-size: 12.5px; color: var(--sub); line-height: 18px; }
+  .look { margin-top: 40px; padding-top: 26px; border-top: 1px solid var(--line); }
+  .head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 20px; justify-content: space-between; }
+  .head > div { max-width: 700px; }
+  h2 { font-size: 20px; margin: 4px 0 6px; letter-spacing: -.2px; display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+  .pick { font-size: 10.5px; font-weight: 800; letter-spacing: .5px; color: #fff; background: var(--pink); border-radius: 999px; padding: 3px 9px; }
+  .what { font-size: 13.5px; color: var(--sub); line-height: 20px; margin: 0; }
+  .try { flex-shrink: 0; display: inline-block; padding: 10px 16px; border-radius: 999px; background: var(--pink); color: #fff; font-weight: 700; font-size: 13.5px; text-decoration: none; }
+  .pc { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin: 14px 0 0; max-width: 760px; }
+  .pc p { margin: 0; font-size: 12.5px; line-height: 18px; color: var(--sub); }
+  .pc b { color: var(--ink); }
+  .row { display: flex; gap: 16px; overflow-x: auto; padding: 18px 2px 12px; scroll-snap-type: x mandatory; }
+  .shot { flex: 0 0 250px; scroll-snap-align: start; margin: 0; }
+  .shot img { width: 100%; display: block; border-radius: 24px; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(16,24,40,.10); background: #fff; }
+  figcaption { margin-top: 9px; font-size: 12.5px; color: var(--sub); line-height: 18px; }
+  figcaption b { color: var(--ink); display: block; font-size: 13.5px; }
+  @media (max-width: 640px) { .pc { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">PICK YOUR TRIP SCREEN</p>
+  <h1>Three looks, side by side</h1>
+  <p class="lead">The screen that shows the two trips and the way to choose your own cities, designed three ways. Each one is built in the prototype and leads to the same trip, the same switch and the same save. Look B was chosen and is the screen in the flow now. The other two are kept here to compare.</p>
+
+  <ul class="rules">
+    <li><b>Everything in view at once</b><span>No carousel. Options hidden behind a swipe get missed, so all three choices are on the first screen.</span></li>
+    <li><b>Own cities is a real choice</b><span>It sits beside the two trips at the same size, not as a line of small print under them.</span></li>
+    <li><b>Show the difference, do not list it</b><span>The nights of each trip are a bar, cut where the hotel changes. Short stays against long ones read in a glance.</span></li>
+    <li><b>One clear next step</b><span>One trip starts picked, and the button always says what it will open.</span></li>
+  </ul>
+
+  <div id="looks"></div>
+</div>
+
+<script>
+  const LOOKS = [
+    { id: "plan", letter: "B", name: "Pick one, then one button", pick: true,
+      what: "Three rows of the same size: the two trips and your own cities. Tap one and it opens up with its photos, nights and what you will do. One button at the bottom acts on the pick. This is how the best plan pickers work.",
+      pro: "Fastest to understand. All three choices fit on one screen with no scrolling. Own cities has equal weight. Only one button, so nothing competes.",
+      con: "Only one trip is open at a time, so the two are compared by tapping between them.",
+      shots: [["b1-plan-most-booked", "Most booked, picked", "Starts picked, opened up with photos, nights and highlights."], ["b2-plan-more-relaxed", "More relaxed, picked", "One tap moves the pick. The button follows it."], ["b3-plan-own", "Your own cities, picked", "The same row, with the cities to choose from."]] },
+    { id: "map", letter: "A", name: "The route on the map",
+      what: "The map draws the trip that is picked, with numbered stops, and keeps the other trip faint behind it. Three choices sit under the map, and the details of the pick under those. This is how maps apps show route alternatives.",
+      pro: "The most striking of the three. Where each trip goes is understood without reading. Own cities shows every city on the map.",
+      con: "Needs the map to load. On a small phone the details under the map need a short scroll.",
+      shots: [["a1-map-most-booked", "Most booked, picked", "Route drawn in pink, the other trip dashed in grey."], ["a2-map-more-relaxed", "More relaxed, picked", "The map redraws for the pick."], ["a3-map-own", "Your own cities, picked", "Every city on the map, and the cities as photos below."]] },
+    { id: "story", letter: "C", name: "The trip as a story",
+      what: "Each trip is a rich card, like a travel magazine page: three photos, who it suits, nights, what you will do, price and its own button. Your own cities is a third card with photos of its own. Three shortcuts at the top jump to each card.",
+      pro: "The richest and most persuasive. Closest to the screen you have now, so the least new to learn.",
+      con: "It scrolls. The second trip and own cities start below the first screen, which is why the shortcuts are at the top.",
+      shots: [["c1-story-top", "Top of the screen", "Shortcuts to all three, then the first trip."], ["c2-story-second", "Second trip", "Same layout, so the two compare line by line."], ["c3-story-own", "Your own cities", "A card of its own at the end."]] },
+  ];
+  LOOKS.sort((x, y) => x.letter.localeCompare(y.letter));
+  document.getElementById("looks").innerHTML = LOOKS.map((l) => `
+    <section class="look">
+      <div class="head">
+        <div>
+          <p class="kicker">LOOK ${l.letter}</p>
+          <h2>${l.name}${l.pick ? '<span class="pick">CHOSEN</span>' : ""}</h2>
+          <p class="what">${l.what}</p>
+        </div>
+        <a class="try" href="/options-lab/${l.id}">Try look ${l.letter} live</a>
+      </div>
+      <div class="pc">
+        <p><b>Good:</b> ${l.pro}</p>
+        <p><b>Watch for:</b> ${l.con}</p>
+      </div>
+      <div class="row">
+        ${l.shots.map(([file, name, desc]) => `
+          <figure class="shot">
+            <img src="options-looks-shots/${file}.jpg" alt="${name}" loading="lazy" />
+            <figcaption><b>${name}</b>${desc}</figcaption>
+          </figure>`).join("")}
+      </div>
+    </section>`).join("");
+  // The prototype screens behind these buttons are not on the live site yet,
+  // so the buttons only show where the prototype runs.
+  if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.querySelectorAll(".try").forEach((a) => a.remove());
+</script>
+</body>
+</html>

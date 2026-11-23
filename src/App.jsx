@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import PhoneFrame from "./components/PhoneFrame";
 import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
+import TogetherLab from "./pages/together/TogetherLab";
 import TripNudge from "./components/TripNudge";
 import CallbackNudge from "./components/CallbackNudge";
 import ProfileGate from "./components/ProfileGate";
@@ -133,7 +134,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
   const giftPaths = pathname === "/wallet" || pathname.startsWith("/gift-cards") || pathname.startsWith("/gift/") || pathname.startsWith("/g/") || pathname.startsWith("/registry");
-  const hideShell = pathname === "/login-v2" || pathname === "/otp-sms" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/pending-lab" || pathname === "/honest-lab" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip" || pathname.startsWith("/day-media") || pathname === "/build" || pathname === "/ai-photos" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname.startsWith("/together") || pathname === "/login-v2" || pathname === "/otp-sms" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/pending-lab" || pathname === "/honest-lab" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip" || pathname.startsWith("/day-media") || pathname === "/build" || pathname === "/ai-photos" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -146,7 +147,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
   // show only the screen, no demo-state switcher.
   // Design labs hide it too, so the cards can be judged without it on top of them.
-  const shareLink = pathname.startsWith("/destination-v7") || pathname === "/otp-sms" || pathname === "/pending-lab" || pathname === "/honest-lab" || pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/stage-home" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
+  const shareLink = pathname.startsWith("/together") || pathname.startsWith("/destination-v7") || pathname === "/otp-sms" || pathname === "/pending-lab" || pathname === "/honest-lab" || pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/stage-home" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
 
   // The photo lab is a desktop testing tool that talks to Gemini for real, so
   // it sits outside the phone frame and outside the app shell entirely. On its
@@ -168,6 +169,9 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
             its own subdomain build, but it no longer stands in for /. */}
         <Route path="/" element={AI_PHOTOS_VARIANT ? <HomeAI userState={userState} /> : <HomeV5 />} />
         <Route path="/ai" element={<HomeAI userState={userState} />} />
+        {/* Plan together: every screen of the invite flow, on its own links. */}
+        <Route path="/together" element={<TogetherLab />} />
+        <Route path="/together/:screen" element={<TogetherLab />} />
         {/* Review page for the invitation options. Not part of the feature. */}
         <Route path="/nudge-options" element={<NudgeOptions />} />
         <Route path="/ai-section-options" element={<AISectionOptions />} />

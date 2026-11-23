@@ -422,9 +422,16 @@ export function DealsProvider({ children }) {
     setDeals(prev => prev.map(d => d.id !== dealId ? d : { ...d, customItinerary }));
   }, []);
 
+  // Merge fields into a deal. `patch` is an object, or a function of the deal
+  // that returns one. Plan together keeps who is on the trip (`people`) on the
+  // deal this way.
+  const patchDeal = useCallback((dealId, patch) => {
+    setDeals(prev => prev.map(d => d.id !== dealId ? d : { ...d, ...(typeof patch === "function" ? patch(d) : patch) }));
+  }, []);
+
   const value = {
     deals, createDeal, updateDraft, patchCustomizations, requestPricing, forkVersion,
-    deleteDeal, discardVersion, getDeal, getVersion,
+    deleteDeal, discardVersion, getDeal, getVersion, patchDeal,
     findCustomItinerary, setCustomItinerary,
     wished, toggleWish, isWished,
   };

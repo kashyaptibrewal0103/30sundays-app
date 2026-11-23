@@ -33,7 +33,7 @@ import BetterTrip from "../components/BetterTrip";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
-import InvitePartnerSection from "../components/InvitePartnerSection";
+import { usePlanTogether } from "../components/PlanTogether";
 import SectionNav from "../components/SectionNav";
 import RouteChooser from "../components/route/RouteChooser";
 import DateRange from "../components/wizard/DateRange";
@@ -690,6 +690,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // closed plan would quietly bring it back into My Plans. The way forward is
   // a fresh plan, which is what Regenerate makes.
   const closedDeal = inDeal && dealsCtx.getDeal(dealId)?.status === "lost";
+  // ─── Plan together ───
+  //
+  // Inviting someone to plan needs a trip that is saved and theirs: not a
+  // closed plan, and not somebody else's trip being read. The hook hands back
+  // the faces under the route, the section further down, and their sheets.
+  const together = usePlanTogether({ dealId, dest: it?.dest, enabled: inDeal && !closedDeal && !viewOnly, leadName: version?.customizations?.leadName });
+  const hasTogether = !!together.section;
   // ─── Reading somebody else's trip ───
   //
   // `viewOnly` is a real itinerary opened off the home rail. It is the same
@@ -1043,10 +1050,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const navSections = useMemo(
     () => NAV_SECTIONS.filter((x) => {
       if (viewOnly && (x.key === "together" || x.key === "consultant")) return false;
+      if (x.key === "together" && !hasTogether) return false;
       if (noFlights && x.key === "flights") return false;
       return true;
     }),
-    [viewOnly, noFlights]
+    [viewOnly, noFlights, hasTogether]
   );
 
   const overlayFrame = isMobile
@@ -2283,6 +2291,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         </div>
       )}
 
+      {/* Who is planning this trip, at the top of it. */}
+      {together.strip}
       <CoverageLine dest={it.dest} cov={coverage} onView={() => setCoverageOpen(true)} />
       <Divider />
 
@@ -2563,14 +2573,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
       <Divider />
 
-      {/* ═══ Invite partner (co-planner) ═══
-          Not on somebody else's trip: there is nothing here yet to plan
-          together, and the invite would go out against a trip they do not own. */}
-      {!viewOnly && (
+      {/* ═══ Plan together ═══
+          Only on a saved trip of their own (see `together` above): not on
+          somebody else's trip, a closed plan, or a trip never saved. */}
+      {hasTogether && (
         <>
           <div ref={setSectionEl("together")}>
-            <InvitePartnerSection destination={it.dest} />
+            {together.section}
           </div>
+          {together.overlays}
           <Divider />
         </>
       )}

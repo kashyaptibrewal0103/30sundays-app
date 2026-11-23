@@ -269,6 +269,8 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, planId, pastNot
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vRoute}</p>
                   <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {/* A shared trip says who saved each version, once the list is open. */}
+                    {deal.people?.length ? <>Saved by <b style={{ color: C.head }}>{v.savedBy || "you"}</b> · </> : null}
                     {vDates ? `${vDates} · ` : ""}{fmt(total(ppPrice(v), travellersOf(v)))}
                   </p>
                 </div>

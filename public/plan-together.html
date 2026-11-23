@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plan Together Requirements</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --pink: #E31B53; --ink: #181D27; --sub: #535862; --line: #E9EAEB; --bg: #FFFFFF; --soft: #FAFAFA; --green: #027A48; --amber: #B54708; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --soft: #16181D; }
+  }
+  :root[data-theme="dark"] { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --soft: #16181D; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Manrope, system-ui, sans-serif; font-size: 14.5px; line-height: 22px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 72px; }
+  .kicker { font-size: 11px; font-weight: 800; letter-spacing: .7px; color: var(--pink); margin: 0; }
+  h1 { font-size: 28px; line-height: 34px; margin: 6px 0 8px; letter-spacing: -.4px; }
+  h2 { font-size: 21px; margin: 0 0 6px; letter-spacing: -.2px; }
+  h3 { font-size: 15.5px; margin: 18px 0 6px; }
+  p { margin: 0 0 10px; }
+  .lead { color: var(--sub); max-width: 760px; }
+  .muted { color: var(--sub); }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 4px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; font-weight: 700; font-size: 13.5px; text-decoration: none; }
+  .btn.solid { background: var(--pink); color: #fff; }
+  .btn.outline { border: 1.5px solid var(--pink); color: var(--pink); }
+  .url { font-size: 12.5px; color: var(--sub); margin-top: 6px; word-break: break-all; }
+  .toc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 18px 0 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; font-size: 13px; }
+  .toc a { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .toc a:hover { color: var(--pink); }
+  section { margin-top: 40px; padding-top: 26px; border-top: 1px solid var(--line); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .box { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .box b.t { display: block; font-size: 14px; margin-bottom: 4px; }
+  ul, ol { margin: 6px 0 10px; padding-left: 20px; }
+  li { margin: 3px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 6px; font-size: 13.5px; line-height: 19px; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { font-size: 11.5px; letter-spacing: .4px; text-transform: uppercase; color: var(--sub); font-weight: 800; }
+  .tablewrap { overflow-x: auto; }
+  .yes { color: var(--green); font-weight: 700; }
+  .no { color: var(--sub); }
+  pre { white-space: pre-wrap; background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-family: inherit; font-size: 13.5px; line-height: 20px; margin: 6px 0 14px; }
+  .row { display: flex; gap: 16px; overflow-x: auto; padding: 14px 2px 10px; scroll-snap-type: x mandatory; }
+  .shot { flex: 0 0 230px; scroll-snap-align: start; margin: 0; }
+  .shot img { width: 100%; display: block; border-radius: 22px; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(16,24,40,.10); background: #fff; }
+  figcaption { margin-top: 8px; font-size: 12.5px; color: var(--sub); line-height: 18px; }
+  figcaption b { color: var(--ink); display: block; font-size: 13.5px; }
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .4px; padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
+  .tag.out { color: var(--sub); border: 1px solid var(--line); }
+  .tag.risk { color: #fff; background: var(--pink); }
+  .note { border-left: 3px solid var(--pink); padding: 2px 0 2px 12px; margin: 10px 0; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } h1 { font-size: 24px; line-height: 30px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">REQUIREMENT · PLAN TOGETHER · 23 NOV 2026</p>
+  <h1>Plan together: invite someone to plan a trip</h1>
+  <p class="lead">The person who made a trip invites their partner, family or friends. The invite goes on WhatsApp. The guest logs in with the invited number, is told who invited them, and finds the trip in My Plans next to their own. Both can change it, and every version says who saved it and when.</p>
+
+  <div class="links">
+    <a class="btn solid" href="/together">Open the prototype, every screen</a>
+    <a class="btn outline local-only" href="/itinerary/1?dealId=demo_bali&amp;versionId=demo_bali_v1">Try it on a real trip</a>
+  </div>
+  <p class="url">Prototype link: <span id="proto-url">/together</span>. Every button moves on to the next screen, as Kashyap (who invites) and then as Priya (who is invited).</p>
+
+  <nav class="toc">
+    <a href="#scope">Scope</a><a href="#who">Who can do what</a><a href="#j1">1. Owner invites</a><a href="#j2">2. Guest joins</a><a href="#j3">3. Owner hears</a><a href="#j4">4. Versions say who</a><a href="#plans">My Plans</a><a href="#stages">Trip stages</a><a href="#messages">Messages</a><a href="#corners">Corner cases</a><a href="#ops">Privacy and sales</a><a href="#tracking">Tracking</a><a href="#risks">Risks and questions</a>
+  </nav>
+
+  <section id="scope">
+    <h2>Scope</h2>
+    <div class="grid2">
+      <div class="box">
+        <b class="t">In this release</b>
+        <ul>
+          <li>Invite from the trip screen, from contacts or by typing a name and number.</li>
+          <li>30 Sundays sends the invite on WhatsApp. The owner can also send it from their own WhatsApp.</li>
+          <li>The guest logs in as usual with the invited number. A short screen says who invited them, then they land in My Plans.</li>
+          <li>Invited trips are marked in My Plans with who invited them.</li>
+          <li>Everyone on the trip can change it. Every version says who saved it and when.</li>
+          <li>The owner is told when a guest joins. The owner can remove people; a guest can leave.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <b class="t">Not in this release</b>
+        <ul>
+          <li>Reminders. To nudge someone, the owner sends the invite again from their own WhatsApp.</li>
+          <li>Editing a number. A wrong number is removed and invited again.</li>
+          <li>An activity log. Who did what is shown on the versions instead.</li>
+          <li>A welcome screen before login. Login stays exactly as today.</li>
+          <li>Guests inviting other people, asking to join from another number, live co-editing, chat, split payments.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">Inviting someone gives them access to plan. It does not change the number of travellers on the trip, or its price.</p>
+  </section>
+
+  <section id="who">
+    <h2>Who can do what</h2>
+    <p class="muted">A trip has one owner, the person who made it, and up to 7 co-travellers (8 people in all).</p>
+    <div class="tablewrap"><table>
+      <tr><th>What they can do</th><th>Owner</th><th>Co-traveller (joined)</th></tr>
+      <tr><td>See the trip, every version and the prices</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Change the trip and save a new version</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Compare versions</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Call or message the consultant</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Review and pay</td><td class="yes">Yes</td><td class="yes">Yes, receipt in the payer's name (see open questions)</td></tr>
+      <tr><td>Invite people</td><td class="yes">Yes</td><td class="no">No</td></tr>
+      <tr><td>Remove people</td><td class="yes">Yes</td><td class="no">No</td></tr>
+      <tr><td>Leave the trip</td><td class="no">No, it is their trip</td><td class="yes">Yes</td></tr>
+      <tr><td>Cancel the booking</td><td class="yes">Yes</td><td class="no">No</td></tr>
+    </table></div>
+  </section>
+
+  <section id="j1">
+    <h2>1. The owner invites</h2>
+    <p class="muted">Plan together appears on a saved trip only. It is not shown on the two unsaved options after the dates, on a closed plan, or on someone else's trip.</p>
+    <ol>
+      <li><b>Two ways in.</b> A new line under the route at the top of the trip: "Plan this trip with your partner · Invite". And the Plan together section further down, where it is today.</li>
+      <li><b>Invite someone.</b> A sheet that leads with Pick from contacts, then Name and Mobile number (+91 by default, a country picker for numbers abroad). A contact with two numbers asks which one.</li>
+      <li><b>Checks.</b> Own number: "That's your number. Add someone else's." Already added: "Priya is already on this trip." Full: "A trip can have up to 8 people. Remove someone to add more." Short number: "Enter a 10-digit mobile number."</li>
+      <li><b>Send invite.</b> 30 Sundays sends the WhatsApp. The sheet confirms it and offers "Send from your WhatsApp", which opens the owner's WhatsApp on the guest's chat with the message filled in. "Copy invite link" sits under it.</li>
+      <li><b>Back on the trip.</b> The line under the route shows the faces and "Priya invited · not joined yet".</li>
+      <li><b>People on this trip.</b> Tapping it lists the owner, then each person with their number, status (Invited or Joined) and when. An invited person has a WhatsApp button to send it again from the owner's WhatsApp. The menu has one action: Remove from trip.</li>
+    </ol>
+    <div class="row" data-shots="trip:The trip, nobody invited|add:Invite someone|contacts-two:Contacts, two numbers|add-error:Their own number|sent:Invite sent|wa-self:Sent from the owner's WhatsApp|invited:Priya invited|people:People on this trip|people-menu:Remove from trip|remove:Remove an invite"></div>
+  </section>
+
+  <section id="j2">
+    <h2>2. The guest joins</h2>
+    <p class="muted">The number gives the guest the trip, not the link. A lost link or a fresh install never loses the invite. Login itself is unchanged.</p>
+    <ol>
+      <li><b>The WhatsApp.</b> From 30 Sundays, from the owner, or both. Its button opens the app if installed, else the App Store or Play Store; on a laptop, a page with a QR code.</li>
+      <li><b>Login as usual.</b> The same mobile number and OTP screen as today. No invite screen before it.</li>
+      <li><b>One screen after login.</b> "Kashyap invited you to plan a Bali trip", with the trip and its latest version. One button: Go to My Plans. The guest is Joined from this moment and the owner is told.</li>
+      <li><b>My Plans.</b> The invited trip sits with their own trips. Its card has a line across the top, "Kashyap invited you to plan this trip", and is outlined and marked NEW until they open it.</li>
+      <li><b>The trip.</b> The same screen the owner sees, with a one-time tip: "This is the plan Kashyap made. Change anything and save. Kashyap will see it with your name." The line under the route reads "Planning with Kashyap".</li>
+      <li><b>People on this trip.</b> The guest sees everyone, cannot invite or remove, and can Leave this trip.</li>
+    </ol>
+    <p>After this, the rest of the app works as it does today.</p>
+    <div class="row" data-shots="g-wa:The invite on WhatsApp|g-login:Login, as today|g-welcome:Who invited them|g-plans:My Plans, invited trips marked|g-trip:The trip, as Priya|g-people:People, as Priya|g-leave:Leave this trip|g-two:Invited to two trips"></div>
+  </section>
+
+  <section id="j3">
+    <h2>3. The owner hears they joined</h2>
+    <p class="muted">Within a minute of the guest's OTP, in three places.</p>
+    <div class="tablewrap"><table>
+      <tr><th>Where</th><th>What the owner sees</th></tr>
+      <tr><td>WhatsApp from 30 Sundays</td><td>"Good news, Kashyap! Priya has joined your Bali trip on 30 Sundays..." with Open your trip</td></tr>
+      <tr><td>Push notification</td><td>"Priya joined your Bali trip" and "You can plan it together now."</td></tr>
+      <tr><td>On the trip</td><td>A one-time banner, "Priya joined. You're planning this together now." Priya's status turns green, Joined. The line under the route reads "Planning with Priya".</td></tr>
+    </table></div>
+    <div class="row" data-shots="o-wa-joined:Joined, on WhatsApp|o-push:Push notifications|o-joined:Joined, on the trip|people-joined:People, after joining|remove-joined:Remove someone who joined"></div>
+  </section>
+
+  <section id="j4">
+    <h2>4. Versions say who saved them</h2>
+    <ol>
+      <li>Unsaved changes belong to the person making them. Nobody else sees them.</li>
+      <li>Saving creates a new version, as today. Versions are never changed after they are saved.</li>
+      <li>Every version carries who saved it and when: "V3 · Priya · Today, 4:12 pm". Your own say "you". The consultant's say "30 Sundays".</li>
+      <li>The My Plans card keeps today's format. Who saved a version shows only once the earlier versions are opened: each row reads "Saved by Priya · latest", "Saved by you", with the time and price.</li>
+      <li>On the trip it shows on the line under the route ("V3 by Priya · Today, 4:12 pm"), in What changed ("Priya made V3 from V2"), and in Compare.</li>
+      <li>When someone saves, everyone else on the trip gets a push: "Priya saved V3 of your Bali trip".</li>
+      <li><b>Two people editing at once.</b> Both start from V2. Priya saves first, so V3 is Priya's. Kashyap sees "Priya just saved V3. Your changes will save as V4." When Kashyap saves, that is V4. Nothing is merged or lost; Compare shows both.</li>
+    </ol>
+    <div class="row" data-shots="t-versions:My Plans, versions opened|t-v3:What changed, and who|t-clash:Both editing at once"></div>
+  </section>
+
+  <section id="plans">
+    <h2>My Plans: own trips and invited trips</h2>
+    <ul>
+      <li>One list, as today. Trips they made and trips they were invited to sit together.</li>
+      <li>An invited trip has a line across the top of its card: the inviter's face and "Kashyap invited you to plan this trip".</li>
+      <li>A new invite is outlined in pink and marked NEW until opened, and sits at the top of the list until then.</li>
+      <li>The count under the title says how many are shared: "3 plans · 2 shared with you".</li>
+      <li>Otherwise the card is today's card, unchanged: photo, destination and nights, version, route, dates and travellers, Generated, price, and the earlier versions folded under it.</li>
+      <li>Opening the earlier versions shows who saved each one, the latest included: "V3 · Saved by you · latest", "V2 · Saved by Ananya · 15 Nov". Who saved what is not on the closed card.</li>
+      <li>The owner's card is today's card with nothing added. When the owner opens the versions, the ones Priya saved say "Saved by Priya".</li>
+    </ul>
+    <div class="row" data-shots="g-plans:Priya's My Plans|t-versions:Kashyap's My Plans, versions opened"></div>
+  </section>
+
+  <section id="stages">
+    <h2>At each trip stage</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Trip stage</th><th>Plan together</th><th>Co-travellers can</th></tr>
+      <tr><td>Two options, not saved yet</td><td>Hidden. Nothing to share until one is saved</td><td>Not applicable</td></tr>
+      <tr><td>Saved (draft or quote)</td><td>Invite and remove</td><td>See, change, save versions, compare</td></tr>
+      <tr><td>Quote expired</td><td>Invite and remove</td><td>Same, and refresh the price</td></tr>
+      <tr><td>Waiting on payment</td><td>Invite and remove</td><td>Same, and Review and pay</td></tr>
+      <tr><td>Booked, before travel</td><td>Invite and remove</td><td>See the trip. Changes go through the consultant, as for the owner. Vouchers and tickets show only to the travellers named on them and the owner</td></tr>
+      <tr><td>On the trip</td><td>Invite still works, so family at home can follow along</td><td>See the trip</td></tr>
+      <tr><td>Trip over</td><td>No new invites</td><td>See the trip</td></tr>
+      <tr><td>Closed, lost or cancelled</td><td>Hidden for everyone</td><td>It moves to older plans for everyone</td></tr>
+    </table></div>
+  </section>
+
+  <section id="messages">
+    <h2>Messages</h2>
+    <p class="muted">{Sender name} and {Guest name} are first names. Two changes from the first draft: "he would love" is now "would love", so it fits anyone, and "Log in with your mobile number" is now "Log in with this number", so the guest uses the invited number.</p>
+    <h3>1. Invite, sent by the owner from their WhatsApp</h3>
+<pre>Hi {Guest name} 🌴
+It's {Sender name}. I've started planning our {Destination} trip on 30 Sundays and I'd love to plan it with you!
+Download the app: {app link}
+Log in with this number to see the plan so far, and let's finalise the rest together.</pre>
+    <h3>2. Invite, sent by 30 Sundays (WhatsApp template, button "Open the trip")</h3>
+<pre>Hi {Guest name} 🌴
+{Sender name} has started planning your {Destination} trip on 30 Sundays and would love to plan it with you!
+Download the app: {app link}
+Log in with this number to see the plan so far and finalise the rest together.</pre>
+    <h3>3. Joined, to the owner, sent by 30 Sundays</h3>
+<pre>Good news, {Sender name}! 🎉
+{Guest name} has joined your {Destination} trip on 30 Sundays. You can now plan it together, and every change shows who made it.
+Open your trip: {trip link}</pre>
+    <h3>4. SMS, when the number is not on WhatsApp</h3>
+<pre>{Sender name} invited you to plan your {Destination} trip on 30 Sundays. Get the app: {short link} and log in with this number.</pre>
+    <h3>Push notifications</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Event</th><th>To</th><th>Title</th><th>Line</th></tr>
+      <tr><td>Guest joined</td><td>Owner, and others already on the trip</td><td>Priya joined your Bali trip</td><td>You can plan it together now.</td></tr>
+      <tr><td>New version saved</td><td>Everyone else on the trip</td><td>Priya saved V3 of your Bali trip</td><td>See what changed.</td></tr>
+      <tr><td>Added to a trip</td><td>An invited number that already uses the app</td><td>Kashyap invited you to a Bali trip</td><td>It's in your plans now.</td></tr>
+      <tr><td>Guest left</td><td>Owner</td><td>Priya left your Bali trip</td><td>Versions Priya saved are still there.</td></tr>
+    </table></div>
+  </section>
+
+  <section id="corners">
+    <h2>Corner cases</h2>
+    <p class="muted">The rule under most of them: the invite is tied to the number until the guest joins, and to their account after.</p>
+    <div class="tablewrap"><table>
+      <tr><th>When</th><th>Scenario</th><th>What happens</th></tr>
+      <tr><td>Inviting</td><td>Owner enters their own number</td><td>Blocked: "That's your number. Add someone else's."</td></tr>
+      <tr><td>Inviting</td><td>Number already on the trip</td><td>Blocked: "Priya is already on this trip."</td></tr>
+      <tr><td>Inviting</td><td>Trip already has 8 people</td><td>Blocked, and Add someone reads "This trip is full"</td></tr>
+      <tr><td>Inviting</td><td>Contact has two or more numbers</td><td>We ask which number to use</td></tr>
+      <tr><td>Inviting</td><td>Contacts permission refused</td><td>Typing a name and number still works</td></tr>
+      <tr><td>Inviting</td><td>Number abroad</td><td>Country picker. WhatsApp works the same. OTP by WhatsApp where SMS does not reach</td></tr>
+      <tr><td>Inviting</td><td>Number not on WhatsApp</td><td>We send one SMS instead</td></tr>
+      <tr><td>Inviting</td><td>Wrong number typed</td><td>Remove them and invite again. The old link stops working</td></tr>
+      <tr><td>Inviting</td><td>Guest has not joined</td><td>The owner can send it again from their own WhatsApp, from the person's row. No automatic reminders</td></tr>
+      <tr><td>Inviting</td><td>The number already uses 30 Sundays</td><td>No install. A push says they were invited, and the invited screen shows on their next open</td></tr>
+      <tr><td>Joining</td><td>Guest logs in with another number</td><td>No trip. If they came through the link: "This invite is for another number" with Log in with that number</td></tr>
+      <tr><td>Joining</td><td>Link forwarded to someone not invited</td><td>Same as above. The number shows half hidden. No access</td></tr>
+      <tr><td>Joining</td><td>Link opened on a laptop</td><td>A page with a QR code and the store buttons</td></tr>
+      <tr><td>Joining</td><td>The store drops the link during install</td><td>Nothing lost. The number is matched at login</td></tr>
+      <tr><td>Joining</td><td>Number invited to two trips</td><td>Joins both. The screen after login shows both, then My Plans</td></tr>
+      <tr><td>Joining</td><td>Guest already has their own trip to the same place</td><td>Both stay, separate, both in My Plans</td></tr>
+      <tr><td>Joining</td><td>Invite removed, or trip closed, before they join</td><td>"This invite is no longer active."</td></tr>
+      <tr><td>Joining</td><td>Guest's own name differs from what the owner typed</td><td>Their own name is used once they join</td></tr>
+      <tr><td>Planning</td><td>Both edit from the same version</td><td>First save is V3, second is V4. The second person is told before saving</td></tr>
+      <tr><td>Planning</td><td>Many saves in a few minutes</td><td>At most one push per person per trip every 10 minutes</td></tr>
+      <tr><td>Planning</td><td>Guest wants to invite someone</td><td>Their people list says "Ask Kashyap to invite them."</td></tr>
+      <tr><td>Paying</td><td>Guest pays an instalment</td><td>Receipt in the guest's name. See open questions on PAN and TCS</td></tr>
+      <tr><td>Leaving</td><td>Guest removed or leaves</td><td>The trip leaves their My Plans. Versions they saved stay, with their name</td></tr>
+      <tr><td>Leaving</td><td>Removed guest opens an old link or push</td><td>"You no longer have access to this trip."</td></tr>
+      <tr><td>Leaving</td><td>Removed guest is invited again</td><td>Treated as a new invite</td></tr>
+      <tr><td>Account</td><td>Guest changes their phone number later</td><td>They keep the trip. After joining, access follows the account</td></tr>
+      <tr><td>Account</td><td>Owner deletes their account</td><td>Open question (below)</td></tr>
+    </table></div>
+    <div class="row" data-shots="g-mismatch:Logged in with another number|g-inactive:Invite no longer active|g-gone:No longer on the trip"></div>
+  </section>
+
+  <section id="ops">
+    <h2>Privacy, sales and back office</h2>
+    <ul>
+      <li><b>Shared with everyone on the trip:</b> the trip, every version and who saved it, the prices, first names and photos of the people on it.</li>
+      <li><b>Kept private:</b> each person's other trips, phone numbers (only the owner sees the numbers they typed), receipts and payment methods of others, passport and traveller details of others.</li>
+      <li><b>CRM:</b> a guest logging in for the first time must not create a new lead. They are added to the owner's deal as a co-traveller. The consultant sees who is on the trip and who saved each version. The owner stays the main contact.</li>
+      <li><b>To store:</b> for each invite, the trip, who invited, the name and number typed, the status, how it was sent, and when it was sent, joined or removed. For each version, who saved it as well as when. Times in Indian time.</li>
+    </ul>
+  </section>
+
+  <section id="tracking">
+    <h2>Tracking</h2>
+    <p class="muted">The question to answer: do trips with a joined co-traveller book more often than trips without one?</p>
+    <div class="tablewrap"><table>
+      <tr><th>Number</th><th>How it is worked out</th></tr>
+      <tr><td>Invite rate</td><td>Saved trips with at least one invite, out of all saved trips</td></tr>
+      <tr><td>Join rate</td><td>Co-travellers who joined, out of those invited</td></tr>
+      <tr><td>Time to join</td><td>Hours from invite sent to joined</td></tr>
+      <tr><td>Sent by the owner too</td><td>Invites the owner also sent from their own WhatsApp</td></tr>
+      <tr><td>Guest versions</td><td>Versions saved by co-travellers, out of all versions</td></tr>
+      <tr><td>Booking rate with and without</td><td>Bookings from trips with a joined co-traveller, against trips with none</td></tr>
+      <tr><td>Installs from invites</td><td>New app users whose first login matched an invite</td></tr>
+    </table></div>
+    <p class="muted">Events: together_invite_open, together_contacts_pick, together_invite_sent, together_self_send, together_invite_link_open, together_joined, together_version_saved, together_removed, together_left.</p>
+  </section>
+
+  <section id="risks">
+    <h2>Risks and open questions</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Risk</th><th>Why it matters</th><th>What we do</th></tr>
+      <tr><td><span class="tag risk">BIGGEST</span> WhatsApp opt-in</td><td>Meta requires a business to get opt-in before messaging someone (<a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/getting-opt-in">Meta: get opt-in</a>). The guest gave none; the owner gave us the number. Blocks or reports can lower the quality rating of the number all our customer messages go from</td><td>Confirm with our WhatsApp provider before 30 Sundays sends invite 2. Until then, "Send from your WhatsApp" is the main path</td></tr>
+      <tr><td>Message cost</td><td>Messages a business starts are charged per message, and an invite is likely classed as marketing</td><td>Count it in the cost per invite</td></tr>
+      <tr><td>A co-traveller pays</td><td>TCS and PAN go with the person who pays, and the invoice name follows</td><td>Finance to decide before guests see Review and pay</td></tr>
+    </table></div>
+    <h3>Open questions</h3>
+    <ul>
+      <li>Can 30 Sundays send the invite on WhatsApp under the opt-in rules, or only the owner from their own WhatsApp?</li>
+      <li>Is 8 people the right limit per trip?</li>
+      <li>Can a co-traveller pay? Whose PAN is used for TCS, and whose name goes on the invoice?</li>
+      <li>If the owner deletes their account, does the trip pass to the first co-traveller who joined?</li>
+      <li>Should the consultant ever call a co-traveller directly, or always the owner?</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+  // Screens, from the prototype, in the order they are met.
+  document.querySelectorAll("[data-shots]").forEach((row) => {
+    row.innerHTML = row.dataset.shots.split("|").map((pair) => {
+      const [file, name] = pair.split(":");
+      return `<figure class="shot"><img src="plan-together-shots/${file}.jpg?v=3" alt="${name}" loading="lazy" /><figcaption><b>${name}</b><a href="/together/${file}">Open in prototype</a></figcaption></figure>`;
+    }).join("");
+  });
+  // The full address of the prototype, wherever this page is opened.
+  document.getElementById("proto-url").textContent = location.origin + "/together";
+  // The real trip screen is only in the local prototype for now.
+  if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.querySelectorAll(".local-only").forEach((a) => a.remove());
+</script>
+</body>
+</html>
