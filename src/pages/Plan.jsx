@@ -426,7 +426,8 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
           // card sits right above its created card so the pair reads together.
           // A plan waiting on the customer's confirmation and payment goes to
           // the top: it is the one thing on this screen that needs them now.
-          const waiting = (c) => (c.cardKind === "made" && c.awaitingPayment ? 0 : 1);
+          // A partly booked trip comes first too: some of it is already theirs.
+          const waiting = (c) => (c.cardKind === "made" && (c.awaitingPayment || c.partial) ? 0 : 1);
           const activeCards = toCards(
             [...toUnits(active)].sort((a, b) => recency(b.versions) - recency(a.versions))
           ).sort((a, b) => waiting(a) - waiting(b));

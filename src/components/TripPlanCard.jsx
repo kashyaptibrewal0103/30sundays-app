@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ArrowRight, User, Baby, ArrowLeftRight, AlertTriangle } from "lucide-react";
+import { ChevronDown, ArrowRight, User, Baby, ArrowLeftRight, AlertTriangle, Check } from "lucide-react";
+import { partialOf } from "../data/partial";
 import SaveHeart from "./SaveHeart";
 import { C, allItineraries } from "../data";
 import { useDeals } from "../data/deals";
@@ -103,6 +104,21 @@ function PendingNote({ action, white = false, top = false }) {
   );
 }
 
+// ─── Partly booked ───
+//
+// Part of the trip is booked (flights or hotels), so it stays here in My
+// Plans rather than moving to My Trips, and says so with a tag by the dates,
+// on a line of its own so the route and dates keep their room. While the
+// consultant's link waits on the customer, the card shows the usual
+// Confirmation and payment pending note, whose button opens the consent.
+function PartialTag() {
+  return (
+    <span data-testid="partial-tag" style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.sBg, color: C.sText, border: `1px solid ${C.sBorder}`, letterSpacing: ".2px", whiteSpace: "nowrap" }}>
+      <Check size={10} strokeWidth={3.2} /> Partly booked
+    </span>
+  );
+}
+
 // ONE card template per deal. Header (destination, version, status) + the
 // itinerary facts (route with nights, dates, travellers, generated-on) + the
 // price(s) with their action. Maldives shows one priced row per property.
@@ -129,7 +145,8 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, planId, pastNot
   const isDraftCard = deal.cardKind === "draft";
   const versionBadgeNum = isDraftCard ? deal.baseNum : primary.num;
   const showVersionBadge = versionBadgeNum != null;
-  const awaiting = !lost && !isDraftCard && primaryIsQuote && !!deal.awaitingPayment;
+  const part = !lost && !isDraftCard ? partialOf(deal) : null;
+  const awaiting = !lost && !isDraftCard && primaryIsQuote && (!!deal.awaitingPayment || !!part?.linkLive);
   const pv = awaiting ? pendingVariant : null;
 
   const dest = primary.destination ?? deal.dest;
@@ -175,6 +192,9 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, planId, pastNot
           <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{adults}<User size={12} /></span>
           {kids > 0 && <><span>·</span><span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{kids}<Baby size={12} /></span></>}
         </div>
+        {/* Its own line, under the trip's facts. Only once something is
+            actually booked. */}
+        {part?.anyBooked && <div style={{ marginTop: 7 }}><PartialTag /></div>}
         {!isDraftCard && generatedOn && (
           <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             Generated {generatedOn}
@@ -213,6 +233,11 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, planId, pastNot
   ).some(n => n >= 2);
   const goPay = (e) => {
     e.stopPropagation();
+    // Part of the trip sent to be booked: its consent screen, on the trip.
+    if (part?.linkLive) {
+      navigate(`/itinerary/${primary.itineraryId ?? deal.itineraryId}?dealId=${deal.dealId ?? deal.id}&versionId=${primary.id}&confirm=1`);
+      return;
+    }
     navigate(`/itinerary/${primary.itineraryId ?? deal.itineraryId}/payment-plan?pp=${Math.round(ppPrice(primary))}&t=${t}`);
   };
   const goCompare = (e) => {

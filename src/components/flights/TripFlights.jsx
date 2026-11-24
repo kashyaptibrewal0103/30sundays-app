@@ -410,7 +410,7 @@ export function PkgChip({ kind }) {
 
 // One airline's flights: the app's card, plus the two things that can be done
 // to it. A deal is the same card holding every flight in it.
-function FlightCard({ parts, travellers, onChange, onRemove, onDetails, testId, pkg }) {
+function FlightCard({ parts, travellers, onChange, onRemove, onDetails, testId, pkg, lock, chip, voucher }) {
   const f0 = parts[0].f;
   const fare = sum(parts.map((p) => p.f));
   return (
@@ -421,10 +421,14 @@ function FlightCard({ parts, travellers, onChange, onRemove, onDetails, testId, 
           <span style={{ display: "block", fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f0.airline}</span>
           {pkg && <span style={{ display: "block", marginTop: 4 }}><PkgChip kind={pkg.kind} /></span>}
         </span>
+        {/* A booked flight is paid for: no fare, its lock and tag instead
+            (or nothing, when the section already says every flight is booked). */}
+        {lock ? chip : (
         <span style={{ textAlign: "right", flexShrink: 0 }}>
           <span style={{ display: "block", fontSize: 14.5, fontWeight: 500, color: C.head }}>₹{formatPrice(fare * travellers)}</span>
           {pkg?.saving > 0 && <span style={{ display: "block", fontSize: 10.5, fontWeight: 600, color: GREEN, marginTop: 2 }}>Saves ₹{formatPrice(pkg.saving * travellers)}</span>}
         </span>
+        )}
       </div>
       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 14 }}>
         {parts.map((p, k) => (
@@ -432,15 +436,19 @@ function FlightCard({ parts, travellers, onChange, onRemove, onDetails, testId, 
             <Leg {...p} />
           </div>
         ))}
-        <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+        {/* A booked flight has nothing to change here: the consultant does it. */}
+        {!lock && <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
           <button onClick={onChange} data-testid={`${testId}-change`} style={{ ...actBtn, border: `1px solid ${PINK}`, color: PINK }}>
             <ArrowLeftRight size={14} /> Change
           </button>
           <button onClick={onRemove} data-testid={`${testId}-remove`} style={{ ...actBtn, border: `1px solid ${C.div}`, color: C.head }}>
             <Trash2 size={14} color={C.sub} /> Remove
           </button>
-        </div>
+        </div>}
       </div>
+      {voucher && (
+        <div style={{ padding: "10px 14px", borderTop: `1px solid ${C.div}` }}>{voucher}</div>
+      )}
       <button onClick={onDetails} style={footStyle}>
         Tap to view flight details <ChevronRight size={15} color={C.head} />
       </button>
@@ -567,9 +575,15 @@ export function FareLoader({ title, sub, cards = 3 }) {
 }
 
 // ─── The section on the itinerary ───
-export function FlightsSection({ legs, chosen, changed = [], failed = [], failedNow = [], dropped = [], cause, refreshing, saved, city: fromCity, travellers, startISO, consultant, onAddFlights, onChangeCity, onChangeLegs, onRemoveLegs, onAddLeg, onDetails, onDismissChanges }) {
+export function FlightsSection({ legs, chosen, changed = [], failed = [], failedNow = [], dropped = [], cause, refreshing, saved, city: fromCity, travellers, startISO, consultant, onAddFlights, onChangeCity, onChangeLegs, onRemoveLegs, onAddLeg, onDetails, onDismissChanges, lockFor = null, chipFor = null, voucherFor = null, banner = null, cityLocked = false }) {
   const any = chosen.some(Boolean) || failed.length > 0;
-  const note = saved ? NOTE_SAVED : NOTE_UNSAVED;
+  // On a partly booked trip, `lockFor(i)` says whether a flight is booked
+  // (or waiting to be confirmed). A locked card has no Change or Remove and
+  // no fare; `chipFor(i)` stands in the fare's place and `voucherFor(i)` sits
+  // above its details. `banner` says it once, at the top, when every flight
+  // is booked. `cityLocked` keeps the city they fly from.
+  const anyLocked = !!lockFor && legs.some((_, i) => lockFor(i));
+  const note = anyLocked ? null : saved ? NOTE_SAVED : NOTE_UNSAVED;
 
   // Nothing added yet (or everything taken out): the app's own empty card,
   // with the way in.
@@ -623,6 +637,9 @@ export function FlightsSection({ legs, chosen, changed = [], failed = [], failed
       parts={parts}
       pkg={parts[0].inPkg ? parts[0].f.pkg : null}
       travellers={travellers}
+      lock={lockFor ? parts.map((p) => lockFor(p.i)).find(Boolean) || null : null}
+      chip={lockFor && chipFor ? chipFor(parts.find((p) => lockFor(p.i))?.i ?? parts[0].i) : null}
+      voucher={voucherFor ? voucherFor(parts[0].i) : null}
       onChange={() => onChangeLegs(parts.map((p) => p.i))}
       onRemove={() => onRemoveLegs(parts.map((p) => p.i))}
       onDetails={() => onDetails(parts.map((p) => ({ f: p.f, kind: p.kind })))}
@@ -672,7 +689,8 @@ export function FlightsSection({ legs, chosen, changed = [], failed = [], failed
       <div data-testid="flights-from" style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
         <PlaneTakeoff size={14} color={C.sub} />
         <span style={{ flex: 1, fontSize: 12, color: C.sub }}>Flying from <b style={{ color: C.head, fontWeight: 600 }}>{fromCity}</b></span>
-        <button onClick={onChangeCity} data-testid="flights-change-city" style={{ ...linkBtn, color: PINK }}>Change city</button>
+        {!cityLocked && <button onClick={onChangeCity} data-testid="flights-change-city" style={{ ...linkBtn, color: PINK }}>Change city</button>}
+        {banner}
       </div>
 
       {refreshing ? (
@@ -1096,7 +1114,7 @@ function BagChip({ Icon, color, bg, text, warn }) {
 
 const wave = (hex) => `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='8'%3E%3Cpath d='M0 4 Q4 0 8 4 T16 4' fill='none' stroke='%23${hex}' stroke-width='1.3'/%3E%3C/svg%3E")`;
 
-export function FlightDetailSheet({ items, travellers, startISO, onClose, perPerson = false }) {
+export function FlightDetailSheet({ items, travellers, startISO, onClose, perPerson = false, booked = null }) {
   const f0 = items[0].f;
   const total = sum(items.map((x) => x.f)) * (perPerson ? 1 : travellers);
   return (
@@ -1110,8 +1128,10 @@ export function FlightDetailSheet({ items, travellers, startISO, onClose, perPer
             <span style={{ display: "block", fontSize: 14, color: C.head }}>{f0.airline}</span>
             <span style={{ display: "block", fontSize: 10.5, color: C.inact, marginTop: 3 }}>{f0.flightNo}</span>
           </span>
-          <span style={{ fontSize: 19, fontWeight: 600, color: C.head, flexShrink: 0 }}>₹{formatPrice(total)}</span>
+          {/* A booked flight: its tag in place of the fare. */}
+          {booked ? booked.chip : <span style={{ fontSize: 19, fontWeight: 600, color: C.head, flexShrink: 0 }}>₹{formatPrice(total)}</span>}
         </div>
+        {booked?.voucher && <div style={{ marginTop: 14 }}>{booked.voucher}</div>}
 
         {f0.pkg && items.length > 1 && (
           <div data-testid="flight-detail-deal" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

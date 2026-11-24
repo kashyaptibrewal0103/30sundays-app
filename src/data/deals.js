@@ -429,9 +429,18 @@ export function DealsProvider({ children }) {
     setDeals(prev => prev.map(d => d.id !== dealId ? d : { ...d, ...(typeof patch === "function" ? patch(d) : patch) }));
   }, []);
 
+  // Put whole deals in, replacing any with the same id. The partly booked
+  // demo trips go into My Plans this way, from their own lab page.
+  const upsertDeals = useCallback((list) => {
+    setDeals(prev => {
+      const ids = new Set(list.map(d => d.id));
+      return [...list, ...prev.filter(d => !ids.has(d.id))];
+    });
+  }, []);
+
   const value = {
     deals, createDeal, updateDraft, patchCustomizations, requestPricing, forkVersion,
-    deleteDeal, discardVersion, getDeal, getVersion, patchDeal,
+    deleteDeal, discardVersion, getDeal, getVersion, patchDeal, upsertDeals,
     findCustomItinerary, setCustomItinerary,
     wished, toggleWish, isWished,
   };

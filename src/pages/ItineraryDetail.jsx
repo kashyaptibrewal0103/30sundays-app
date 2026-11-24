@@ -34,6 +34,8 @@ import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
 import { usePlanTogether } from "../components/PlanTogether";
+import { usePartial, BookedChip, VoucherLink } from "../components/PartialBooking";
+import { partialOf } from "../data/partial";
 import SectionNav from "../components/SectionNav";
 import RouteChooser from "../components/route/RouteChooser";
 import DateRange from "../components/wizard/DateRange";
@@ -690,6 +692,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // closed plan would quietly bring it back into My Plans. The way forward is
   // a fresh plan, which is what Regenerate makes.
   const closedDeal = inDeal && dealsCtx.getDeal(dealId)?.status === "lost";
+  // ─── Partly booked ───
+  //
+  // Some flights or hotels on this trip are booked, or sent to be confirmed
+  // and paid. The trip's basics are then fixed: no Customise, no new route,
+  // dates or travellers. Booked items are locked where they sit; what is
+  // still open can change. While a consent link waits on the customer,
+  // nothing changes at all. See usePartial further down.
+  const partialInfo = inDeal ? partialOf(dealsCtx.getDeal(dealId)) : null;
+  const partialOn = !!partialInfo;
+  const partialLinkLive = !!partialInfo?.linkLive;
   // ─── Plan together ───
   //
   // Inviting someone to plan needs a trip that is saved and theirs: not a
@@ -704,7 +716,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // something taken off: no change day, no change hotel, no dates, no cities,
   // no save. What is left is the trip, the price it sold at, a PDF, and the
   // one thing somebody reading it actually wants, which is to have it.
-  const editable = !closedDeal && !viewOnly;
+  const editable = !closedDeal && !viewOnly && !partialLinkLive;
   // The quote/PDF bar applies only to plans opened from the Plan tab (a deal).
   // Explore itineraries (no deal) show no version/PDF until the first edit
   // creates one. Quoted = a PDF exists; a deal copy is quoted once priced.
@@ -1004,12 +1016,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   };
   // Any saved plan can be edited via the wizard — built trips seed from their
   // own data, curated ones seed from the itinerary (Build handles the fallback).
-  const wizardEditable = inDeal && !closedDeal;
+  const wizardEditable = inDeal && !closedDeal && !partialOn;
 
   // Guided customisation tour: auto-run once per person, or on demand when
   // opened with ?tour=1 (from the home banner). Replayable from the "How it
   // works" button. Delay a beat so the targets are laid out.
   useEffect(() => {
+    // Nothing to customise on a partly booked trip.
+    if (partialOn) return;
     const forced = params.get("tour") === "1";
     let seen = true;
     try { seen = !!localStorage.getItem("cust_tour_seen"); } catch { /* ignore */ }
@@ -2091,6 +2105,22 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     navigate(-1);
   };
   // Keep the edited version as a draft (edits already auto-persist) and leave.
+  // ─── Partly booked: what is locked, item by item ───
+  // Each booked flight and hotel is locked where it sits, with a tag that
+  // explains. What each costs comes from the cost split, so the payment
+  // block adds up with the total.
+  const stayNights = hotels.map((h, i) => (hotels.length === it.days.length ? it.days[i]?.n : 1) || 1);
+  const allStayNights = stayNights.reduce((a, b) => a + b, 0) || 1;
+  const partial = usePartial({
+    deal: inDeal ? dealsCtx.getDeal(dealId) : null,
+    dealId, dest: it.dest, travellers, dateLabel,
+    fromCity: tf.city, frame: overlayFrame, total: grandTotal,
+    legs: tfLegs.map((l) => ({ ...l, fromCity: airports[l.from]?.city || l.fromCity, toCity: airports[l.to]?.city || l.toCity })),
+    chosen: tfChosen, stays: hotels,
+    legAmount: (i) => (tfChosen[i]?.price || 0) * travellers,
+    stayAmount: (i) => Math.round(costSplit.hotels * stayNights[i] / allStayNights),
+  });
+
   const saveDraftAndLeave = () => {
     setLeavePrompt(false);
     navigate(-1);
@@ -2178,7 +2208,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           total={grandTotal}
           onBreakdown={() => document.getElementById("cost-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" })}
         />
-      ) : wizardEditable ? (
+      ) : (wizardEditable || partialOn) ? (
         /* ─── Dates first, route under it ───
             The dates and who is going are the line somebody checks, so
             they are the line in black. The route is the line somebody
@@ -2214,6 +2244,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               The floating one stays filled. It has a photograph and a day
               plan behind it and has to be found; this one is sitting in
               white space next to the words it edits. */}
+          {partialOn ? null : (
           <button
             ref={setTopCustomiseEl}
             data-tour="edit"
@@ -2229,6 +2260,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           >
             <Pencil size={13} color={C.p600} /> Customise
           </button>
+          )}
         </div>
       ) : (
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
@@ -2292,6 +2324,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       )}
 
       {/* Who is planning this trip, at the top of it. */}
+      {/* Only while part of the trip waits on the customer's consent. */}
+      {partial.topStrip}
       {together.strip}
       <CoverageLine dest={it.dest} cov={coverage} onView={() => setCoverageOpen(true)} />
       <Divider />
@@ -2424,7 +2458,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
       {/* ═══ 4. Hotels ═══ */}
       <div id="hotels-section" ref={setSectionEl("hotels")} style={{ scrollMarginTop: 62 }}>
-        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
+        {/* Every hotel booked: said once, here, rather than on each card. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 16px", marginBottom: 12 }}>
+          <p style={{ flex: 1, fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>Hotels</p>
+          {partial.allHotels && <BookedChip label="All hotels booked" tip={partial.tip("hotel", "booked", true)} />}
+        </div>
 
         <div
           className="hs"
@@ -2474,7 +2512,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 imageAlt={h.name}
                 dayLabel={h.dayRange}
                 soldOut={soldOut}
-                topRightBadge={soldOut ? (
+                topRightBadge={partial.hotelLock(i) && !partial.allHotels ? (
+                  <BookedChip onPhoto status={partial.hotelLock(i)} tip={partial.tip("hotel", partial.hotelLock(i))} />
+                ) : soldOut ? (
                   <span style={{ background: C.p600, color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 999, letterSpacing: "0.3px", boxShadow: "0 1px 6px rgba(0,0,0,0.25)" }}>Sold out</span>
                 ) : undefined}
                 stars={h.stars}
@@ -2485,7 +2525,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 freeCancellation={h.freeCancellation}
                 saved={wishlist.isSaved("hotel", it.dest, h.name)}
                 onSave={() => wishlist.toggle("hotel", it.dest, h.name, { name: h.name, img: h.img, sub: `${h.city}${h.stars ? ` · ${h.stars}-star` : ""}`, city: h.city, stars: h.stars, score: h.rating })}
-                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${h.roomId ? `&room=${encodeURIComponent(h.roomId)}` : ""}${dealQS}${viewOnly ? "&view=1" : ""}`}
+                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${h.roomId ? `&room=${encodeURIComponent(h.roomId)}` : ""}${dealQS}${viewOnly || partial.hotelLock(i) ? "&view=1" : ""}${partial.hotelLock(i) === "booked" ? "&booked=1" : ""}`}
                 footer={
                   <>
                     {swapOpen && (
@@ -2514,7 +2554,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                         </span>
                       </div>
                     )}
-                    {editable && (
+                    {partial.hotelLock(i) === "booked" && (
+                      <div style={{ marginTop: 8 }}><VoucherLink /></div>
+                    )}
+                    {editable && !partial.hotelLock(i) && (
                       <span
                         data-tour="change-hotel"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
@@ -2547,7 +2590,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         {/* Sold-out is communicated on the hotel card itself (badge) + toast; no section banner. */}
 
         {/* Single hotel-upgrade banner (per-card chips removed) */}
-        {upgradeInfo.upgradeCount >= 1 && (
+        {upgradeInfo.upgradeCount >= 1 && !hotels.every((h, i) => partial.hotelLock(i)) && (
           <div onClick={() => setShowUpgradeDrawer(true)} style={{
             margin: "16px 16px 0", background: "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)", border: "1.5px solid #E8D5A3",
             borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
@@ -2593,7 +2636,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       <>
       <div ref={setSectionEl("flights")}>
       {useNewFlights ? (
-        <FlightsSection legs={tfLegs} chosen={tfChosen} changed={tfTrip.changed} failed={tfTrip.failed} failedNow={tfTrip.failedNow} dropped={tfTrip.dropped} cause={tfTrip.cause} refreshing={flightsRefreshing} saved={validQuote} city={tf.city} travellers={travellers} startISO={tripStart} consultant={consultant} {...flightHandlers} />
+        <FlightsSection legs={tfLegs} chosen={tfChosen} changed={tfTrip.changed} failed={tfTrip.failed} failedNow={tfTrip.failedNow} dropped={tfTrip.dropped} cause={tfTrip.cause} refreshing={flightsRefreshing} saved={validQuote} city={tf.city} travellers={travellers} startISO={tripStart} consultant={consultant} {...flightHandlers}
+          lockFor={partial.on ? partial.flightLock : null}
+          chipFor={(i) => (partial.allFlights ? null : <BookedChip status={partial.flightLock(i)} tip={partial.tip("flight", partial.flightLock(i))} />)}
+          voucherFor={(i) => (partial.flightLock(i) === "booked" ? <VoucherLink /> : null)}
+          banner={partial.allFlights ? <BookedChip label="All flights booked" tip={partial.tip("flight", "booked", true)} /> : null}
+          cityLocked={partial.cityLocked} />
       ) : (() => {
         const padCard = { border: `1px solid ${C.div}`, borderRadius: 16, background: C.white, boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)", padding: "12px 14px 14px" };
         const changeStyle = { display: "inline-flex", alignItems: "center", gap: 1, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, textDecoration: "none", border: `1px solid ${C.div}`, borderRadius: 20, padding: "5px 12px", background: C.white };
@@ -2838,6 +2886,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           You can claim the TCS amount when filing your income tax return.
         </p>
       </div>
+
+      {/* Partly booked: what was paid, what is still to come, and the consent. */}
+      {partial.paymentBlock && (
+        <>
+          <Divider />
+          {partial.paymentBlock}
+        </>
+      )}
 
       {/* Bottom padding for sticky CTA */}
       <div style={{ height: 20 }} />
@@ -3422,7 +3478,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       )}
       {flightDetail && (
         <div style={{ ...overlayFrame, zIndex: 200 }}>
-          <FlightDetailSheet items={flightDetail} travellers={travellers} startISO={tripStart} onClose={() => setFlightDetail(null)} />
+          <FlightDetailSheet items={flightDetail} travellers={travellers} startISO={tripStart} onClose={() => setFlightDetail(null)}
+            booked={(() => {
+              // A booked flight's details: its tag, and its voucher.
+              const li = tfChosen.findIndex((c) => c && c.id === flightDetail[0]?.f?.id);
+              const st = li >= 0 ? partial.flightLock(li) : null;
+              if (!st) return null;
+              return { chip: <BookedChip status={st} tip={partial.tip("flight", st)} />, voucher: st === "booked" ? <VoucherLink block /> : null };
+            })()} />
         </div>
       )}
 
@@ -3540,6 +3603,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           onClose={() => setCitiesScreen(false)}
         />
       )}
+
+      {partial.overlays}
 
       {customiseOpen && (
         <CustomisePicker frame={overlayFrame} onPick={customise} onClose={() => setCustomiseOpen(false)} />

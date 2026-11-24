@@ -9,6 +9,7 @@ import { useWishlist } from "../data/wishlist";
 import InclusionsSection from "../components/InclusionsSection";
 import HotelV3 from "../components/hotel_v3/HotelV3";
 import { detailFromHotel } from "../data/hotelDetailAdapter";
+import { BookedChip, VoucherLink } from "../components/PartialBooking";
 
 export default function HotelPDP() {
   const { itineraryId, stayIndex, hotelId } = useParams();
@@ -25,6 +26,8 @@ export default function HotelPDP() {
   // Everything that would alter a stay belongs to the person who owns the
   // trip, and a reader does not.
   const readOnly = params.get("view") === "1";
+  // A hotel already booked on a partly booked trip: read-only, with its voucher.
+  const booked = params.get("booked") === "1";
   const dealsCtx = useDeals();
   const wishlist = useWishlist();
   const [showCurrentDetails, setShowCurrentDetails] = useState(false); // expand current-hotel in the bar
@@ -267,6 +270,19 @@ export default function HotelPDP() {
     </div>
   );
 
+  // Booked: no change, the reason, and the voucher.
+  const bookedBar = (
+    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "10px 16px 14px", background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 26%)" }}>
+      <div data-testid="booked-hotel-bar" style={{ background: C.white, border: `1px solid ${C.div}`, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.12)", padding: "12px 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <BookedChip tip="This hotel can't be changed because we have already booked it. To change it, talk to your consultant; the hotel may charge for it." />
+          <span style={{ fontSize: 12, color: C.sub, lineHeight: "16px" }}>We have booked this hotel for you.</span>
+        </div>
+        <VoucherLink block />
+      </div>
+    </div>
+  );
+
   // Replace-hotel confirmation + upgrade sheet + upgrade confirmation.
   const overlay = (
     <>
@@ -452,7 +468,7 @@ export default function HotelPDP() {
           <InclusionsSection inclusions={inclusions} />
         </>
       )}
-      bottomBar={readOnly ? null : ownStay && isSameAsCurrent ? ownBar : bottomBar}
+      bottomBar={booked ? bookedBar : readOnly ? null : ownStay && isSameAsCurrent ? ownBar : bottomBar}
       overlay={readOnly ? null : overlay}
       saved={isWished}
       onSave={toggleWish}

@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Partly Booked Trips</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --pink: #E31B53; --ink: #181D27; --sub: #535862; --line: #E9EAEB; --bg: #FFFFFF; --soft: #FAFAFA; --green: #027A48; --gfill: #ECFDF3; --amber: #B54708; --afill: #FFFAEB; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --soft: #16181D; --green: #4EAC7E; --gfill: #14261D; --amber: #FDA201; --afill: #2A2112; }
+  }
+  :root[data-theme="dark"] { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --soft: #16181D; --green: #4EAC7E; --gfill: #14261D; --amber: #FDA201; --afill: #2A2112; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Manrope, system-ui, sans-serif; font-size: 14.5px; line-height: 22px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 72px; }
+  .kicker { font-size: 11px; font-weight: 800; letter-spacing: .7px; color: var(--pink); margin: 0; }
+  h1 { font-size: 28px; line-height: 34px; margin: 6px 0 8px; letter-spacing: -.4px; }
+  h2 { font-size: 21px; margin: 0 0 6px; letter-spacing: -.2px; }
+  h3 { font-size: 15.5px; margin: 20px 0 6px; }
+  p { margin: 0 0 10px; }
+  a { color: var(--pink); }
+  .lead { color: var(--sub); max-width: 780px; }
+  .muted { color: var(--sub); }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 4px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; font-weight: 700; font-size: 13.5px; text-decoration: none; }
+  .btn.solid { background: var(--pink); color: #fff; }
+  .btn.outline { border: 1.5px solid var(--pink); color: var(--pink); }
+  .url { font-size: 12.5px; color: var(--sub); margin-top: 6px; word-break: break-all; }
+  .toc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 18px 0 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; font-size: 13px; }
+  .toc a { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .toc a:hover { color: var(--pink); }
+  section { margin-top: 40px; padding-top: 26px; border-top: 1px solid var(--line); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .box { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .box b.t { display: block; font-size: 14px; margin-bottom: 4px; }
+  ul, ol { margin: 6px 0 10px; padding-left: 20px; }
+  li { margin: 3px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 6px; font-size: 13.5px; line-height: 19px; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { font-size: 11.5px; letter-spacing: .4px; text-transform: uppercase; color: var(--sub); font-weight: 800; }
+  .tablewrap { overflow-x: auto; }
+  .row { display: flex; gap: 16px; overflow-x: auto; padding: 14px 2px 10px; scroll-snap-type: x mandatory; }
+  .shot { flex: 0 0 220px; scroll-snap-align: start; margin: 0; }
+  .shot img { width: 100%; display: block; border-radius: 20px; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(16,24,40,.10); background: #fff; }
+  figcaption { margin-top: 8px; font-size: 12.5px; color: var(--sub); line-height: 18px; }
+  figcaption b { color: var(--ink); display: block; font-size: 13.5px; }
+  .note { border-left: 3px solid var(--pink); padding: 2px 0 2px 12px; margin: 10px 0; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .chip.g { background: var(--gfill); color: var(--green); border: 1px solid rgba(2,122,72,.25); }
+  .chip.a { background: var(--afill); color: var(--amber); border: 1px solid rgba(181,71,8,.25); }
+  .chip.n { background: var(--soft); color: var(--sub); border: 1px solid var(--line); }
+  .quote { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } h1 { font-size: 24px; line-height: 30px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">REQUIREMENT · PARTLY BOOKED TRIPS · 23 NOV 2026</p>
+  <h1>Partly booked: book the flights or hotels first</h1>
+  <p class="lead">Today a trip is marked sold only when every part is final and the first instalment is paid. Now a customer can book part of it first, say the flights, and finish the hotels, day plans and visa later. The trip stays in My Plans, marked Partly booked. What is booked is locked with a clear reason, and its voucher can be downloaded. What is still open can be changed as usual.</p>
+
+  <div class="links">
+    <a class="btn solid" href="/partial">Open the prototype, every case</a>
+    <a class="btn outline" href="https://partial-sold-prototype.vercel.app/" target="_blank" rel="noopener">Seller side and consent link (Jaikishan's prototype)</a>
+  </div>
+  <p class="url">Prototype link: <span id="proto-url">/partial</span>. Pick a case, then open My Plans or the trip. Every screenshot below has its own link to that case.</p>
+
+  <nav class="toc">
+    <a href="#scope">Scope</a><a href="#rules">The rules</a><a href="#names">Names</a><a href="#states">Item states</a><a href="#cases">The cases</a><a href="#plans">1. My Plans</a><a href="#top">2. Top of the trip</a><a href="#flights">3. Flights</a><a href="#hotels">4. Hotels</a><a href="#payment">5. Payment and consent</a><a href="#confirm">6. Confirm and pay</a><a href="#copy">Copy</a><a href="#corners">Corner cases</a><a href="#tracking">Tracking</a><a href="#questions">Open questions</a>
+  </nav>
+
+  <section id="scope">
+    <h2>Scope</h2>
+    <div class="grid2">
+      <div class="box">
+        <b class="t">In this release</b>
+        <ul>
+          <li>Flights and hotels can be booked before the rest, in any order, all of them or only some.</li>
+          <li>The trip stays in My Plans with a Partly booked tag, until every part is booked.</li>
+          <li>On the trip: each booked flight and hotel is locked, with a lock, a Booked tag and an i that says why.</li>
+          <li>The trip's dates, cities, travellers (and departure city, once flights to and from India are booked) are fixed. Customise is not shown.</li>
+          <li>Vouchers for everything booked: on the card, in the flight details, on the hotel page.</li>
+          <li>A Payment section: what was paid and when, what is still to come, and the consent accepted.</li>
+          <li>Confirm and pay, with consent, when the consultant sends a part to be booked.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <b class="t">Not in this release</b>
+        <ul>
+          <li>Booking day plans, activities or the visa on their own. They are booked with the last part.</li>
+          <li>The customer changing or cancelling a booked item in the app. They talk to the consultant.</li>
+          <li>More than one partly booked plan per customer.</li>
+          <li>The seller side (Mark Sold, consent link, price re-check). See Jaikishan's prototype.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">Customer-facing words always say "booked", never "sold".</p>
+  </section>
+
+  <section id="rules">
+    <h2>The rules</h2>
+    <ol>
+      <li><b>One partly booked plan.</b> A customer has at most one plan that is partly booked.</li>
+      <li><b>It stays in My Plans.</b> A partly booked trip does not move to My Trips. It moves there once every part is booked, exactly as a fully sold trip does today.</li>
+      <li><b>The basics are fixed.</b> Once anything is booked: dates, cities and nights, and travellers. Once a flight to or from India is booked: the departure city too. Customise is not shown on the trip, and so the route, dates and travellers cannot be changed.</li>
+      <li><b>Booked items are locked.</b> A booked flight has no Change or Remove and no fare. A booked hotel has no Change hotel and its page opens read-only. The upgrade banner hides once every hotel is booked.</li>
+      <li><b>Open items work as today.</b> Hotels and flights not yet booked keep Change, Remove and Change hotel. Day plans can be changed. Saving makes a new version as usual; the bookings carry over to it.</li>
+      <li><b>While a consent link is out, nothing changes.</b> The parts sent show To confirm, everything else On hold, until the customer confirms and pays. To change something first, the consultant withdraws the link.</li>
+      <li><b>Every booked item has its voucher.</b> Shown once the voucher is issued.</li>
+    </ol>
+  </section>
+
+  <section id="names">
+    <h2>Names: the same as the itinerary builder</h2>
+    <p>The app and the itinerary builder use the same three names for the parts of a trip, on the consent screen and in the payment schedule:</p>
+    <div class="tablewrap"><table>
+      <tr><th>Name</th><th>Means</th></tr>
+      <tr><td><b>Already finalised</b></td><td>Booked and paid in an earlier step. Locked.</td></tr>
+      <tr><td><b>Finalise now</b></td><td>What the consultant has sent to confirm and pay in this step.</td></tr>
+      <tr><td><b>Finalise later</b></td><td>Everything still open. Priced and paid when it is finalised.</td></tr>
+    </table></div>
+    <p>On the trip screen itself, a finalised flight or hotel still carries the short tag <b>Booked</b>, with the lock and the i.</p>
+  </section>
+
+  <section id="states">
+    <h2>Item states</h2>
+    <p class="muted">Each flight and each hotel on the trip is in one of four states.</p>
+    <div class="tablewrap"><table>
+      <tr><th>State</th><th>When</th><th>What shows on the item</th><th>Can change</th></tr>
+      <tr><td><span class="chip n">Open</span></td><td>Not booked</td><td>As today: fare, Change, Remove, Change hotel</td><td>Yes</td></tr>
+      <tr><td><span class="chip a">To confirm</span></td><td>Sent by the consultant to be booked; waiting on consent and payment</td><td>Clock, To confirm, i</td><td>No</td></tr>
+      <tr><td><span class="chip a">On hold</span></td><td>Anything else on the trip while a consent link is out</td><td>Clock, On hold, i</td><td>No</td></tr>
+      <tr><td><span class="chip g">Booked</span></td><td>Paid and booked</td><td>Lock, Booked, i; no fare on flights; Download voucher</td><td>No, through the consultant</td></tr>
+    </table></div>
+  </section>
+
+  <section id="cases">
+    <h2>The cases</h2>
+    <p class="muted">The five cases in the prototype. Open any of them straight on the trip.</p>
+    <div class="tablewrap"><table>
+      <tr><th>Case</th><th>Trip</th><th>Booked</th><th>Still open</th><th></th></tr>
+      <tr><td>All flights booked</td><td>Bali</td><td>2 flights</td><td>Hotels, day plans, visa</td><td><a href="/partial?case=demo_partial_flights&amp;go=trip">Open</a></td></tr>
+      <tr><td>All hotels booked</td><td>Thailand</td><td>2 hotels</td><td>Flights, day plans, visa</td><td><a href="/partial?case=demo_partial_hotels&amp;go=trip">Open</a></td></tr>
+      <tr><td>Some flights booked</td><td>Vietnam</td><td>Out and home</td><td>The flight inside Vietnam, hotels, day plans, visa</td><td><a href="/partial?case=demo_partial_someflights&amp;go=trip">Open</a></td></tr>
+      <tr><td>Flights, then some hotels</td><td>Sri Lanka</td><td>2 flights, then 2 of 3 hotels (two payments)</td><td>1 hotel, day plans, visa</td><td><a href="/partial?case=demo_partial_somehotels&amp;go=trip">Open</a></td></tr>
+      <tr><td>Sent to confirm and pay</td><td>Vietnam</td><td>Nothing yet; 3 flights waiting</td><td>Hotels, day plans, visa</td><td><a href="/partial?case=demo_partial_confirm&amp;go=trip">Open</a></td></tr>
+      <tr><td>Flights booked, hotels to confirm</td><td>Vietnam</td><td>4 flights; 4 hotels waiting</td><td>Day plans, visa</td><td><a href="/partial?case=demo_partial_next&amp;go=trip">Open</a></td></tr>
+      <tr><td>Sent to confirm, nothing to pay</td><td>Bali</td><td>Nothing yet; 3 hotels waiting, already covered by money paid</td><td>Flights, day plans, visa</td><td><a href="/partial?case=demo_partial_zero&amp;go=trip">Open</a></td></tr>
+    </table></div>
+  </section>
+
+  <section id="plans">
+    <h2>1. My Plans</h2>
+    <ul>
+      <li>The card keeps today's format. A green <span class="chip g">✓ Partly booked</span> tag sits on its own line under the dates, so the route and dates stay clear. No other line is added.</li>
+      <li>Partly booked trips sit at the top of My Plans, with the plans waiting on payment.</li>
+      <li>While a consent link is out, the card shows today's "Confirmation and payment pending" note. Its button opens the trip straight on the consent screen.</li>
+      <li>Version list and Compare work as today.</li>
+    </ul>
+    <div class="row" data-shots="plans:Partly booked tag:demo_partial_flights:plans|plans-pending:Waiting on confirm and pay:demo_partial_confirm:plans"></div>
+  </section>
+
+  <section id="top">
+    <h2>2. Top of the trip</h2>
+    <ul>
+      <li>No Customise button and no summary of what is booked: each section says it where it matters.</li>
+      <li>The dates, travellers and route read as today, with nothing to tap.</li>
+      <li>Only while a consent link is out: one amber strip, "Confirmation and payment pending", with Confirm and pay.</li>
+    </ul>
+    <div class="row" data-shots="trip-top:Partly booked, the top:demo_partial_flights:trip|confirm-top:Waiting on confirm and pay:demo_partial_confirm:trip"></div>
+  </section>
+
+  <section id="flights">
+    <h2>3. Flights</h2>
+    <h3>Every flight booked</h3>
+    <ul>
+      <li>Said once, at the top of the section, on the "Flying from" line: <span class="chip g">🔒 All flights booked ⓘ</span>. Change city is gone.</li>
+      <li>The cards show no fare and no Change or Remove. Each has Download voucher above "Tap to view flight details".</li>
+    </ul>
+    <h3>Some flights booked</h3>
+    <ul>
+      <li>A booked flight shows <span class="chip g">🔒 Booked ⓘ</span> where its fare was, no Change or Remove, and Download voucher.</li>
+      <li>A flight not booked keeps its fare, Change and Remove, and can be changed as today.</li>
+      <li>If the flights to and from India are booked, the departure city is fixed (no Change city). If only flights inside the country are booked, it is not.</li>
+    </ul>
+    <h3>The i, and the details</h3>
+    <ul>
+      <li>Tapping the tag shows a short note (copy below). Any other tap or a scroll puts it away.</li>
+      <li>The flight details sheet of a booked flight shows the Booked tag in place of the fare, and a Download voucher button.</li>
+    </ul>
+    <div class="row" data-shots="flights-all:All flights booked:demo_partial_flights:trip|flights-all-tip:The i, every flight:demo_partial_flights:trip|flight-detail:Details, with the voucher:demo_partial_flights:trip|flights-some:Some flights booked:demo_partial_someflights:trip|flights-some-tip:The i, one flight:demo_partial_someflights:trip|confirm-flights:To confirm, while the link is out:demo_partial_confirm:trip"></div>
+  </section>
+
+  <section id="hotels">
+    <h2>4. Hotels</h2>
+    <h3>Every hotel booked</h3>
+    <ul>
+      <li>Said once, beside the "Hotels" heading: <span class="chip g">🔒 All hotels booked ⓘ</span>. The photos carry no tag.</li>
+      <li>Each card has Download voucher in place of Change hotel. The upgrade banner is not shown.</li>
+    </ul>
+    <h3>Some hotels booked</h3>
+    <ul>
+      <li>A booked hotel has <span class="chip g">🔒 Booked ⓘ</span> on its photo, and Download voucher in place of Change hotel.</li>
+      <li>A hotel not booked keeps Change hotel, as today.</li>
+    </ul>
+    <h3>The hotel page</h3>
+    <ul>
+      <li>A booked hotel's page opens read-only: no room choice, no Change hotel. Its bottom bar says "We have booked this hotel for you" with the Booked tag, and a Download voucher button.</li>
+    </ul>
+    <div class="row" data-shots="hotels-all:All hotels booked:demo_partial_hotels:trip|hotels-all-tip:The i, every hotel:demo_partial_hotels:trip|hotels-some:Some hotels booked:demo_partial_somehotels:trip|hotels-some-tip:The i, one hotel:demo_partial_somehotels:trip|hotel-page:Booked hotel page:demo_partial_somehotels:trip"></div>
+  </section>
+
+  <section id="payment">
+    <h2>5. Payment and consent</h2>
+    <ul>
+      <li>A Payment section under the Cost breakdown, on a partly booked trip only.</li>
+      <li>One row per booking: "Paid on 14 Nov 2026 · For 2 flights · ₹1,02,000". A trip booked in two parts has two rows.</li>
+      <li>"Finalise later · For 1 hotel, day plans, visa · tentative" with the rest of the total. The rows add up to the trip's final price.</li>
+      <li>"Consent and payment terms accepted on 21 Nov 2026 · View" opens what was agreed, read-only.</li>
+      <li>"Instalments are set once every part is booked."</li>
+    </ul>
+    <div class="row" data-shots="payment:Payment:demo_partial_somehotels:trip|consent-view:What you agreed to:demo_partial_somehotels:trip"></div>
+  </section>
+
+  <section id="confirm">
+    <h2>6. Confirm and pay</h2>
+    <p class="muted">Follows the consent link in Jaikishan's prototype, inside the app.</p>
+    <ol>
+      <li><b>The consultant sends a part to be booked.</b> The card in My Plans and the top of the trip show Confirmation and payment pending.</li>
+      <li><b>Confirm and pay</b> opens a full screen: "Your Vietnam 3 flights are ready to book", the dates, travellers and departure city.</li>
+      <li><b>Your itinerary</b>, in the same three groups the consultant sees in the itinerary builder: <b>Already finalised</b> (booked earlier, with a lock; shown only if something is), <b>Finalise now</b> (each flight or hotel being sent, opened) and <b>Finalise later</b> (what is still open). Then "We cannot honour verbal or informal commitments". Viewed after paying, what was agreed shows under Already finalised.</li>
+      <li><b>Traveller details</b>, as filled in by our team, to check against each passport. Each traveller is a card that opens to show first name, last name, date of birth and gender; the date of birth is not repeated on the closed card. A traveller with no passport on file gets one pill, "Passport pending", and inside the card one short note: "Check these against your passport. Fixing them later can cost extra." The "All details captured" pill by the heading shows only when every traveller has a passport, so the same thing is never flagged twice. The blue "What counts as a valid passport?" dropdown is the last thing in the card.</li>
+      <li><b>Invoicing details</b>: the PAN the invoice and TCS go in, with a Verified pill by the heading. Its blue "Why do we need this?" dropdown is also the last thing in the card. Every FAQ dropdown on this screen sits at the bottom of its card, never above the content.</li>
+      <li><b>Payment schedule</b>, its own card: the same three names: "Already finalised" with what was paid before (only if anything was), "Finalise now, pay now" with the amount and what it is for, then "Finalise later" with the rest, marked tentative, then "Instalments are set once every part is booked." The last thing in the card is the blue link "Read full Terms and Conditions", which opens the full terms.</li>
+      <li><b>Cancellation policy</b>, a separate card: flights cannot be refunded once ticketed; hotels follow each hotel's own policy. Only the lines for what is being booked show.</li>
+      <li><b>Your consent:</b> one tick, "I confirm and agree to all of the below", covering the items being final, the trip's basics being fixed, the traveller details, and the terms. Continue to pay stays grey until it is ticked.</li>
+      <li><b>Your payment:</b> the amount due today and what it is for. <b>Pay online</b> is the one main button, full width and pink, with "UPI, card or net banking" under it and a blue "Copy payment link for someone else". A line says the rest is priced and paid when it is finalised. <b>Pay by bank transfer instead</b> sits below, folded away; opened, it shows the account details with copy buttons and a plain outline button, "I have made the transfer". Two pink buttons of the same weight are never shown together.</li>
+      <li><b>Bank transfer:</b> "We are checking your transfer. We book your 3 flights once it reaches us, usually within a working day." Nothing is booked, and the trip keeps waiting, until the money is matched.</li>
+      <li><b>Paid online:</b> "Your 3 flights are booked. We have sent the details on WhatsApp and email." Back on the trip, they show Booked, with vouchers once issued.</li>
+    </ol>
+    <div class="row" data-shots="confirm-top:Pending, on the trip:demo_partial_confirm:trip|consent:Confirm and pay:demo_partial_confirm:trip|consent-travellers:Travellers and invoicing:demo_partial_confirm:trip|consent-agree:Consent ticked:demo_partial_confirm:trip|pay-method:Pay online first:demo_partial_confirm:trip|pay-bank:Bank transfer, opened:demo_partial_confirm:trip|transfer:Transfer being checked:demo_partial_confirm:trip|done:Paid online, booked:demo_partial_confirm:trip"></div>
+    <div class="row" data-shots="schedule:Payment schedule card:demo_partial_confirm:trip"></div>
+    <h3>Something already booked, more sent now</h3>
+    <div class="row" data-shots="groups-next:Already finalised, Finalise now, Finalise later:demo_partial_next:trip|schedule-next:The schedule in the same names:demo_partial_next:trip"></div>
+    <h3>When there is nothing to pay now</h3>
+    <div class="row" data-shots="zero-top:Waiting for confirmation:demo_partial_zero:trip|zero-payment:Nothing to pay now:demo_partial_zero:trip|zero-schedule:Schedule, ₹0:demo_partial_zero:trip|zero-agree:Confirm, no payment:demo_partial_zero:trip|zero-done:Booked:demo_partial_zero:trip"></div>
+  </section>
+
+  <section id="copy">
+    <h2>Copy</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Where</th><th>Text</th></tr>
+      <tr><td>My Plans tag</td><td>Partly booked</td></tr>
+      <tr><td>i on one booked flight</td><td class="quote">This flight can't be changed because we have already booked it. Your dates, cities, departure city and travellers are fixed with it. To change this flight, talk to your consultant; the airline may charge for it.</td></tr>
+      <tr><td>i on all flights</td><td class="quote">These flights can't be changed because we have already booked them. Your dates, cities, departure city and travellers are fixed with them. To change these flights, talk to your consultant; the airline may charge for it.</td></tr>
+      <tr><td>i on one booked hotel</td><td class="quote">This hotel can't be changed because we have already booked it. Your dates, cities and travellers are fixed with it. To change this hotel, talk to your consultant; the hotel may charge for it.</td></tr>
+      <tr><td>i on all hotels</td><td class="quote">These hotels can't be changed because we have already booked them. Your dates, cities and travellers are fixed with them. To change these hotels, talk to your consultant; the hotel may charge for it.</td></tr>
+      <tr><td>i, To confirm</td><td class="quote">Your consultant has sent this to be booked. Confirm and pay to book it. Until then, nothing on this trip can change.</td></tr>
+      <tr><td>i, On hold</td><td class="quote">On hold while part of your trip waits for your confirmation and payment.</td></tr>
+      <tr><td>Voucher</td><td>Download voucher; after the tap, Voucher downloaded</td></tr>
+      <tr><td>Hotel page</td><td>We have booked this hotel for you.</td></tr>
+      <tr><td>After paying</td><td class="quote">Your 3 flights are booked. We have sent the details on WhatsApp and email. Your trip stays in My Plans while you finish the rest with your consultant.</td></tr>
+    </table></div>
+  </section>
+
+  <section id="corners">
+    <h2>Corner cases</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Case</th><th>What happens</th></tr>
+      <tr><td>Pay now is zero (money already paid covers the part sent)</td><td>Nothing to pay, only to confirm. The trip strip says "Waiting for your confirmation" with a Confirm button. The consent screen is titled Confirm; the schedule says "Nothing to pay now", ₹0 in green, "What you have already paid covers this." The button is Confirm, which books it straight away with no payment screen. On the trip, the row then reads "Booked on" (not "Paid on"), covered by what they had paid.</td></tr>
+      <tr><td>The customer wants to change a booked flight or hotel</td><td>Not in the app. The i says to talk to the consultant, who changes it and sends a new version; the airline or hotel may charge.</td></tr>
+      <tr><td>The customer changes something still open and saves</td><td>A new version, as today. The bookings carry over: booked items stay locked in the new version.</td></tr>
+      <tr><td>An earlier version is opened</td><td>Booked items are locked there too. Bookings belong to the trip, not to one version.</td></tr>
+      <tr><td>The fare of a booked flight changes later</td><td>No effect. The fare is not shown; the Payment section shows what was paid.</td></tr>
+      <tr><td>A hotel still open sells out</td><td>Today's sold-out handling, on that hotel only. Booked hotels are never checked again.</td></tr>
+      <tr><td>The customer edits while a consent link is out</td><td>Not possible: To confirm and On hold. The consultant withdraws the link, edits, and sends a new one.</td></tr>
+      <tr><td>A second part is booked (hotels after flights)</td><td>A second consent and a second payment row. The tags move from Open to Booked.</td></tr>
+      <tr><td>Every part is booked</td><td>The trip is sold in full: it leaves My Plans and moves to My Trips; the instalment plan is set.</td></tr>
+      <tr><td>A booked item but no voucher yet</td><td>The item shows Booked; in place of Download voucher, "Voucher on its way". (The prototype always has one.)</td></tr>
+      <tr><td>The customer has another plan they want to part-book</td><td>Only one partly booked plan at a time. The first is finished or cancelled before another is part-booked.</td></tr>
+      <tr><td>A co-traveller on the trip (Plan together)</td><td>Sees the same locks, tags and vouchers. Cannot change booked items.</td></tr>
+      <tr><td>A booked flight or hotel is cancelled by the airline or hotel</td><td>The consultant handles it; the item goes back to Open or is rebooked. See open questions.</td></tr>
+    </table></div>
+  </section>
+
+  <section id="tracking">
+    <h2>Tracking</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Event</th><th>When</th><th>Properties</th></tr>
+      <tr><td><code>partial_booked_info_tapped</code></td><td>The i on a tag is tapped</td><td>item (flight, hotel, all_flights, all_hotels), status, deal_id</td></tr>
+      <tr><td><code>voucher_downloaded</code></td><td>Download voucher</td><td>item, where (card, flight_details, hotel_page), deal_id</td></tr>
+      <tr><td><code>partial_confirm_opened</code></td><td>Confirm and pay opened</td><td>from (my_plans, trip), deal_id, amount</td></tr>
+      <tr><td><code>partial_consent_accepted</code></td><td>Consent ticked, Continue to pay</td><td>deal_id, items, amount</td></tr>
+      <tr><td><code>partial_payment_method</code></td><td>Pay online, or I have made the transfer</td><td>method (online, bank_transfer), deal_id, amount</td></tr>
+      <tr><td><code>payment_link_copied</code></td><td>Copy payment link</td><td>deal_id, amount</td></tr>
+    </table></div>
+  </section>
+
+  <section id="questions">
+    <h2>Open questions</h2>
+    <ul>
+      <li>When an airline or hotel cancels a booked item, does it go back to Open on the trip, and who tells the customer?</li>
+      <li>Do vouchers come from the existing voucher system per item, or only once the whole trip is booked?</li>
+      <li>Should earlier versions of a partly booked plan stay openable, or be read-only?</li>
+      <li>Which other parts can be booked on their own later: activities, the visa?</li>
+    </ul>
+  </section>
+</div>
+<script>
+  document.querySelectorAll("[data-shots]").forEach((row) => {
+    row.innerHTML = row.dataset.shots.split("|").map((x) => {
+      const [file, name, kase, go] = x.split(":");
+      return `<figure class="shot"><img src="partial-booking-shots/${file}.jpg?v=1" alt="${name}" loading="lazy" /><figcaption><b>${name}</b><a href="/partial?case=${kase}&go=${go}">Open in prototype</a></figcaption></figure>`;
+    }).join("");
+  });
+  document.getElementById("proto-url").textContent = location.origin + "/partial";
+</script>
+</body>
+</html>
