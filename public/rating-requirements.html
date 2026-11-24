@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>In-App Rating Requirements</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --pink: #E31B53; --ink: #181D27; --sub: #535862; --line: #E9EAEB; --bg: #FFFFFF; --soft: #FAFAFA; --green: #027A48; --code: #F6F7F9; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --soft: #16181D; --green: #4EAC7E; --code: #16181D; }
+  }
+  :root[data-theme="dark"] { --ink: #F5F5F6; --sub: #A4A7AE; --line: #2A2D33; --bg: #0F1115; --soft: #16181D; --green: #4EAC7E; --code: #16181D; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Manrope, system-ui, sans-serif; font-size: 14.5px; line-height: 22px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 72px; }
+  .kicker { font-size: 11px; font-weight: 800; letter-spacing: .7px; color: var(--pink); margin: 0; }
+  h1 { font-size: 28px; line-height: 34px; margin: 6px 0 8px; letter-spacing: -.4px; }
+  h2 { font-size: 21px; margin: 0 0 6px; letter-spacing: -.2px; }
+  h3 { font-size: 15.5px; margin: 20px 0 6px; }
+  p { margin: 0 0 10px; }
+  a { color: var(--pink); }
+  .lead { color: var(--sub); max-width: 780px; }
+  .muted { color: var(--sub); }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 4px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; font-weight: 700; font-size: 13.5px; text-decoration: none; }
+  .btn.solid { background: var(--pink); color: #fff; }
+  .btn.outline { border: 1.5px solid var(--pink); color: var(--pink); }
+  .url { font-size: 12.5px; color: var(--sub); margin-top: 6px; word-break: break-all; }
+  .toc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 18px 0 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; font-size: 13px; }
+  .toc a { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .toc a:hover { color: var(--pink); }
+  section { margin-top: 40px; padding-top: 26px; border-top: 1px solid var(--line); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .box { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .box b.t { display: block; font-size: 14px; margin-bottom: 4px; }
+  .stat { font-size: 26px; font-weight: 800; letter-spacing: -.5px; line-height: 30px; }
+  .stat small { font-size: 13px; font-weight: 600; color: var(--sub); letter-spacing: 0; }
+  ul, ol { margin: 6px 0 10px; padding-left: 20px; }
+  li { margin: 3px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 6px; font-size: 13.5px; line-height: 19px; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { font-size: 11.5px; letter-spacing: .4px; text-transform: uppercase; color: var(--sub); font-weight: 800; }
+  td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tablewrap { overflow-x: auto; }
+  .good { color: var(--green); font-weight: 700; }
+  .bad { color: var(--pink); font-weight: 700; }
+  code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 6px 0 14px; overflow-x: auto; }
+  pre code { background: none; border: 0; padding: 0; font-size: 12.5px; line-height: 19px; white-space: pre; }
+  .label { font-size: 11px; font-weight: 800; letter-spacing: .5px; color: var(--sub); text-transform: uppercase; margin: 12px 0 4px; }
+  .row { display: flex; gap: 16px; overflow-x: auto; padding: 14px 2px 10px; scroll-snap-type: x mandatory; }
+  .shot { flex: 0 0 210px; scroll-snap-align: start; margin: 0; }
+  .shot img { width: 100%; display: block; border-radius: 22px; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(16,24,40,.10); background: #fff; }
+  figcaption { margin-top: 8px; font-size: 12.5px; color: var(--sub); line-height: 18px; }
+  figcaption b { color: var(--ink); display: block; font-size: 13.5px; }
+  .num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--pink); color: #fff; font-size: 11px; font-weight: 800; margin-right: 6px; vertical-align: 1px; }
+  .kit { border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin-top: 14px; }
+  .kit h3 { margin-top: 0; }
+  .kv { display: grid; grid-template-columns: 170px 1fr; gap: 6px 14px; font-size: 13.5px; line-height: 20px; margin: 8px 0 6px; }
+  .kv dt { color: var(--sub); font-weight: 700; }
+  .kv dd { margin: 0; }
+  .note { border-left: 3px solid var(--pink); padding: 2px 0 2px 12px; margin: 10px 0; }
+  .check li { list-style: none; position: relative; }
+  .check { padding-left: 4px; }
+  .check li::before { content: ""; display: inline-block; width: 13px; height: 13px; border: 1.5px solid var(--sub); border-radius: 4px; margin-right: 9px; vertical-align: -2px; }
+  @media (max-width: 760px) {
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .kv { grid-template-columns: 1fr; gap: 0 0; }
+    .kv dd { margin-bottom: 8px; }
+    h1 { font-size: 24px; line-height: 30px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">REQUIREMENT · IN-APP STORE RATING · 23 NOV 2026</p>
+  <h1>Ask for a store rating at the right moment</h1>
+  <p class="lead">Show the App Store or Google Play rating card inside our app, at three happy moments, and never when something has just gone wrong. The card belongs to the store: people tap the stars and submit without leaving the app. The goal is to take both store ratings to 4.5.</p>
+
+  <div class="links">
+    <a class="btn solid" href="/rating-prompts">Open the prototype</a>
+    <a class="btn outline" href="/rating-prompts.html">How the cards look, step by step</a>
+  </div>
+  <p class="url">Prototype link: <span id="proto-url">/rating-prompts</span>. Pick iPhone or Android and tap through the card the way a customer would.</p>
+
+  <nav class="toc">
+    <a href="#goal">Goal</a><a href="#scope">Scope</a><a href="#when">When to ask</a><a href="#never">Never ask</a><a href="#often">How often</a><a href="#flow">The flow</a><a href="#today">Today's prompt</a><a href="#account">Rate us row</a><a href="#kits">API kits</a><a href="#android">Google Play kit</a><a href="#ios">Apple kit</a><a href="#flutter">Flutter</a><a href="#logic">Decision logic</a><a href="#testing">Testing</a><a href="#rules">Store rules</a><a href="#tracking">Tracking</a><a href="#qa">Acceptance</a><a href="#questions">Open questions</a><a href="#sources">Sources</a>
+  </nav>
+
+  <section id="goal">
+    <h2>Goal</h2>
+    <p class="muted">Both store ratings rest on fewer than 100 ratings, so a few hundred good new ones are enough to move them.</p>
+    <div class="grid3">
+      <div class="box"><b class="t">Google Play</b><div class="stat">3.9 <small>from 88 ratings</small></div><p class="muted" style="margin:4px 0 0">Needs about 250 to 500 new ratings averaging 4.6 to 4.7. Play weights recent ratings, so it gets there sooner.</p></div>
+      <div class="box"><b class="t">App Store, India</b><div class="stat">4.1 <small>from 68 ratings</small></div><p class="muted" style="margin:4px 0 0">Needs about 125 to 250 new ratings averaging 4.6 to 4.7. Ratings are counted per country.</p></div>
+      <div class="box"><b class="t">Inside our app, 2.5.0</b><div class="stat">4.41 <small>from 455 people</small></div><p class="muted" style="margin:4px 0 0">People rate us well when we ask them. The stores mostly hear from people who went there on their own to complain.</p></div>
+    </div>
+    <p style="margin-top:12px">At the three moments below, our own in-app ratings average <b>4.6 to 4.7, with about 80% five-star</b>. About 1,670 people a week reach one of them. If 1 in 20 rates, the App Store reaches 4.5 in about 3 to 6 weeks and Play in about 7 to 14. The 1 in 20 is an assumption; read the real rate in the store consoles two weeks after launch.</p>
+  </section>
+
+  <section id="scope">
+    <h2>Scope</h2>
+    <div class="grid2">
+      <div class="box">
+        <b class="t">In this release</b>
+        <ul>
+          <li>Show the store's rating card at three moments, iPhone and Android.</li>
+          <li>Skip the ask when a warning sign is present.</li>
+          <li>Ask each person once from our side, and remember it on the phone.</li>
+          <li>A permanent "Rate 30 Sundays" row in Account that opens the store page.</li>
+          <li>Stop today's in-app feedback prompt from firing right after login and repeating.</li>
+          <li>Events for every ask and every tap on the Account row.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <b class="t">Not in this release</b>
+        <ul>
+          <li>Our own star screen in front of the store card. Both stores forbid it.</li>
+          <li>Any reward, discount or points for rating.</li>
+          <li>Resetting the App Store rating. It would wipe the 68 ratings we have.</li>
+          <li>Replies to store reviews from inside our tools (done in the store consoles).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="when">
+    <h2>When to ask</h2>
+    <p class="muted">Three moments. Ask at the first one a person reaches, on a calm screen, 2 seconds after it has settled. Never in the middle of a task.</p>
+    <div class="tablewrap"><table>
+      <tr><th>Moment</th><th>Who</th><th>Exactly when</th><th>Avg (2.5.0)</th><th>Avg (since Aug)</th><th>People a week</th></tr>
+      <tr><td><b>1. Just booked</b></td><td>Booked customers</td><td>First app open 1 to 7 days after booking, on Home or the trip screen</td><td class="n">4.33</td><td class="n">4.41</td><td class="n">about 265</td></tr>
+      <tr><td><b>2. Trip coming up</b></td><td>Booked customers</td><td>Any app open while the trip is 8 to 60 days away, on Home or the trip screen</td><td class="n">4.45</td><td class="n">4.40</td><td class="n">about 675</td></tr>
+      <tr><td><b>3. Engaged lead</b></td><td>Leads, not booked</td><td>Opens an itinerary on a later day than their first app day, after 10 seconds on it</td><td class="n">4.78</td><td class="n">4.28</td><td class="n">about 730</td></tr>
+      <tr><td colspan="3"><b>All three, no warning sign, first ask</b></td><td class="n good">4.68</td><td class="n good">4.60</td><td></td></tr>
+    </table></div>
+    <p class="note">Moment 3 is strong on 2.5.0 but weaker across older builds. Launch it behind a switch we can turn off without a release, and check its store average after two weeks.</p>
+  </section>
+
+  <section id="never">
+    <h2>Never ask when</h2>
+    <p class="muted">Any one of these is enough to skip. Skipping is silent: nothing is shown and the moment is tried again on the next app open.</p>
+    <div class="tablewrap"><table>
+      <tr><th>Warning sign</th><th>How the app knows</th><th>Avg rating when present</th></tr>
+      <tr><td>Contacted support or called an expert in the last 3 days</td><td>Taps on chat, call, WhatsApp or "Talk to expert"</td><td class="n bad">2.38</td></tr>
+      <tr><td>Opened a payment link or pending instalments in the last 24 hours</td><td>Payment screen or payment link opened</td><td class="n bad">2.57 to 3.88</td></tr>
+      <tr><td>Saw an app error in the last 24 hours</td><td>Any error screen or failed request shown to the user</td><td class="n bad">3.78</td></tr>
+      <tr><td>On the trip, or the trip starts within 7 days</td><td>Trip start and end dates of their booking</td><td class="n bad">3.33 to 4.14</td></tr>
+      <tr><td>Back from the trip (any time after it starts)</td><td>Trip start date has passed</td><td class="n bad">3.92 to 4.15</td></tr>
+      <tr><td>Booking cancelled, refund open, or payment failed</td><td>Booking status from our servers</td><td class="n">not measured</td></tr>
+      <tr><td>Already asked by us (on this phone or account)</td><td>Saved flag, see How often</td><td class="n bad">falls with each ask</td></tr>
+      <tr><td>Saw our in-app feedback prompt in this session</td><td>Session flag</td><td class="n">not measured</td></tr>
+      <tr><td>First app open, login or onboarding</td><td>Session and login state</td><td class="n">first-impression ratings</td></tr>
+    </table></div>
+  </section>
+
+  <section id="often">
+    <h2>How often</h2>
+    <ul>
+      <li><b>Once per person from our side.</b> After we ask, we never ask that person again, on any moment. Every repeat ask in our data rated lower.</li>
+      <li><b>The store has its own limit on top.</b> Apple shows the card at most 3 times a year per person. Google shows it about once a month, on a limit it does not publish. When the store says no, nothing appears and the app just carries on.</li>
+      <li><b>Remember it for the account, not only the phone.</b> Save "asked on" with the date, moment and app version on the phone, and on the server against the customer, so a reinstall or a second phone does not ask again.</li>
+      <li><b>Never from a button.</b> The card may not appear, which would look broken. Buttons open the store page instead (see the Account row).</li>
+    </ul>
+  </section>
+
+  <section id="flow">
+    <h2>The flow</h2>
+    <p class="muted">The card is drawn by the store, so it looks slightly different across phone and OS versions. The prototype shows it over a booked trip screen.</p>
+    <h3>iPhone: App Store</h3>
+    <div class="row" data-shots="ios-1:Our screen:A calm screen. 2 seconds after it settles, the app asks Apple.|ios-2:Apple's card:Enjoying 30 Sundays? Tap a star, or Not Now.|ios-3:Stars picked:Cancel or Submit.|ios-4:Submitted:Apple thanks them and offers Write a Review."></div>
+    <h3>Android: Google Play</h3>
+    <div class="row" data-shots="android-1:Our screen:A calm screen. 2 seconds after it settles, the app asks Google.|android-2:Google Play's sheet:Stars, Not now, Submit greyed out. Says the review is public.|android-3:Stars picked:An optional review box opens. Submit turns on.|android-4:Writing a review:Public, up to 500 characters, optional.|android-5:Submitted:Google thanks them, with Undo for a moment."></div>
+    <p>After the card closes, whatever happened, the person is back on the same screen exactly where they were. Our app shows nothing extra: no thank-you, no toast.</p>
+  </section>
+
+  <section id="today">
+    <h2>What changes in today's in-app prompt</h2>
+    <p class="muted">Today our own "How are we doing?" star prompt fires for almost everyone right after login, and keeps coming back.</p>
+    <div class="grid2">
+      <div class="box">
+        <b class="t">Today, on 2.5.0 (3 to 23 Nov)</b>
+        <ul>
+          <li>Shown 20,938 times to 10,688 people; 455 rated (4.3%).</li>
+          <li>90% of showings are the "reminder" trigger on Home, mostly within minutes of first login.</li>
+          <li>1,442 people saw it 4 times or more, one person 21 times.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <b class="t">From this release</b>
+        <ul>
+          <li>Keep it only as a feedback question, shown once per person, never at login.</li>
+          <li>Never in the same session as the store card.</li>
+          <li>Never send only its 5-star raters on to the store. That is the filtering both stores ban.</li>
+          <li>Never show it right before the store card, as a "do you like us?" gate.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="account">
+    <h2>"Rate 30 Sundays" row in Account</h2>
+    <p>A permanent row in Account, near Help. Tapping it opens our page in the store with the review box ready. It has no limit and catches people who want to rate on their own.</p>
+    <div class="tablewrap"><table>
+      <tr><th>Phone</th><th>Opens</th></tr>
+      <tr><td>iPhone</td><td><code>https://apps.apple.com/app/id6749570798?action=write-review</code> (the App Store, straight to Write a Review)</td></tr>
+      <tr><td>Android</td><td><code>https://play.google.com/store/apps/details?id=com.thirtysundays.app</code> (our Play Store page)</td></tr>
+    </table></div>
+  </section>
+
+  <section id="kits">
+    <h2>API kits from both stores</h2>
+    <p class="muted">Each store gives one official kit. Our app is Flutter, so we use one Flutter package that calls both kits for us. The native details are here so the team knows exactly what runs underneath.</p>
+    <div class="tablewrap"><table>
+      <tr><th></th><th>Google Play</th><th>Apple App Store</th></tr>
+      <tr><td><b>Kit</b></td><td>Play In-App Review library</td><td>StoreKit (built into iOS)</td></tr>
+      <tr><td><b>Package</b></td><td><code>com.google.android.play:review:2.0.2</code> and <code>review-ktx:2.0.2</code></td><td>Nothing to install, <code>import StoreKit</code></td></tr>
+      <tr><td><b>Main call</b></td><td><code>requestReviewFlow()</code> then <code>launchReviewFlow()</code></td><td><code>AppStore.requestReview(in:)</code>, or <code>RequestReviewAction</code> in SwiftUI</td></tr>
+      <tr><td><b>Works on</b></td><td>Android 5.0+ (API 21) with the Play Store installed</td><td>iOS 16+ for the current call; older call on iOS 14 to 15</td></tr>
+      <tr><td><b>How often it shows</b></td><td>Unpublished quota, about once a month</td><td>3 times per person in 365 days</td></tr>
+      <tr><td><b>Tells us the result</b></td><td>No</td><td>No</td></tr>
+      <tr><td><b>Can we restyle it</b></td><td>No</td><td>No</td></tr>
+      <tr><td><b>Where to test it for real</b></td><td>Internal test track</td><td>A development build (never TestFlight)</td></tr>
+      <tr><td><b>Flutter package</b></td><td colspan="2"><code>in_app_review 2.0.12</code>, verified publisher, wraps both kits</td></tr>
+    </table></div>
+
+    <div class="kit" id="android">
+      <h3>Google Play: In-App Review library</h3>
+      <dl class="kv">
+        <dt>What it does</dt><dd>Opens Google Play's rating sheet over our app. The person picks 1 to 5 stars, can add a public review, and submits without leaving.</dd>
+        <dt>Dependency</dt><dd><code>com.google.android.play:review:2.0.2</code> (latest), plus <code>review-ktx</code> for Kotlin. This is the standalone library; the old all-in-one Play Core library is retired.</dd>
+        <dt>Requirements</dt><dd>Android 5.0 (API 21) or newer, Play Store installed, app installed from Play. No permission needed.</dd>
+        <dt>Steps</dt><dd>1. Create a <code>ReviewManager</code>. 2. Call <code>requestReviewFlow()</code> to get a <code>ReviewInfo</code>, only just before showing, as it expires. 3. Call <code>launchReviewFlow(activity, reviewInfo)</code>. 4. When it completes, carry on; it completes whether or not anything was shown.</dd>
+        <dt>Limits</dt><dd>Quota is per person and unpublished, about once a month. The sheet cannot be resized, covered, restyled or closed by us. Nothing on screen should invite the tap. New ratings show in the Play Console after about 24 hours.</dd>
+        <dt>Docs</dt><dd><a href="https://developer.android.com/guide/playcore/in-app-review">Overview</a> · <a href="https://developer.android.com/guide/playcore/in-app-review/kotlin-java">Integrate (Kotlin, Java)</a> · <a href="https://developer.android.com/guide/playcore/in-app-review/test">Test</a> · <a href="https://developer.android.com/reference/com/google/android/play/core/release-notes-in_app_reviews">Release notes</a></dd>
+      </dl>
+      <p class="label">Native Android, for reference (Kotlin)</p>
+<pre><code>// build.gradle
+implementation("com.google.android.play:review:2.0.2")
+implementation("com.google.android.play:review-ktx:2.0.2")
+
+// When a moment is reached and every check passes
+val manager = ReviewManagerFactory.create(context)
+manager.requestReviewFlow().addOnCompleteListener { request -&gt;
+    if (request.isSuccessful) {
+        manager.launchReviewFlow(activity, request.result)
+            .addOnCompleteListener { /* carry on, no result is given */ }
+    }
+    // On failure: do nothing, never show an error
+}</code></pre>
+    </div>
+
+    <div class="kit" id="ios">
+      <h3>Apple: StoreKit review request</h3>
+      <dl class="kv">
+        <dt>What it does</dt><dd>Opens Apple's "Enjoying 30 Sundays?" alert. The person taps a star and submits, and can then write a review. It is the only rating prompt Apple allows (guideline 5.6.1).</dd>
+        <dt>Dependency</dt><dd>None. StoreKit ships with iOS.</dd>
+        <dt>Calls</dt><dd><code>AppStore.requestReview(in: windowScene)</code> on iOS 16+, or <code>@Environment(\.requestReview)</code> (<code>RequestReviewAction</code>) in SwiftUI. The older <code>SKStoreReviewController.requestReview(in:)</code> is deprecated from iOS 18; it still works but should only be the fallback for iOS 14 to 15.</dd>
+        <dt>Limits</dt><dd>At most 3 times per person in 365 days. Someone who already rated sees it again only on a new app version and a year after their last review. People can switch these prompts off for every app in Settings. Apple decides each time whether it shows.</dd>
+        <dt>Write a review link</dt><dd><code>https://apps.apple.com/app/id6749570798?action=write-review</code> for the Account row. Allowed, and has no limit.</dd>
+        <dt>Docs</dt><dd><a href="https://developer.apple.com/documentation/storekit/requesting-app-store-reviews">Requesting App Store reviews</a> · <a href="https://developer.apple.com/documentation/storekit/requestreviewaction">RequestReviewAction</a> · <a href="https://developer.apple.com/documentation/storekit/skstorereviewcontroller">SKStoreReviewController</a> · <a href="https://developer.apple.com/design/human-interface-guidelines/ratings-and-reviews">Ratings and reviews (HIG)</a></dd>
+      </dl>
+      <p class="label">Native iOS, for reference (Swift)</p>
+<pre><code>import StoreKit
+
+// UIKit, iOS 16+
+if let scene = UIApplication.shared.connectedScenes
+    .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+    AppStore.requestReview(in: scene)   // shows only if Apple allows it
+}
+
+// SwiftUI, iOS 16+
+@Environment(\.requestReview) private var requestReview
+// ... when a moment is reached and every check passes:
+requestReview()</code></pre>
+    </div>
+
+    <div class="kit" id="flutter">
+      <h3>What we build with: Flutter <code>in_app_review</code></h3>
+      <dl class="kv">
+        <dt>Package</dt><dd><a href="https://pub.dev/packages/in_app_review">in_app_review 2.0.12</a>, published 15 May 2026, verified publisher.</dd>
+        <dt>Underneath on Android</dt><dd>Play In-App Review <code>2.0.2</code>: <code>ReviewManagerFactory</code>, <code>requestReviewFlow</code>, <code>launchReviewFlow</code>. Min SDK 21.</dd>
+        <dt>Underneath on iOS</dt><dd><code>AppStore.requestReview(in:)</code> on iOS 16+, the current non-deprecated call. Falls back to <code>SKStoreReviewController</code> on iOS 14 to 15. Package supports iOS 12+.</dd>
+        <dt>Calls we use</dt><dd><code>isAvailable()</code>, <code>requestReview()</code> for the three moments, <code>openStoreListing(appStoreId:)</code> for the Account row.</dd>
+      </dl>
+      <p class="label">Add the package (pubspec.yaml)</p>
+<pre><code>dependencies:
+  in_app_review: ^2.0.12</code></pre>
+      <p class="label">Ask at a moment</p>
+<pre><code>import 'package:in_app_review/in_app_review.dart';
+
+final _review = InAppReview.instance;
+
+Future&lt;void&gt; askForStoreRating(String moment) async {
+  if (!await RatingGuard.canAsk(moment)) return;   // checks below
+  if (!await _review.isAvailable()) return;
+  await Future.delayed(const Duration(seconds: 2));  // let the screen settle
+  await _review.requestReview();                     // the store decides
+  await RatingGuard.markAsked(moment);               // never ask again
+  track('rating_prompt_requested', {'moment': moment});
+}</code></pre>
+      <p class="label">The Account row</p>
+<pre><code>onTap: () {
+  track('rating_store_link_tapped', {});
+  _review.openStoreListing(appStoreId: '6749570798');
+}</code></pre>
+    </div>
+  </section>
+
+  <section id="logic">
+    <h2>Decision logic</h2>
+    <p class="muted">Runs when Home, the trip screen or an itinerary has settled. All must pass, in this order, before the store is asked.</p>
+<pre><code>class RatingGuard {
+  static Future&lt;bool&gt; canAsk(String moment) async {
+    final s = await RatingState.load();   // phone + server copy
+
+    if (s.everAsked) return false;                      // once per person
+    if (s.isFirstAppOpen || s.inLoginOrOnboarding) return false;
+    if (s.feedbackPromptShownThisSession) return false;
+    if (s.lastSupportContact.within(days: 3)) return false;
+    if (s.lastPaymentScreen.within(hours: 24)) return false;
+    if (s.lastErrorShown.within(hours: 24)) return false;
+    if (s.bookingCancelled || s.refundOpen || s.paymentFailed) return false;
+
+    switch (moment) {
+      case 'just_booked':      // 1 to 7 days after booking
+        return s.isBooked &amp;&amp; s.daysSinceBooking.between(1, 7);
+      case 'trip_coming_up':   // trip 8 to 60 days away
+        return s.isBooked &amp;&amp; s.daysToTrip.between(8, 60);
+      case 'engaged_lead':     // itinerary seen on a later day, 10s on it
+        return !s.isBooked &amp;&amp; s.appDaysCount &gt;= 2
+            &amp;&amp; s.secondsOnItinerary &gt;= 10 &amp;&amp; Remote.leadMomentOn;
+    }
+    return false;
+  }
+}</code></pre>
+    <h3>What the app needs to know</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Fact</th><th>Where from</th></tr>
+      <tr><td>Booked or not, booking date, trip start and end dates</td><td>The customer's deal, already loaded for My Plans and the trip screen</td></tr>
+      <tr><td>Booking cancelled, refund open, payment failed</td><td>Deal status from our servers</td></tr>
+      <tr><td>Last support or expert contact, last payment screen, last error</td><td>Saved on the phone with a time each time it happens</td></tr>
+      <tr><td>Days the app was used, time on an itinerary</td><td>Saved on the phone</td></tr>
+      <tr><td>Asked already (date, moment, app version)</td><td>Saved on the phone and on the server against the customer</td></tr>
+      <tr><td>Lead moment on or off</td><td>Remote setting, so it can be switched off without a release</td></tr>
+    </table></div>
+  </section>
+
+  <section id="testing">
+    <h2>Testing</h2>
+    <div class="grid2">
+      <div class="box">
+        <b class="t">Android</b>
+        <ul>
+          <li>Upload to the <b>internal test track</b> and install from the Play Store. The quota does not apply there.</li>
+          <li>Use a Google account that has not reviewed 30 Sundays.</li>
+          <li>Internal app sharing shows the sheet, but Submit stays off.</li>
+          <li>Unit tests: <code>FakeReviewManager</code> stands in, shows nothing.</li>
+          <li>A debug build installed from a computer may show nothing. That is expected.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <b class="t">iPhone</b>
+        <ul>
+          <li>A <b>development build</b> on a phone or simulator always shows the alert, and Submit does nothing.</li>
+          <li><b>TestFlight never shows it.</b> Do not log that as a bug.</li>
+          <li>Test the Account row on a real iPhone; the simulator has no App Store.</li>
+          <li>On a live build, Apple decides; it may not show even when we ask.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">QA tests our logic (does the app ask at the right moment, and not when a warning sign is present) by watching the <code>rating_prompt_requested</code> event, not by waiting for the card.</p>
+  </section>
+
+  <section id="rules">
+    <h2>Store rules we must follow</h2>
+    <p class="muted">Breaking these can get the app pulled or the developer account closed.</p>
+    <div class="tablewrap"><table>
+      <tr><th>Never</th><th>Store</th><th>Why</th></tr>
+      <tr><td>Offer anything for a rating: discount, points, gift card, better price</td><td>Both</td><td>Incentivised ratings count as manipulation</td></tr>
+      <tr><td>Ask a question before the card ("Enjoying 30 Sundays?", "Would you give us 5 stars?")</td><td>Both</td><td>Play design guidelines; Apple 5.6.1 disallows custom review prompts</td></tr>
+      <tr><td>Show our own stars and send only happy people to the store</td><td>Both</td><td>Filtering who rates is not allowed</td></tr>
+      <tr><td>Put the card behind a button</td><td>Both</td><td>It may not appear, which looks broken</td></tr>
+      <tr><td>Force a rating to unlock anything</td><td>Both</td><td>Play: no forced pop-ups. Apple 3.2.2</td></tr>
+      <tr><td>Restyle, cover or close the card from our code</td><td>Play</td><td>In-app review design guidelines</td></tr>
+      <tr><td>Ask for a better rating in a review reply</td><td>Play</td><td>Replies must not solicit</td></tr>
+    </table></div>
+  </section>
+
+  <section id="tracking">
+    <h2>Tracking</h2>
+    <p class="muted">The stores never tell us whether the card showed or what was rated, so we log every ask and read results in the store consoles.</p>
+    <div class="tablewrap"><table>
+      <tr><th>Event</th><th>When</th><th>Properties</th></tr>
+      <tr><td><code>rating_prompt_requested</code></td><td>Right after <code>requestReview()</code> is called</td><td>moment, platform, app_version, is_booked, days_since_booking, days_to_trip</td></tr>
+      <tr><td><code>rating_prompt_skipped</code></td><td>A moment was reached but a check failed</td><td>moment, reason (support, payment, error, trip, asked, session, first_open)</td></tr>
+      <tr><td><code>rating_store_link_tapped</code></td><td>Tap on the Account row</td><td>platform, app_version</td></tr>
+    </table></div>
+    <h3>Watch every week</h3>
+    <ul>
+      <li>New ratings and their average, per store, in Play Console and App Store Connect (India).</li>
+      <li>Asks per moment, and skips per reason, from our events.</li>
+      <li>Two weeks after launch: if the store average of new ratings is below 4.5, drop the weakest moment (likely the lead one).</li>
+      <li>Every 1 to 3 star review replied to within 2 days.</li>
+    </ul>
+  </section>
+
+  <section id="qa">
+    <h2>Acceptance criteria</h2>
+    <ul class="check">
+      <li>A booked customer opening the app 1 to 7 days after booking is asked once, 2 seconds after Home or the trip screen settles.</li>
+      <li>A booked customer whose trip is 8 to 60 days away is asked once, if not asked before.</li>
+      <li>A lead is asked on an itinerary only on a later day than their first, after 10 seconds, and only while the remote switch is on.</li>
+      <li>No ask within 3 days of a support or expert contact, 24 hours of a payment screen or an error, during the trip or the 7 days before it, or after the trip starts.</li>
+      <li>No ask on first open, during login or onboarding, or in a session where our feedback prompt showed.</li>
+      <li>After one ask, the same person is never asked again, after reinstall or on a second phone too.</li>
+      <li>Nothing breaks or shows an error when the store shows no card.</li>
+      <li>The person returns to the same screen, same scroll, after the card closes.</li>
+      <li>The Account row opens Write a Review on iPhone and our Play page on Android.</li>
+      <li>Our in-app feedback prompt no longer shows at login and shows at most once per person.</li>
+      <li>All three events fire with their properties.</li>
+    </ul>
+  </section>
+
+  <section id="questions">
+    <h2>Open questions</h2>
+    <ul>
+      <li>Can the app read trip start and end dates, and cancelled, refund or failed payment status, from what it already loads?</li>
+      <li>Can "asked already" be saved on the server against the customer, so it holds across phones?</li>
+      <li>Who replies to store reviews, and do they have the right App Store Connect role?</li>
+      <li>Where does the Account row sit: above Help, or in a "More" group?</li>
+    </ul>
+  </section>
+
+  <section id="sources">
+    <h2>Sources</h2>
+    <ul>
+      <li><a href="https://developer.android.com/guide/playcore/in-app-review">Google: In-app reviews overview</a></li>
+      <li><a href="https://developer.android.com/guide/playcore/in-app-review/kotlin-java">Google: Integrate in-app reviews (Kotlin or Java)</a></li>
+      <li><a href="https://developer.android.com/guide/playcore/in-app-review/test">Google: Test in-app reviews</a></li>
+      <li><a href="https://support.google.com/googleplay/android-developer/answer/9898684">Google Play policy: ratings, reviews and installs</a></li>
+      <li><a href="https://developer.apple.com/documentation/storekit/requesting-app-store-reviews">Apple: Requesting App Store reviews</a></li>
+      <li><a href="https://developer.apple.com/documentation/storekit/requestreviewaction">Apple: RequestReviewAction</a></li>
+      <li><a href="https://developer.apple.com/documentation/storekit/skstorereviewcontroller">Apple: SKStoreReviewController (deprecated)</a></li>
+      <li><a href="https://developer.apple.com/design/human-interface-guidelines/ratings-and-reviews">Apple: Ratings and reviews, Human Interface Guidelines</a></li>
+      <li><a href="https://developer.apple.com/app-store/review/guidelines/">Apple: App Review Guidelines</a></li>
+      <li><a href="https://pub.dev/packages/in_app_review">Flutter: in_app_review</a> and its <a href="https://github.com/britannio/in_app_review">source</a></li>
+      <li>Our numbers: in-app ratings on 2.5.0 (3 to 23 Nov 2026, 455 people) and all builds since 1 Aug (932 people); store listings read 23 Nov 2026.</li>
+    </ul>
+  </section>
+</div>
+<script>
+  document.querySelectorAll("[data-shots]").forEach((row) => {
+    row.innerHTML = row.dataset.shots.split("|").map((x, i) => {
+      const [file, name, desc] = x.split(":");
+      return `<figure class="shot"><img src="rating-prompts-shots/${file}.jpg" alt="${name}" loading="lazy" /><figcaption><b><span class="num">${i + 1}</span>${name}</b>${desc} <a href="/rating-prompts/${file}">Open</a></figcaption></figure>`;
+    }).join("");
+  });
+  document.getElementById("proto-url").textContent = location.origin + "/rating-prompts";
+</script>
+</body>
+</html>
